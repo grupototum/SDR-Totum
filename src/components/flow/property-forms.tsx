@@ -25,7 +25,10 @@ export function StartForm({ node }: { node: FlowNode }) {
         <TInput value={node.data.niche ?? ""} onChange={(e) => upd({ niche: e.target.value })} />
       </Field>
       <Field label="Público-alvo">
-        <TInput value={node.data.audience ?? ""} onChange={(e) => upd({ audience: e.target.value })} />
+        <TInput
+          value={node.data.audience ?? ""}
+          onChange={(e) => upd({ audience: e.target.value })}
+        />
       </Field>
       <Field label="Variáveis obrigatórias" hint="Se uma estiver vazia, a mensagem não é enviada.">
         <div className="flex flex-wrap gap-1.5">
@@ -87,9 +90,7 @@ export function SendForm({ node }: { node: FlowNode }) {
             </span>
             {i > 0 && (
               <button
-                onClick={() =>
-                  upd({ variations: variations.filter((_, j) => j !== i) })
-                }
+                onClick={() => upd({ variations: variations.filter((_, j) => j !== i) })}
                 className="text-[color:var(--color-text-muted)] hover:text-white"
               >
                 <X className="size-3.5" />
@@ -109,7 +110,9 @@ export function SendForm({ node }: { node: FlowNode }) {
               placeholder="quando usar (ex: decisor único)"
               value={v.when}
               onChange={(e) => {
-                const next = variations.map((x, j) => (j === i ? { ...x, when: e.target.value } : x));
+                const next = variations.map((x, j) =>
+                  j === i ? { ...x, when: e.target.value } : x,
+                );
                 upd({ variations: next });
               }}
             />
@@ -125,10 +128,7 @@ export function SendForm({ node }: { node: FlowNode }) {
         <Plus className="size-3.5" /> Adicionar variação
       </TotumButton>
 
-      <div
-        className="rounded-xl p-3 text-xs"
-        style={{ background: "#1f192a" }}
-      >
+      <div className="rounded-xl p-3 text-xs" style={{ background: "#1f192a" }}>
         <div className="mb-1 flex items-center justify-between">
           <span className="text-[color:var(--color-text-muted)]">Digitando</span>
           <span className="text-white">~{times.typing}s</span>
@@ -154,11 +154,14 @@ export function AiForm({ node }: { node: FlowNode }) {
   return (
     <>
       <Field label="Modelo">
-        <TSelect value={node.data.model ?? "gemini"} onChange={(e) => upd({ model: e.target.value as never })}>
-          <option value="gemini">Gemini</option>
-          <option value="claude">Claude</option>
-          <option value="groq">Groq</option>
-          <option value="openai">OpenAI</option>
+        <TSelect
+          value={node.data.model ?? "gemini-2.5-flash"}
+          onChange={(e) => upd({ model: e.target.value as never })}
+        >
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="groq-llama-3.3-70b">Groq Llama 3.3 70B</option>
+          <option value="gpt-4o-mini">GPT-4o mini</option>
         </TSelect>
       </Field>
       <Field label="Modo">
@@ -197,10 +200,10 @@ export function AiForm({ node }: { node: FlowNode }) {
           onChange={(e) => upd({ fallbackModel: e.target.value })}
         >
           <option value="">—</option>
-          <option value="gemini">Gemini</option>
-          <option value="claude">Claude</option>
-          <option value="groq">Groq</option>
-          <option value="openai">OpenAI</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="groq-llama-3.3-70b">Groq Llama 3.3 70B</option>
+          <option value="gpt-4o-mini">GPT-4o mini</option>
         </TSelect>
       </Field>
     </>
@@ -251,13 +254,12 @@ export function ConditionalForm({ node }: { node: FlowNode }) {
     <>
       <Field label="Modelo classificador">
         <TSelect
-          value={node.data.classifierModel ?? "gemini"}
+          value={node.data.classifierModel ?? "groq-llama-3.3-70b"}
           onChange={(e) => upd({ classifierModel: e.target.value as never })}
         >
-          <option value="gemini">Gemini</option>
-          <option value="claude">Claude</option>
-          <option value="groq">Groq</option>
-          <option value="openai">OpenAI</option>
+          <option value="groq-llama-3.3-70b">Groq Llama 3.3 70B</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gpt-4o-mini">GPT-4o mini</option>
         </TSelect>
       </Field>
       <Field label="Ramos" hint="Sempre existe um ramo 'default' implícito ao fim.">
@@ -302,7 +304,10 @@ export function VariableForm({ node }: { node: FlowNode }) {
         <TInput value={node.data.varKey ?? ""} onChange={(e) => upd({ varKey: e.target.value })} />
       </Field>
       <Field label="Value">
-        <TInput value={node.data.varValue ?? ""} onChange={(e) => upd({ varValue: e.target.value })} />
+        <TInput
+          value={node.data.varValue ?? ""}
+          onChange={(e) => upd({ varValue: e.target.value })}
+        />
       </Field>
     </>
   );
@@ -347,7 +352,10 @@ export function EndForm({ node }: { node: FlowNode }) {
   return (
     <>
       <Field label="Resultado">
-        <TSelect value={node.data.result ?? "meeting"} onChange={(e) => upd({ result: e.target.value as never })}>
+        <TSelect
+          value={node.data.result ?? "meeting"}
+          onChange={(e) => upd({ result: e.target.value as never })}
+        >
           <option value="meeting">Reunião marcada</option>
           <option value="rejected">Rejeitado</option>
           <option value="followup">Followup</option>
@@ -361,9 +369,18 @@ export function EndForm({ node }: { node: FlowNode }) {
 }
 
 const LOG_FIELDS = [
-  "empresa", "resultado", "temperatura", "score", "abriu_pela_observacao",
-  "gatilho_preview", "agendou", "objeções", "resumo", "transcript",
-  "próxima_ação", "onde_travou",
+  "empresa",
+  "resultado",
+  "temperatura",
+  "score",
+  "abriu_pela_observacao",
+  "gatilho_preview",
+  "agendou",
+  "objeções",
+  "resumo",
+  "transcript",
+  "próxima_ação",
+  "onde_travou",
 ];
 
 export function LogForm({ node }: { node: FlowNode }) {
@@ -379,7 +396,10 @@ export function LogForm({ node }: { node: FlowNode }) {
             <span>PostgreSQL</span>
             <span>sempre ativo</span>
           </div>
-          <label className="flex items-center justify-between rounded-xl px-3 py-2 text-xs" style={{ background: "#1f192a", color: "#d1cece" }}>
+          <label
+            className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+            style={{ background: "#1f192a", color: "#d1cece" }}
+          >
             <span>Google Sheets</span>
             <input
               type="checkbox"
@@ -399,7 +419,10 @@ export function LogForm({ node }: { node: FlowNode }) {
             />
           </Field>
           <Field label="Nome da aba">
-            <TInput value={node.data.sheetTab ?? "Leads"} onChange={(e) => upd({ sheetTab: e.target.value })} />
+            <TInput
+              value={node.data.sheetTab ?? "Leads"}
+              onChange={(e) => upd({ sheetTab: e.target.value })}
+            />
           </Field>
         </>
       )}

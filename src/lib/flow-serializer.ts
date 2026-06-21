@@ -489,7 +489,8 @@ export function exportFlow(params: {
       };
       // Prefer raw.action to preserve non-standard action types (e.g. enviar_previa)
       const rawAction = raw.action as string | undefined;
-      out.action = rawAction ?? actionMap[node.data.actionType ?? "audit_site"] ?? node.data.actionType;
+      out.action =
+        rawAction ?? actionMap[node.data.actionType ?? "audit_site"] ?? node.data.actionType;
       const next = getNext(node.id) ?? (raw.next as string | undefined);
       if (next) out.next = next;
       else delete out.next;

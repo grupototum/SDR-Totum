@@ -2,8 +2,15 @@ import { useFlowStore } from "@/stores/flow-store";
 import { Field, TInput, TSelect, Slider } from "./form-primitives";
 import { TotumButton } from "@/components/ui/totum-button";
 import {
-  StartForm, SendForm, AiForm, WaitForm, ConditionalForm,
-  VariableForm, ActionForm, EndForm, LogForm,
+  StartForm,
+  SendForm,
+  AiForm,
+  WaitForm,
+  ConditionalForm,
+  VariableForm,
+  ActionForm,
+  EndForm,
+  LogForm,
 } from "./property-forms";
 import { Trash2, Plus, X } from "lucide-react";
 import { nodeMeta } from "./node-types";
@@ -90,10 +97,20 @@ function GlobalSettings() {
         </header>
 
         <Field label={`Velocidade de leitura · ${h.readingSpeed} ppm`}>
-          <Slider value={h.readingSpeed} onChange={(v) => updH({ readingSpeed: v })} min={150} max={300} />
+          <Slider
+            value={h.readingSpeed}
+            onChange={(v) => updH({ readingSpeed: v })}
+            min={150}
+            max={300}
+          />
         </Field>
         <Field label={`Velocidade de digitação · ${h.typingSpeed} ppm`}>
-          <Slider value={h.typingSpeed} onChange={(v) => updH({ typingSpeed: v })} min={20} max={80} />
+          <Slider
+            value={h.typingSpeed}
+            onChange={(v) => updH({ typingSpeed: v })}
+            min={20}
+            max={80}
+          />
         </Field>
 
         <div

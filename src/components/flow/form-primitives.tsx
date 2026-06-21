@@ -1,6 +1,14 @@
 import { type ChangeEvent, type ReactNode } from "react";
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+}) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11px] uppercase tracking-wider text-[color:var(--color-text-muted)]">

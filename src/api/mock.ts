@@ -188,7 +188,7 @@ const mockConversations: ConversationDetail[] = [
   },
 ];
 
-let conversationStore = [...mockConversations];
+const conversationStore = [...mockConversations];
 let msgCounter = 100;
 
 async function delay(ms = 300) {

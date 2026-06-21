@@ -96,5 +96,4 @@ export const NODE_TYPES: NodeTypeMeta[] = [
   },
 ];
 
-export const nodeMeta = (kind: NodeKind) =>
-  NODE_TYPES.find((n) => n.kind === kind)!;
+export const nodeMeta = (kind: NodeKind) => NODE_TYPES.find((n) => n.kind === kind)!;

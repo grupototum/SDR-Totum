@@ -43,7 +43,12 @@ function FlowCanvasInner() {
   }, []);
 
   return (
-    <div ref={wrapperRef} className="relative h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
+    <div
+      ref={wrapperRef}
+      className="relative h-full w-full"
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -59,12 +64,7 @@ function FlowCanvasInner() {
         proOptions={{ hideAttribution: true }}
         style={{ background: "#0e0918" }}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={32}
-          size={1.5}
-          color="#272333"
-        />
+        <Background variant={BackgroundVariant.Dots} gap={32} size={1.5} color="#272333" />
         <Controls position="bottom-right" />
         <MiniMap
           position="bottom-right"

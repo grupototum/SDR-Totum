@@ -177,9 +177,7 @@ export function EndNode(p: NodeProps<FlowNode>) {
       <div className="space-y-1">
         <div className="text-sm">{resultLabel[p.data.result ?? "meeting"]}</div>
         {p.data.note && (
-          <p className="line-clamp-2 text-xs text-[color:var(--color-text-muted)]">
-            {p.data.note}
-          </p>
+          <p className="line-clamp-2 text-xs text-[color:var(--color-text-muted)]">{p.data.note}</p>
         )}
       </div>
     </NodeShell>
