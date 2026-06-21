@@ -9,6 +9,7 @@ import {
   type Node,
   type NodeChange,
 } from "@xyflow/react";
+import { importFlow, exportFlow, type FlowEnvelope } from "@/lib/flow-serializer";
 
 export type NodeKind =
   | "start"
@@ -34,6 +35,7 @@ export interface MessageVariation {
 
 export interface NodeData extends Record<string, unknown> {
   label?: string;
+  _raw?: Record<string, unknown>;
   // start
   researchName?: string;
   niche?: string;
@@ -42,7 +44,7 @@ export interface NodeData extends Record<string, unknown> {
   // send
   variations?: MessageVariation[];
   // ai
-  model?: "gemini" | "claude" | "groq" | "openai";
+  model?: string;
   mode?: "strict" | "flexible";
   instruction?: string;
   limits?: string;
@@ -52,7 +54,7 @@ export interface NodeData extends Record<string, unknown> {
   timeoutUnit?: "minutes" | "hours" | "days";
   onTimeout?: "followup" | "end" | "node";
   // conditional
-  classifierModel?: "gemini" | "claude" | "groq" | "openai";
+  classifierModel?: string;
   branches?: BranchOption[];
   // variable
   varKey?: string;
@@ -76,8 +78,8 @@ export interface NodeData extends Record<string, unknown> {
 export type FlowNode = Node<NodeData>;
 
 export interface HumanizationConfig {
-  readingSpeed: number; // wpm
-  typingSpeed: number; // wpm
+  readingSpeed: number;
+  typingSpeed: number;
   alwaysTyping: boolean;
   maxConsecutive: number;
   sendWindowStart: string;
@@ -101,6 +103,7 @@ interface FlowStore {
   selectedNodeId: string | null;
   humanization: HumanizationConfig;
   interrupts: InterruptConfig[];
+  envelope: FlowEnvelope;
 
   setFlowName: (name: string) => void;
   onNodesChange: (changes: NodeChange[]) => void;
@@ -114,6 +117,8 @@ interface FlowStore {
   addInterrupt: () => void;
   updateInterrupt: (id: string, patch: Partial<InterruptConfig>) => void;
   removeInterrupt: (id: string) => void;
+  loadFlow: (jsonStr: string) => void;
+  exportToJSON: () => string;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -128,7 +133,7 @@ const defaultDataFor = (kind: NodeKind): NodeData => {
       };
     case "ai":
       return {
-        model: "gemini",
+        model: "gemini-2.5-flash",
         mode: "strict",
         instruction: "",
         limits: "",
@@ -138,7 +143,7 @@ const defaultDataFor = (kind: NodeKind): NodeData => {
       return { timeoutValue: 24, timeoutUnit: "hours", onTimeout: "followup" };
     case "conditional":
       return {
-        classifierModel: "gemini",
+        classifierModel: "groq-llama-3.3-70b",
         branches: [
           { id: uid(), label: "aceita prévia" },
           { id: uid(), label: "objeção" },
@@ -155,6 +160,31 @@ const defaultDataFor = (kind: NodeKind): NodeData => {
   }
 };
 
+const defaultEnvelope: FlowEnvelope = {
+  flow_id: "novo_flow",
+  version: "1.0",
+};
+
+const defaultHumanization: HumanizationConfig = {
+  readingSpeed: 225,
+  typingSpeed: 40,
+  alwaysTyping: true,
+  maxConsecutive: 3,
+  sendWindowStart: "08:00",
+  sendWindowEnd: "22:00",
+  timezone: "America/Sao_Paulo",
+};
+
+const defaultInterrupts: InterruptConfig[] = [
+  {
+    id: uid(),
+    name: "Objeção precoce",
+    trigger: "lead objeta interesse, agência ou preço antes da abertura",
+    goToNodeId: "",
+    resolveBehavior: "resume",
+  },
+];
+
 export const useFlowStore = create<FlowStore>((set, get) => ({
   flowName: "Flow sem título",
   nodes: [
@@ -167,30 +197,14 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   ],
   edges: [],
   selectedNodeId: null,
-  humanization: {
-    readingSpeed: 225,
-    typingSpeed: 40,
-    alwaysTyping: true,
-    maxConsecutive: 3,
-    sendWindowStart: "08:00",
-    sendWindowEnd: "22:00",
-    timezone: "America/Sao_Paulo",
-  },
-  interrupts: [
-    {
-      id: uid(),
-      name: "Objeção precoce",
-      trigger: "lead objeta interesse, agência ou preço antes da abertura",
-      goToNodeId: "",
-      resolveBehavior: "resume",
-    },
-  ],
+  humanization: defaultHumanization,
+  interrupts: defaultInterrupts,
+  envelope: defaultEnvelope,
 
   setFlowName: (name) => set({ flowName: name }),
   onNodesChange: (changes) =>
     set((s) => ({ nodes: applyNodeChanges(changes, s.nodes) as FlowNode[] })),
-  onEdgesChange: (changes) =>
-    set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
+  onEdgesChange: (changes) => set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
   onConnect: (conn) => set((s) => ({ edges: addEdge({ ...conn, animated: true }, s.edges) })),
 
   addNode: (kind, position) => {
@@ -201,9 +215,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
 
   updateNodeData: (id, patch) =>
     set((s) => ({
-      nodes: s.nodes.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, ...patch } } : n,
-      ),
+      nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)),
     })),
 
   deleteNode: (id) =>
@@ -215,20 +227,54 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
 
   setSelected: (id) => set({ selectedNodeId: id }),
 
-  updateHumanization: (patch) =>
-    set((s) => ({ humanization: { ...s.humanization, ...patch } })),
+  updateHumanization: (patch) => set((s) => ({ humanization: { ...s.humanization, ...patch } })),
 
   addInterrupt: () =>
     set((s) => ({
       interrupts: [
         ...s.interrupts,
-        { id: uid(), name: "Nova interrupção", trigger: "", goToNodeId: "", resolveBehavior: "resume" },
+        {
+          id: uid(),
+          name: "Nova interrupção",
+          trigger: "",
+          goToNodeId: "",
+          resolveBehavior: "resume",
+        },
       ],
     })),
   updateInterrupt: (id, patch) =>
     set((s) => ({
       interrupts: s.interrupts.map((i) => (i.id === id ? { ...i, ...patch } : i)),
     })),
-  removeInterrupt: (id) =>
-    set((s) => ({ interrupts: s.interrupts.filter((i) => i.id !== id) })),
+  removeInterrupt: (id) => set((s) => ({ interrupts: s.interrupts.filter((i) => i.id !== id) })),
+
+  loadFlow: (jsonStr) => {
+    try {
+      const result = importFlow(jsonStr);
+      const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+      const name = (parsed.flow_id as string) ?? "Flow importado";
+      set({
+        nodes: result.nodes as FlowNode[],
+        edges: result.edges,
+        envelope: result.envelope,
+        humanization: { ...defaultHumanization, ...result.humanization },
+        interrupts: result.interrupts.length > 0 ? result.interrupts : defaultInterrupts,
+        selectedNodeId: null,
+        flowName: name,
+      });
+    } catch (err) {
+      throw new Error(`Falha ao importar flow: ${(err as Error).message}`);
+    }
+  },
+
+  exportToJSON: () => {
+    const s = get();
+    return exportFlow({
+      nodes: s.nodes,
+      edges: s.edges,
+      envelope: s.envelope,
+      humanization: s.humanization,
+      interrupts: s.interrupts,
+    });
+  },
 }));
