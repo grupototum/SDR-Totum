@@ -13,13 +13,18 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
+const items: Array<{
+  title: string;
+  url: string;
+  icon: typeof Home;
+  exact?: boolean;
+}> = [
   { title: "Início", url: "/", icon: Home, exact: true },
   { title: "Pesquisa", url: "/pesquisa", icon: Search },
   { title: "Builder", url: "/builder", icon: Workflow },
   { title: "Conversas", url: "/conversations", icon: MessagesSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-] as const;
+];
 
 export function AppSidebar() {
   const { state } = useSidebar();
