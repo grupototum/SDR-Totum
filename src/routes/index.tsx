@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "@/api";
 import type { StartConversationPayload } from "@/api";
 import { toast } from "sonner";
-import { ArrowRight, Plus, Workflow, MessageCircle, BarChart3, Rocket } from "lucide-react";
+import { ArrowRight, Plus, Workflow, MessageCircle, BarChart3, Rocket, Search } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -159,6 +159,7 @@ function StartConversationModal({ onClose }: { onClose: () => void }) {
 
 // ── Nav sidebar ────────────────────────────────────────────────────────────────
 const navLinks = [
+  { to: "/pesquisa" as const, icon: Search, label: "Pesquisa" },
   { to: "/builder" as const, icon: Workflow, label: "Flow Builder" },
   { to: "/conversations" as const, icon: MessageCircle, label: "Conversas" },
   { to: "/reports" as const, icon: BarChart3, label: "Relatórios" },
@@ -248,6 +249,7 @@ function Home() {
               <div>
                 <h3 className="text-lg text-white">{label}</h3>
                 <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                  {to === "/pesquisa" && "Monte ordens de pesquisa e gere o prompt do agente"}
                   {to === "/builder" && "Crie e edite flows visuais de automação"}
                   {to === "/conversations" && "Monitore e intervenha em conversas ao vivo"}
                   {to === "/reports" && "Analise resultados e temperaturas de leads"}

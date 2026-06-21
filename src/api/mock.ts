@@ -13,6 +13,7 @@ import type {
   ReportSchema,
   ReportSummary,
   StartConversationPayload,
+  ResearchOrder,
 } from "./types";
 
 const FLOW_ID = "odonto_sdr_v1";
@@ -195,6 +196,31 @@ async function delay(ms = 300) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// ── Research orders: persistência local (localStorage + fallback memória) ─────
+// TODO(http): substituir por GET/POST /api/research-orders quando o endpoint existir.
+const RESEARCH_KEY = "totum:research-orders";
+let researchMem: ResearchOrder[] = [];
+
+function readOrders(): ResearchOrder[] {
+  if (typeof window === "undefined") return researchMem;
+  try {
+    const raw = window.localStorage.getItem(RESEARCH_KEY);
+    return raw ? (JSON.parse(raw) as ResearchOrder[]) : [];
+  } catch {
+    return researchMem;
+  }
+}
+
+function writeOrders(orders: ResearchOrder[]) {
+  researchMem = orders;
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RESEARCH_KEY, JSON.stringify(orders));
+  } catch {
+    /* quota/privacy — mantém em memória */
+  }
+}
+
 export const mockApi: ApiClient = {
   async getHealth() {
     await delay();
@@ -327,6 +353,31 @@ export const mockApi: ApiClient = {
     const conv = conversationStore.find((c) => c.id === conversationId);
     if (!conv?.report) throw new Error(`Relatório de ${conversationId} não encontrado`);
     return conv.report;
+  },
+
+  async listResearchOrders() {
+    await delay();
+    return readOrders().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async getResearchOrder(id) {
+    await delay();
+    const order = readOrders().find((o) => o.id === id);
+    if (!order) throw new Error(`Ordem ${id} não encontrada`);
+    return order;
+  },
+
+  async createResearchOrder(input) {
+    await delay();
+    const order: ResearchOrder = {
+      id: `ro-${Date.now()}`,
+      name: input.name,
+      status: "rascunho",
+      createdAt: new Date().toISOString(),
+      data: input.data,
+    };
+    writeOrders([order, ...readOrders()]);
+    return order;
   },
 };
 

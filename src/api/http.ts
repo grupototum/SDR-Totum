@@ -11,6 +11,8 @@ import type {
   ReportSchema,
   ReportSummary,
   StartConversationPayload,
+  ResearchOrder,
+  OrderData,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -58,4 +60,12 @@ export const httpApi: ApiClient = {
 
   listReports: () => req<ReportSummary[]>("/api/reports"),
   getReport: (id) => req<ReportSchema>(`/api/reports/${id}`),
+
+  listResearchOrders: () => req<ResearchOrder[]>("/api/research-orders"),
+  getResearchOrder: (id) => req<ResearchOrder>(`/api/research-orders/${id}`),
+  createResearchOrder: (input: { name: string; data: OrderData }) =>
+    req<ResearchOrder>("/api/research-orders", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };

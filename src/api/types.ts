@@ -84,6 +84,44 @@ export interface StartConversationPayload {
   };
 }
 
+// ── Research orders (página Pesquisa) ────────────────────────────────────────
+
+export interface ResearchGeography {
+  uf: string;
+  cities: string[];
+}
+
+/** Configuração de uma ordem de pesquisa de lote (montada no wizard). */
+export interface OrderData {
+  // P1 — Nicho & ICP
+  niche: string;
+  icpDescription: string;
+  naturalFit: string;
+  upsellContext: string;
+  // P2 — Geografia
+  geography: ResearchGeography[];
+  // P3 — Gate ICP + Exclusões
+  minReviews: number;
+  minRating: number;
+  requireWhatsapp: boolean;
+  instagramActiveDays: number;
+  nonIndividualOnly: boolean;
+  exclusions: string[];
+  // P4 — Tipos & Ângulos
+  opportunityTypes: string[];
+  angles: string[];
+  // P5 — Campos de saída desejados (keys do schema FASE 6)
+  outputFields: string[];
+}
+
+export interface ResearchOrder {
+  id: string;
+  name: string;
+  status: "rascunho" | "pronta" | "em_execucao" | "concluida";
+  createdAt: string;
+  data: OrderData;
+}
+
 export interface ApiClient {
   // Health
   getHealth(): Promise<{ status: string; version: string }>;
@@ -105,4 +143,9 @@ export interface ApiClient {
   // Reports
   listReports(): Promise<ReportSummary[]>;
   getReport(conversationId: string): Promise<ReportSchema>;
+
+  // Research orders
+  listResearchOrders(): Promise<ResearchOrder[]>;
+  getResearchOrder(id: string): Promise<ResearchOrder>;
+  createResearchOrder(input: { name: string; data: OrderData }): Promise<ResearchOrder>;
 }

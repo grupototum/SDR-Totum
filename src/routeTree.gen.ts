@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa.historico'
 
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PesquisaRoute = PesquisaRouteImport.update({
+  id: '/pesquisa',
+  path: '/pesquisa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -34,38 +41,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PesquisaHistoricoRoute = PesquisaHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => PesquisaRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/builder' | '/conversations' | '/reports'
+  fullPaths:
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/builder' | '/conversations' | '/reports'
-  id: '__root__' | '/' | '/builder' | '/conversations' | '/reports'
+  to:
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
+  id:
+    | '__root__'
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
   ConversationsRoute: typeof ConversationsRoute
+  PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
 }
 
@@ -76,6 +114,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pesquisa': {
+      id: '/pesquisa'
+      path: '/pesquisa'
+      fullPath: '/pesquisa'
+      preLoaderRoute: typeof PesquisaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -99,13 +144,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pesquisa/historico': {
+      id: '/pesquisa/historico'
+      path: '/historico'
+      fullPath: '/pesquisa/historico'
+      preLoaderRoute: typeof PesquisaHistoricoRouteImport
+      parentRoute: typeof PesquisaRoute
+    }
   }
 }
+
+interface PesquisaRouteChildren {
+  PesquisaHistoricoRoute: typeof PesquisaHistoricoRoute
+}
+
+const PesquisaRouteChildren: PesquisaRouteChildren = {
+  PesquisaHistoricoRoute: PesquisaHistoricoRoute,
+}
+
+const PesquisaRouteWithChildren = PesquisaRoute._addFileChildren(
+  PesquisaRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
   ConversationsRoute: ConversationsRoute,
+  PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport

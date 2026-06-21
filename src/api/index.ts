@@ -17,6 +17,9 @@ export type {
   ReportSchema,
   ReportSummary,
   StartConversationPayload,
+  OrderData,
+  ResearchGeography,
+  ResearchOrder,
 } from "./types";
 
 const isMock = !import.meta.env.VITE_API_BASE_URL;
