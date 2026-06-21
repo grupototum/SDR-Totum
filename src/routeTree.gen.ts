@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PesquisaIndexRouteImport } from './routes/pesquisa/index'
+import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa/historico'
 
 const BuilderRoute = BuilderRouteImport.update({
   id: '/builder',
@@ -22,31 +24,49 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PesquisaIndexRoute = PesquisaIndexRouteImport.update({
+  id: '/pesquisa/',
+  path: '/pesquisa/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PesquisaHistoricoRoute = PesquisaHistoricoRouteImport.update({
+  id: '/pesquisa/historico',
+  path: '/pesquisa/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa': typeof PesquisaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/builder'
+  fullPaths: '/' | '/builder' | '/pesquisa/historico' | '/pesquisa/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/builder'
-  id: '__root__' | '/' | '/builder'
+  to: '/' | '/builder' | '/pesquisa/historico' | '/pesquisa'
+  id: '__root__' | '/' | '/builder' | '/pesquisa/historico' | '/pesquisa/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
+  PesquisaHistoricoRoute: typeof PesquisaHistoricoRoute
+  PesquisaIndexRoute: typeof PesquisaIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,13 +85,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pesquisa/': {
+      id: '/pesquisa/'
+      path: '/pesquisa'
+      fullPath: '/pesquisa/'
+      preLoaderRoute: typeof PesquisaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pesquisa/historico': {
+      id: '/pesquisa/historico'
+      path: '/pesquisa/historico'
+      fullPath: '/pesquisa/historico'
+      preLoaderRoute: typeof PesquisaHistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
+  PesquisaHistoricoRoute: PesquisaHistoricoRoute,
+  PesquisaIndexRoute: PesquisaIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

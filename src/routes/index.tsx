@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TotumButton } from "@/components/ui/totum-button";
-import { ArrowRight, FileUp, Plus, Workflow } from "lucide-react";
+import { ArrowRight, FileUp, Plus, Search, Workflow } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -59,6 +59,11 @@ function Home() {
             onClick={() => toast.info("Importação de script em breve")}
           >
             <FileUp className="size-4" /> Importar Script
+          </TotumButton>
+          <TotumButton asChild variant="outline" size="lg">
+            <Link to="/pesquisa">
+              <Search className="size-4" /> Nova Pesquisa
+            </Link>
           </TotumButton>
         </div>
       </section>
