@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Search, Workflow, MessagesSquare, BarChart3 } from "lucide-react";
+import logo from "@/assets/sdr-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -35,12 +36,11 @@ export function AppSidebar() {
         className="h-14 flex-row items-center gap-2 px-3"
         style={{ boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.06)" }}
       >
-        <div
-          className="flex size-8 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "linear-gradient(135deg,#e3433e,#da2128)" }}
-        >
-          <span className="text-white text-sm leading-none">T</span>
-        </div>
+        <img
+          src={logo}
+          alt="SDR Totum"
+          className="size-8 shrink-0 object-contain"
+        />
         {!collapsed && (
           <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>
         )}
