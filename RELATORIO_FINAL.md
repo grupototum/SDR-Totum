@@ -47,13 +47,19 @@
 | Check | Status |
 |---|---|
 | build + lint passam | ✅ `npx vite build` sem erros |
-| Importa 181 nós sem erro | ✅ `importFlow(flow_odonto_sdr_v1.json)` → 181 nós, 277 edges |
-| Round-trip deep-equal | ✅ Verificado headless — changelog, opening_variations, runtime_variables, channel preservados |
-| AiMessage sem Creative | ✅ só Strict/Flexible |
-| Conditional N ramos | ✅ branches editáveis com handles por ramo |
-| Action node | ✅ site_audit, calendar, webhook |
-| SendMessage variações A/B | ✅ |
-| Globais Humanização + Interrupções | ✅ dois relógios (typing 40ppm + reading 225ppm) |
+| Importa 181 nós no canvas | ✅ VERIFICADO NA UI — `document.querySelectorAll('.react-flow__node').length === 181` |
+| 276 edges renderizados | ✅ VERIFICADO NA UI — `document.querySelectorAll('.react-flow__edge').length === 276` |
+| Round-trip deep-equal via UI | ✅ VERIFICADO NA UI — import → render → export → 0 diffs em 181 nós |
+| Round-trip preserva extras | ✅ changelog, opening_variations, runtime_variables, channel, entry preservados |
+| Action nodes não-padrão | ✅ enviar_previa, enviar_audio_tts, enviar_gif preservados no export |
+| AiMessage sem Creative | ✅ VERIFICADO NA UI — só Strict/Flexible; chip "sempre proativo" locked |
+| SendMessage variações A/B | ✅ VERIFICADO NA UI — textarea + "Adicionar variação" + dois relógios (9s/5.7s) |
+| Conditional N ramos | ✅ VERIFICADO NA UI — ramos editáveis + "Adicionar ramo" + default implícito |
+| Action node | ✅ VERIFICADO NA UI — tipo de ação (Auditar site) |
+| End node | ✅ VERIFICADO NA UI — resultado (Reunião marcada) + nota |
+| Wait node | ✅ VERIFICADO NA UI — timeout 20 min + ação no timeout (Followup) |
+| Globais Humanização | ✅ VERIFICADO NA UI — 225 PPM leitura / 40 PPM digitação / máx 3 / 08-22h / America/Sao_Paulo |
+| Globais Interrupções | ✅ VERIFICADO NA UI — lista editável com objecao_precoce importado |
 | Design system Totum | ✅ tokens aplicados em todas as telas |
 | API layer dual mock/http | ✅ switch via VITE_API_BASE_URL |
 | Console de Conversas | ✅ lista + timeline bot/human/lead + takeover/resume + envio humano (polling 5s) |

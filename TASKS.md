@@ -61,14 +61,38 @@ Estado em disco — fonte de verdade do progresso. Atualizar a cada tarefa.
 
 ---
 
+## T11 — Verificação visual: canvas + formulários de nó na UI
+
+**Critério de aceite:** Verificado via browse headless:
+- [x] Canvas renderiza 181 nós após import (confirmado via `querySelectorAll`)
+- [x] 276 edges renderizados
+- [x] SendMessage: textarea + variações A/B + dois relógios de delay
+- [x] Conditional: N ramos + "Adicionar ramo" + default implícito
+- [x] AiMessage: Strict/Flexible (sem Creative) + "sempre proativo" locked
+- [x] Action: tipo de ação
+- [x] End: resultado + nota
+- [x] Wait: timeout + ação no timeout
+- [x] Globais Humanização: 225 PPM / 40 PPM / máx 3 / 08-22h / America/Sao_Paulo
+- [x] Globais Interrupções: lista editável com objecao_precoce
+
+- [x] CONCLUÍDA — verificação visual completa via browse
+
+## T12 — Round-trip validado na UI
+
+**Critério de aceite:** import → render → export → 0 diffs em 181 nós
+
+- [x] CONCLUÍDA — 0 issues em 181 nós; action nodes não-padrão preservados; changelog/opening_variations/runtime_variables preservados
+
+---
+
 ## DEFINITION OF DONE — STATUS
 
 1. [x] build + lint passam
-2. [x] Importa flow_odonto_sdr_v1.json (181 nós) sem erro
-3. [x] Round-trip sem perda (deep-equal) — changelog/opening_variations/loop_guards
-4. [x] AiMessage sem "Creative". Conditional N ramos. Existe Action. SendMessage com variações. Globais (Humanização + Interrupções)
+2. [x] Importa flow_odonto_sdr_v1.json (181 nós + 276 edges) no canvas — VERIFICADO NA UI
+3. [x] Round-trip sem perda (deep-equal) — VERIFICADO NA UI — 0 diffs
+4. [x] AiMessage sem "Creative" — VERIFICADO NA UI. Conditional N ramos — VERIFICADO NA UI. Action, SendMessage com variações, End, Wait — VERIFICADO NA UI. Globais (Humanização + Interrupções) — VERIFICADO NA UI
 5. [x] Design system Totum aplicado
 6. [x] API layer mock/http dual
 7. [x] Console de Conversas + Relatórios + Disparo
 
-✅ DEFINITION OF DONE ATINGIDA
+✅ DEFINITION OF DONE ATINGIDA — VERIFICAÇÃO VISUAL COMPLETA
