@@ -12,10 +12,8 @@ const totumButtonVariants = cva(
           "bg-[#da2128] text-white shadow-[var(--shadow-btn-primary)] hover:shadow-[var(--shadow-halo-red)]",
         secondary:
           "text-white bg-[image:var(--gradient-secondary)] shadow-[var(--shadow-btn-primary)] hover:brightness-110",
-        ghost:
-          "bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)]",
-        outline:
-          "bg-transparent text-white card-shadow hover:bg-[hsla(0,0%,100%,0.05)]",
+        ghost: "bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)]",
+        outline: "bg-transparent text-white card-shadow hover:bg-[hsla(0,0%,100%,0.05)]",
       },
       size: {
         sm: "h-8 px-4 text-xs",
@@ -28,8 +26,7 @@ const totumButtonVariants = cva(
 );
 
 export interface TotumButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof totumButtonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof totumButtonVariants> {
   asChild?: boolean;
 }
 
@@ -37,7 +34,11 @@ export const TotumButton = React.forwardRef<HTMLButtonElement, TotumButtonProps>
   ({ className, variant, size, asChild, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp ref={ref} className={cn(totumButtonVariants({ variant, size, className }))} {...props} />
+      <Comp
+        ref={ref}
+        className={cn(totumButtonVariants({ variant, size, className }))}
+        {...props}
+      />
     );
   },
 );

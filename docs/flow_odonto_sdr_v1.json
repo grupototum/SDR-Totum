@@ -1,0 +1,2275 @@
+{
+  "flow_id": "odonto_sdr_v1",
+  "version": "1.1.1",
+  "source_script": "SCRIPT_SDR_v2.5",
+  "niche": "odontologia",
+  "channel": "whatsapp",
+  "required_variables": [
+    "NOME_EMPRESA",
+    "NOME_DONO",
+    "ESPECIALIDADE",
+    "CIDADE",
+    "QTD_AVALIACOES",
+    "CONTEUDO_RECENTE",
+    "CONCORRENTE_1",
+    "CONCORRENTE_2",
+    "CONCORRENTE_3",
+    "tipo_clinica"
+  ],
+  "runtime_variables": [
+    "NOME_DECISOR",
+    "NOME_DECISOR_2",
+    "CAUSA",
+    "CONSEQUENCIA",
+    "NOTA_SEO",
+    "CATEGORIA_PRINCIPAL",
+    "HORA_CALCULADA",
+    "NOME_SDR",
+    "LINK_AGENDA",
+    "PONTO_RETORNO",
+    "tem_site"
+  ],
+  "globals": {
+    "humanization": {
+      "typing_indicator": "always",
+      "typing_speed_wpm": 40,
+      "typing_duration_formula": "min((word_count/40)*60, 8) + random(0.5,1.5)",
+      "reading_speed_wpm": 225,
+      "read_gap_formula": "(word_count/225)*60 + random(1,3)",
+      "max_consecutive_messages": 3,
+      "quiet_hours": [
+        "22:00",
+        "08:00"
+      ],
+      "timezone": "America/Sao_Paulo"
+    },
+    "interrupts": [
+      {
+        "id": "objecao_precoce",
+        "trigger": "lead levanta objeção real (não interesse | já tem agência | preço) ANTES de g09/g12",
+        "goto": "ob_route",
+        "return": "{PONTO_RETORNO}",
+        "applies_before": [
+          "g09",
+          "g12"
+        ],
+        "note": "regra 16 — marca o nó atual como PONTO_RETORNO, resolve em ob_route, retorna pra cá. Objeção TARDIA (em g09/g12) retorna pra prévia, não pra cá."
+      }
+    ],
+    "report_schema": "hermes_report",
+    "model_defaults": {
+      "ai_message": "gemini-2.5-flash",
+      "classifier": "groq-llama-3.3-70b"
+    },
+    "model_strategy": "Classificação (nós conditional) = Groq (grátis/barato). Geração de texto (nós ai_message) = Gemini 2.5 Flash via API KEY. NUNCA usar Claude Max OAuth no bot (risco de ToS).",
+    "loop_guards": {
+      "objection_block": {
+        "block": "objecoes",
+        "max_iterations": 2,
+        "on_exceed": {
+          "goto": "end_objecao_cap"
+        },
+        "note": "Maestro 2026-06-20 (Amanda crítico #2): conta visitas ao bloco objecoes por conversa. Na 3ª, encerra frio (não insistir). Contador = mecânica de engine (Paulo)."
+      }
+    }
+  },
+  "entry": "msg01",
+  "nodes": [
+    {
+      "id": "msg01",
+      "ref": "MSG-01",
+      "type": "send_message",
+      "block": "abertura",
+      "variants": [
+        {
+          "id": "01A",
+          "when": "pesquisa identificou 1 decisor",
+          "text": "Vi vocês aqui nas avaliações de {{ESPECIALIDADE}} na região. {{QTD_AVALIACOES}} avaliações. Aí é a {{NOME_EMPRESA}}, do {{NOME_DONO}}?"
+        },
+        {
+          "id": "01B",
+          "when": "pesquisa identificou 2 decisores ({{NOME_DECISOR_2}} preenchido)",
+          "text": "Vi vocês aqui nas avaliações de {{ESPECIALIDADE}} na região. {{QTD_AVALIACOES}} avaliações. Aí é a {{NOME_EMPRESA}}? Poderia falar com {{NOME_DONO}} ou {{NOME_DECISOR_2}}?"
+        }
+      ],
+      "delay": "auto",
+      "next": "g01"
+    },
+    {
+      "id": "g01",
+      "ref": "G-01",
+      "type": "wait",
+      "block": "abertura",
+      "timeout": "20min",
+      "on_reply": "msg02",
+      "on_timeout": "msg02"
+    },
+    {
+      "id": "msg02",
+      "ref": "MSG-02",
+      "type": "send_message",
+      "block": "abertura",
+      "variants": [
+        {
+          "id": "02A",
+          "when": "padrão",
+          "text": "Estava pesquisando clínicas de {{ESPECIALIDADE}} aqui em {{CIDADE}} e a de vocês me chamou atenção."
+        },
+        {
+          "id": "02B",
+          "when": "variação A/B (mais tensão)",
+          "text": "Estava pesquisando clínicas de {{ESPECIALIDADE}} aqui em {{CIDADE}} e a de vocês me chamou atenção por um motivo específico."
+        }
+      ],
+      "delay": "auto",
+      "next": "msg03"
+    },
+    {
+      "id": "msg03",
+      "ref": "MSG-03",
+      "type": "send_message",
+      "block": "abertura",
+      "variants": [
+        {
+          "id": "03A",
+          "when": "padrão",
+          "text": "Vi um conteúdo recente de vocês sobre {{CONTEUDO_RECENTE}}. Bem diferente do que outras clínicas costumam postar."
+        },
+        {
+          "id": "03B",
+          "when": "variação A/B",
+          "text": "Vi um conteúdo de vocês sobre {{CONTEUDO_RECENTE}}. Sinceramente, achei melhor do que muito do que eu tinha visto por aqui."
+        }
+      ],
+      "delay": "auto",
+      "next": "msg04"
+    },
+    {
+      "id": "msg04",
+      "ref": "MSG-04",
+      "type": "send_message",
+      "block": "abertura",
+      "text": "Daí fui pesquisar um pouco mais e encontrei mais de {{QTD_AVALIACOES}} avaliações no Google.",
+      "delay": "auto",
+      "next": "msg05"
+    },
+    {
+      "id": "msg05",
+      "ref": "MSG-05",
+      "type": "send_message",
+      "block": "abertura",
+      "text": "{{QTD_AVALIACOES}} avaliações e uma nota alta. Isso é reputação construída de verdade. Poucas clínicas chegam nesse nível. Só fiquei com uma dúvida. 🤔",
+      "delay": "auto",
+      "next": "pk01"
+    },
+    {
+      "id": "pk01",
+      "ref": "PK-01",
+      "type": "send_message",
+      "block": "abertura",
+      "variants": [
+        {
+          "id": "01A",
+          "when": "padrão",
+          "text": "Vocês têm algum site ou página própria hoje?"
+        },
+        {
+          "id": "01B",
+          "when": "variação A/B",
+          "text": "Vocês têm site próprio hoje ou ficam mais pelo Instagram mesmo?"
+        }
+      ],
+      "delay": "auto",
+      "next": "wpk01"
+    },
+    {
+      "id": "wpk01",
+      "ref": "PK-01",
+      "type": "wait",
+      "block": "abertura",
+      "timeout": "30min",
+      "on_reply": "clf_site",
+      "on_timeout": "clf_site"
+    },
+    {
+      "id": "clf_site",
+      "ref": "PK-01",
+      "type": "conditional",
+      "block": "abertura",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "tem site / vai mandar link",
+          "goto": "msg06",
+          "set": {
+            "tem_site": true
+          }
+        },
+        {
+          "when": "não tem site / só Instagram",
+          "goto": "msg09",
+          "set": {
+            "tem_site": false
+          }
+        }
+      ],
+      "default": "msg09"
+    },
+    {
+      "id": "msg06",
+      "ref": "MSG-06",
+      "type": "send_message",
+      "block": "rk01_site_sim",
+      "variants": [
+        {
+          "id": "06A",
+          "when": "padrão",
+          "text": "Ah, legal! Não tinha achado não."
+        },
+        {
+          "id": "06B",
+          "when": "variação A/B",
+          "text": "Ah, que bom! Não tinha encontrado não."
+        }
+      ],
+      "delay": "auto",
+      "next": "msg07"
+    },
+    {
+      "id": "msg07",
+      "ref": "MSG-07",
+      "type": "send_message",
+      "block": "rk01_site_sim",
+      "text": "Me manda o link para eu dar uma olhada rapidinho?",
+      "delay": "auto",
+      "next": "g02"
+    },
+    {
+      "id": "g02",
+      "ref": "G-02",
+      "type": "wait",
+      "block": "rk01_site_sim",
+      "timeout": "1h",
+      "on_reply": "msg08",
+      "on_timeout": "msg08"
+    },
+    {
+      "id": "msg08",
+      "ref": "MSG-08",
+      "type": "send_message",
+      "block": "rk01_site_sim",
+      "text": "Obrigado! Vou dar uma olhadinha.",
+      "delay": "auto",
+      "next": "sys_audit"
+    },
+    {
+      "id": "sys_audit",
+      "ref": "[SISTEMA RK-01] / G-03",
+      "type": "action",
+      "block": "rk01_site_sim",
+      "action": "site_audit",
+      "detail": "Análise visual, copy, SEO, percepção 10s, comparação com {{CONCORRENTE_1}},{{CONCORRENTE_2}},{{CONCORRENTE_3}}. Pausa o fluxo até concluir.",
+      "outputs": [
+        "CAUSA",
+        "CONSEQUENCIA",
+        "NOTA_SEO",
+        "CATEGORIA_PRINCIPAL"
+      ],
+      "next": "msg12",
+      "on_fail": "msg12"
+    },
+    {
+      "id": "msg09",
+      "ref": "MSG-09/10",
+      "type": "send_message",
+      "block": "rk02_site_nao",
+      "text": "Ah, entendi. Bom saber.",
+      "delay": "auto",
+      "next": "g04"
+    },
+    {
+      "id": "g04",
+      "ref": "G-04",
+      "type": "wait",
+      "block": "rk02_site_nao",
+      "timeout": "10s",
+      "on_reply": "msg12",
+      "on_timeout": "msg12",
+      "note": "delay curto de 10s; 'Bom saber' cria micro-tensão fechada na MSG-31."
+    },
+    {
+      "id": "msg12",
+      "ref": "MSG-12",
+      "type": "send_message",
+      "block": "qualificacao",
+      "text": "Só para eu não tomar seu tempo à toa...",
+      "delay": "auto",
+      "next": "pk02"
+    },
+    {
+      "id": "pk02",
+      "ref": "PK-02",
+      "type": "send_message",
+      "block": "qualificacao",
+      "variants": [
+        {
+          "id": "02A",
+          "when": "padrão",
+          "text": "É você quem cuida da parte de marketing e divulgação da clínica?"
+        },
+        {
+          "id": "02B",
+          "when": "variação A/B (tira pressão)",
+          "text": "Quem na clínica costuma cuidar dessa parte de divulgação?"
+        }
+      ],
+      "delay": "auto",
+      "next": "wpk02"
+    },
+    {
+      "id": "wpk02",
+      "ref": "PK-02",
+      "type": "wait",
+      "block": "qualificacao",
+      "timeout": "1h",
+      "on_reply": "clf_decisor",
+      "on_timeout": "clf_decisor"
+    },
+    {
+      "id": "clf_decisor",
+      "ref": "PK-02",
+      "type": "conditional",
+      "block": "qualificacao",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "NÃO é o decisor (recepção/secretária/'quem decide é o doutor')",
+          "goto": "msg13"
+        },
+        {
+          "when": "É o decisor ('sou eu','sou o dono','pode falar')",
+          "goto": "g07_route"
+        }
+      ],
+      "default": "msg13"
+    },
+    {
+      "id": "msg13",
+      "ref": "MSG-13",
+      "type": "send_message",
+      "block": "rk03_nao_decisor",
+      "text": "Ok...",
+      "delay": "auto",
+      "next": "msg14"
+    },
+    {
+      "id": "msg14",
+      "ref": "MSG-14",
+      "type": "send_message",
+      "block": "rk03_nao_decisor",
+      "variants": [
+        {
+          "id": "14A",
+          "when": "padrão",
+          "text": "Posso te mandar um áudio rápido para encaminhar pro {{NOME_DECISOR}}?"
+        },
+        {
+          "id": "14B",
+          "when": "variação A/B",
+          "text": "Tem como eu te mandar um áudio rápido pra você encaminhar pro {{NOME_DECISOR}}?"
+        }
+      ],
+      "delay": "auto",
+      "next": "msg15"
+    },
+    {
+      "id": "msg15",
+      "ref": "MSG-15",
+      "type": "send_message",
+      "block": "rk03_nao_decisor",
+      "text": "Tenho certeza que vai gostar do que encontrei sobre a clínica.",
+      "delay": "auto",
+      "next": "g05"
+    },
+    {
+      "id": "g05",
+      "ref": "G-05",
+      "type": "wait",
+      "block": "rk03_nao_decisor",
+      "timeout": "30min",
+      "on_reply": "clf_g05",
+      "on_timeout": "msg16"
+    },
+    {
+      "id": "clf_g05",
+      "ref": "G-05",
+      "type": "conditional",
+      "block": "rk03_nao_decisor",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, aceita encaminhar",
+          "goto": "msg43"
+        },
+        {
+          "when": "NÃO encaminha",
+          "goto": "msg16"
+        }
+      ],
+      "default": "msg16"
+    },
+    {
+      "id": "msg16",
+      "ref": "MSG-16",
+      "type": "send_message",
+      "block": "rk04_recusa",
+      "text": "Tudo bem! Você sabe se teria alguma forma de eu falar diretamente com {{NOME_DECISOR}}?",
+      "delay": "auto",
+      "next": "g06"
+    },
+    {
+      "id": "g06",
+      "ref": "G-06",
+      "type": "wait",
+      "block": "rk04_recusa",
+      "timeout": "1h",
+      "on_reply": "clf_g06",
+      "on_timeout": "msg17"
+    },
+    {
+      "id": "clf_g06",
+      "ref": "G-06",
+      "type": "conditional",
+      "block": "rk04_recusa",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "fornece contato direto do decisor",
+          "goto": "end_contato_humano"
+        },
+        {
+          "when": "recusa fornecer",
+          "goto": "msg17"
+        }
+      ],
+      "default": "msg17"
+    },
+    {
+      "id": "msg17",
+      "ref": "MSG-17",
+      "type": "send_message",
+      "block": "rk04_recusa",
+      "text": "Sem problema! Pode guardar meu contato caso ele/ela tenha curiosidade depois.",
+      "delay": "auto",
+      "next": "end_encerrado_atendente"
+    },
+    {
+      "id": "g07_route",
+      "ref": "G-07/RK-05",
+      "type": "conditional",
+      "block": "decisor",
+      "classifier": "rule",
+      "branches": [
+        {
+          "when": "{{tem_site}} == true (veio de RK-01)",
+          "goto": "msg18"
+        },
+        {
+          "when": "{{tem_site}} == false (veio de RK-02)",
+          "goto": "msg31"
+        }
+      ],
+      "default": "msg31"
+    },
+    {
+      "id": "msg18",
+      "ref": "MSG-18 (CAUSA)",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "{{CAUSA}}",
+      "delay": "auto",
+      "next": "msg19",
+      "note": "CAUSA inserida pelo subagente de análise conforme CATEGORIA_PRINCIPAL (UX/SEO/Percepção/Mobile). SEO 9-10: não citar nota, pivotar."
+    },
+    {
+      "id": "msg19",
+      "ref": "MSG-19 (CONSEQUENCIA)",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "{{CONSEQUENCIA}}",
+      "delay": "auto",
+      "next": "msg20"
+    },
+    {
+      "id": "msg20",
+      "ref": "MSG-20",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Foi exatamente isso que chamou minha atenção.",
+      "delay": "auto",
+      "next": "msg21"
+    },
+    {
+      "id": "msg21",
+      "ref": "MSG-21",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Quando alguém pesquisa {{ESPECIALIDADE}} na região, dificilmente pesquisa uma única clínica. Compara com {{CONCORRENTE_1}}, {{CONCORRENTE_2}}, {{CONCORRENTE_3}}.",
+      "delay": "auto",
+      "next": "msg22"
+    },
+    {
+      "id": "msg22",
+      "ref": "MSG-22",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "E quem ganha essa comparação nem sempre é a melhor clínica. Ganha quem passa mais confiança antes do primeiro contato.",
+      "delay": "auto",
+      "next": "msg23"
+    },
+    {
+      "id": "msg23",
+      "ref": "MSG-23",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Vocês já fizeram a parte mais difícil que é construir confiança. O próximo passo é garantir que quem chega pela primeira vez perceba isso antes de comparar vocês com outras opções.",
+      "delay": "auto",
+      "next": "msg24"
+    },
+    {
+      "id": "msg24",
+      "ref": "MSG-24",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Tem lógica isso que eu falei?",
+      "delay": "auto",
+      "next": "g08"
+    },
+    {
+      "id": "g08",
+      "ref": "G-08",
+      "type": "wait",
+      "block": "bloco_3b",
+      "timeout": "20min",
+      "on_reply": "clf_g08",
+      "on_timeout": "msg24b"
+    },
+    {
+      "id": "clf_g08",
+      "ref": "G-08",
+      "type": "conditional",
+      "block": "bloco_3b",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "confirma / concorda",
+          "goto": "msg25"
+        },
+        {
+          "when": "questiona / tem dúvida",
+          "goto": "ai_duvida_g08"
+        }
+      ],
+      "default": "msg25"
+    },
+    {
+      "id": "ai_duvida_g08",
+      "ref": "G-08",
+      "type": "ai_message",
+      "block": "bloco_3b",
+      "mode": "strict",
+      "model": "gemini-2.5-flash",
+      "proactive": true,
+      "instruction": "Responder a dúvida do lead em UMA mensagem curta e voltar a conduzir.",
+      "limits": "Não promete preço, não inventa rota.",
+      "next": "msg25"
+    },
+    {
+      "id": "msg24b",
+      "ref": "MSG-24 (reenvio)",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Pergunto porque, dependendo da resposta, o que tenho pra mostrar muda bastante.",
+      "delay": "auto",
+      "next": "g08"
+    },
+    {
+      "id": "msg25",
+      "ref": "MSG-25",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Foi justamente por isso que resolvi entrar em contato.",
+      "delay": "auto",
+      "next": "msg26"
+    },
+    {
+      "id": "msg26",
+      "ref": "MSG-26",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "A gente trabalha com uma empresa por região nesse projeto. Antes de conversar com outras clínicas daqui, queria te mostrar uma oportunidade que enxerguei na de vocês.",
+      "delay": "auto",
+      "next": "msg27"
+    },
+    {
+      "id": "msg27",
+      "ref": "MSG-27",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Poucas clínicas que analisei até agora me passaram tanto potencial quanto a de vocês. Tenho interesse real em fazer esse projeto funcionar aqui.",
+      "delay": "auto",
+      "next": "msg28"
+    },
+    {
+      "id": "msg28",
+      "ref": "MSG-28",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Posso te mandar uma prévia sem compromisso?",
+      "delay": "auto",
+      "next": "g09"
+    },
+    {
+      "id": "g09",
+      "ref": "G-09",
+      "type": "wait",
+      "block": "bloco_3b",
+      "timeout": "20min",
+      "on_reply": "clf_g09",
+      "on_timeout": "ob_route"
+    },
+    {
+      "id": "clf_g09",
+      "ref": "G-09",
+      "type": "conditional",
+      "block": "bloco_3b",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, aceita a prévia",
+          "goto": "msg29"
+        },
+        {
+          "when": "objeção (não interesse | já tem agência | preço)",
+          "goto": "ob_route",
+          "set": {
+            "PONTO_RETORNO": "msg29"
+          }
+        }
+      ],
+      "default": "ob_route"
+    },
+    {
+      "id": "msg29",
+      "ref": "MSG-29",
+      "type": "send_message",
+      "block": "bloco_3b",
+      "text": "Ótimo! Vou preparar aqui. Precisa pra essa semana ou pode ser nas próximas 24 horas?",
+      "delay": "auto",
+      "next": "g10"
+    },
+    {
+      "id": "g10",
+      "ref": "G-10",
+      "type": "wait",
+      "block": "bloco_3b",
+      "timeout": "1h",
+      "on_reply": "clf_g10",
+      "on_timeout": "msg30b"
+    },
+    {
+      "id": "clf_g10",
+      "ref": "G-10",
+      "type": "conditional",
+      "block": "bloco_3b",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "urgente / hoje / quanto antes",
+          "goto": "msg30a",
+          "set": {
+            "prazo": "4h"
+          }
+        },
+        {
+          "when": "pode esperar / amanhã",
+          "goto": "msg30b",
+          "set": {
+            "prazo": "24h"
+          }
+        },
+        {
+          "when": "pergunta quanto demora",
+          "goto": "msg30c"
+        }
+      ],
+      "default": "msg30b"
+    },
+    {
+      "id": "msg30a",
+      "ref": "MSG-30A",
+      "type": "send_message",
+      "block": "previa",
+      "text": "Perfeito! Te mando até às {{HORA_CALCULADA}}. Fique de olho aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:AGUARDANDO_ENVIO_PREVIA"
+      ],
+      "next": "act_previa"
+    },
+    {
+      "id": "msg30b",
+      "ref": "MSG-30B",
+      "type": "send_message",
+      "block": "previa",
+      "text": "Combinado! Te mando até amanhã. Não consigo ir além de 24 horas sem comprometer o que vou te mostrar.",
+      "delay": "auto",
+      "effects": [
+        "crm:AGUARDANDO_ENVIO_PREVIA"
+      ],
+      "next": "act_previa"
+    },
+    {
+      "id": "msg30c",
+      "ref": "MSG-30C",
+      "type": "send_message",
+      "block": "previa",
+      "text": "Depende da sua prioridade. Se precisar ainda hoje, consigo em até 4 horas. Se puder esperar, entrego em até 24 horas. Estou trabalhando com mais empresas da região ao mesmo tempo, então não consigo garantir além disso.",
+      "delay": "auto",
+      "effects": [
+        "crm:AGUARDANDO_ENVIO_PREVIA"
+      ],
+      "next": "act_previa"
+    },
+    {
+      "id": "msg31",
+      "ref": "MSG-31",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Foi justamente isso que me chamou atenção.",
+      "delay": "auto",
+      "next": "msg32"
+    },
+    {
+      "id": "msg32",
+      "ref": "MSG-32",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Vocês já fizeram a parte mais difícil que é construir confiança. As avaliações, os conteúdos e a reputação da clínica mostram isso.",
+      "delay": "auto",
+      "next": "msg33"
+    },
+    {
+      "id": "msg33",
+      "ref": "MSG-33",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Só que quem ainda não conhece a clínica nem sempre consegue perceber isso na primeira pesquisa.",
+      "delay": "auto",
+      "next": "msg34"
+    },
+    {
+      "id": "msg34",
+      "ref": "MSG-34",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "O cliente decide antes de te chamar. E é por isso que a maioria das empresas perde clientes antes da conversa começar.",
+      "delay": "auto",
+      "next": "msg35"
+    },
+    {
+      "id": "msg35",
+      "ref": "MSG-35",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Não porque entregam um serviço ruim. Mas porque quem está pesquisando não consegue enxergar rapidamente o que faz aquela empresa ser a escolha certa.",
+      "delay": "auto",
+      "next": "msg36"
+    },
+    {
+      "id": "msg36",
+      "ref": "MSG-36",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Foi exatamente essa sensação que tive analisando a clínica de vocês.",
+      "delay": "auto",
+      "next": "msg37"
+    },
+    {
+      "id": "msg37",
+      "ref": "MSG-37",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Tem lógica isso que eu falei?",
+      "delay": "auto",
+      "next": "g11"
+    },
+    {
+      "id": "g11",
+      "ref": "G-11",
+      "type": "wait",
+      "block": "bloco_3a",
+      "timeout": "20min",
+      "on_reply": "clf_g11",
+      "on_timeout": "msg37b"
+    },
+    {
+      "id": "clf_g11",
+      "ref": "G-11",
+      "type": "conditional",
+      "block": "bloco_3a",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "confirma / concorda",
+          "goto": "msg38"
+        },
+        {
+          "when": "questiona / dúvida",
+          "goto": "ai_duvida_g11"
+        }
+      ],
+      "default": "msg38"
+    },
+    {
+      "id": "ai_duvida_g11",
+      "ref": "G-11",
+      "type": "ai_message",
+      "block": "bloco_3a",
+      "mode": "strict",
+      "model": "gemini-2.5-flash",
+      "proactive": true,
+      "instruction": "Responder a dúvida em 1 mensagem curta e seguir.",
+      "limits": "Não promete preço, não inventa rota.",
+      "next": "msg38"
+    },
+    {
+      "id": "msg37b",
+      "ref": "MSG-37 (reenvio)",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Pergunto porque quero ter certeza de estar falando do jeito certo antes de continuar.",
+      "delay": "auto",
+      "next": "g11"
+    },
+    {
+      "id": "msg38",
+      "ref": "MSG-38",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Foi justamente por isso que resolvi entrar em contato.",
+      "delay": "auto",
+      "next": "impl_check"
+    },
+    {
+      "id": "msg39",
+      "ref": "MSG-39",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "A gente trabalha com uma empresa por região nesse projeto. Antes de conversar com outras clínicas daqui, queria te mostrar uma oportunidade que enxerguei na de vocês.",
+      "delay": "auto",
+      "next": "msg40"
+    },
+    {
+      "id": "msg40",
+      "ref": "MSG-40",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Poucas clínicas que analisei até agora me passaram tanto potencial quanto a de vocês. Tenho interesse real em fazer esse projeto funcionar aqui.",
+      "delay": "auto",
+      "next": "msg41"
+    },
+    {
+      "id": "msg41",
+      "ref": "MSG-41",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Posso te mandar uma prévia sem compromisso?",
+      "delay": "auto",
+      "next": "g12"
+    },
+    {
+      "id": "g12",
+      "ref": "G-12",
+      "type": "wait",
+      "block": "bloco_3a",
+      "timeout": "20min",
+      "on_reply": "clf_g12",
+      "on_timeout": "ob_route"
+    },
+    {
+      "id": "clf_g12",
+      "ref": "G-12",
+      "type": "conditional",
+      "block": "bloco_3a",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, aceita a prévia",
+          "goto": "msg42"
+        },
+        {
+          "when": "objeção",
+          "goto": "ob_route",
+          "set": {
+            "PONTO_RETORNO": "msg42"
+          }
+        }
+      ],
+      "default": "ob_route"
+    },
+    {
+      "id": "msg42",
+      "ref": "MSG-42",
+      "type": "send_message",
+      "block": "bloco_3a",
+      "text": "Ótimo! Vou preparar aqui. Precisa pra essa semana ou pode ser nas próximas 24 horas?",
+      "delay": "auto",
+      "next": "g10",
+      "note": "G-13 reutiliza a lógica de G-10 (MSG-30A/B/C)."
+    },
+    {
+      "id": "act_previa",
+      "ref": "[SISTEMA prévia]",
+      "type": "action",
+      "block": "previa",
+      "action": "enviar_previa",
+      "detail": "PREVIEW agent monta e envia a prévia personalizada (HTML/print). Depois aguarda resposta positiva do lead.",
+      "next": "wait_previa",
+      "on_fail": "wait_previa"
+    },
+    {
+      "id": "wait_previa",
+      "ref": "pós-prévia",
+      "type": "wait",
+      "block": "previa",
+      "timeout": "24h",
+      "on_reply": "clf_previa",
+      "on_timeout": "g34_in"
+    },
+    {
+      "id": "clf_previa",
+      "ref": "pós-prévia",
+      "type": "conditional",
+      "block": "previa",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "resposta positiva à prévia ('gostei','quero','ficou bom','como funciona')",
+          "goto": "g34_in"
+        },
+        {
+          "when": "objeção / dúvida",
+          "goto": "ob_route"
+        }
+      ],
+      "default": "g34_in"
+    },
+    {
+      "id": "msg43",
+      "ref": "MSG-43",
+      "type": "send_message",
+      "block": "audio_via_atendente",
+      "text": "Ótimo! Vou te mandar aqui para encaminhar para ele/ela, ok?",
+      "delay": "auto",
+      "next": "msg44"
+    },
+    {
+      "id": "msg44",
+      "ref": "MSG-44",
+      "type": "send_message",
+      "block": "audio_via_atendente",
+      "text": "Pode encaminhar tudo isso junto?",
+      "delay": "auto",
+      "next": "g14"
+    },
+    {
+      "id": "g14",
+      "ref": "G-14",
+      "type": "wait",
+      "block": "audio_via_atendente",
+      "timeout": "6min",
+      "on_reply": "act_audio_tts",
+      "on_timeout": "act_audio_tts",
+      "note": "6min OU 1 resposta da atendente, o que vier primeiro."
+    },
+    {
+      "id": "act_audio_tts",
+      "ref": "[SISTEMA áudio TTS]",
+      "type": "action",
+      "block": "audio_via_atendente",
+      "action": "enviar_audio_tts",
+      "detail": "Envia o arquivo de voz TTS (roteiro do script, 35-45s, versão M/F, {{NOME_SDR}} injetado). Via Evolution API.",
+      "next": "msg45",
+      "on_fail": "msg45"
+    },
+    {
+      "id": "msg45",
+      "ref": "MSG-45",
+      "type": "send_message",
+      "block": "audio_via_atendente",
+      "text": "Caso não consiga ouvir agora, eu vou resumir o áudio pra vc:\n\n- Pesquisei clínicas de {{ESPECIALIDADE}} na região. A {{NOME_EMPRESA}} foi a que mais me chamou atenção\n- {{CAUSA}}\n- {{CONSEQUENCIA}}\n- Criei uma página mostrando o impacto disso de forma visual e prática\n\nObs: trabalho com uma empresa por região. Ainda não conversei com nenhuma outra clínica daqui. Mas isso pode mudar.\n\nO áudio tem menos de 1 minuto e vale muito mais do que esse resumo.\n\nSegue o link da página:",
+      "delay": "auto",
+      "next": "msg46"
+    },
+    {
+      "id": "msg46",
+      "ref": "MSG-46",
+      "type": "send_message",
+      "block": "audio_via_atendente",
+      "text": "lp.grupototum.com",
+      "delay": "auto",
+      "next": "msg47"
+    },
+    {
+      "id": "msg47",
+      "ref": "MSG-47",
+      "type": "send_message",
+      "block": "audio_via_atendente",
+      "text": "A gente trabalha com uma empresa por região. Antes de conversar com outra clínica daqui, quero muito ouvir ele/ela.",
+      "delay": "auto",
+      "next": "g15"
+    },
+    {
+      "id": "g15",
+      "ref": "G-15",
+      "type": "wait",
+      "block": "bloco4_followup",
+      "timeout": "45min",
+      "on_reply": "msg48",
+      "on_timeout": "msg48"
+    },
+    {
+      "id": "msg48",
+      "ref": "MSG-48",
+      "type": "send_message",
+      "block": "bloco4_followup",
+      "text": "Oi! Conseguiu encaminhar o áudio e as mensagens?",
+      "delay": "auto",
+      "next": "g16"
+    },
+    {
+      "id": "g16",
+      "ref": "G-16",
+      "type": "wait",
+      "block": "bloco4_followup",
+      "timeout": "30min",
+      "on_reply": "clf_g16",
+      "on_timeout": "msg49"
+    },
+    {
+      "id": "clf_g16",
+      "ref": "G-16",
+      "type": "conditional",
+      "block": "bloco4_followup",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, encaminhou",
+          "goto": "mimo_gif"
+        },
+        {
+          "when": "NÃO / ainda não",
+          "goto": "msg49"
+        }
+      ],
+      "default": "msg49"
+    },
+    {
+      "id": "mimo_gif",
+      "ref": "[SISTEMA GIF]",
+      "type": "action",
+      "block": "mimo_delivery",
+      "action": "enviar_gif",
+      "detail": "Envia GIF do mimo via Evolution API: https://tenor.com/view/virginia-me-mimei-mimei-chegou-chegou-bolsa-gif-11943432216321005375",
+      "next": "msg50",
+      "on_fail": "msg50"
+    },
+    {
+      "id": "msg50",
+      "ref": "MSG-50",
+      "type": "send_message",
+      "block": "mimo_delivery",
+      "text": "Pronto, já é seu! 🎁\n\nSó me avisa quando ele/ela responder, ok?",
+      "delay": "auto",
+      "next": "g17",
+      "note": "MIMO genérico por decisão do Rael (2026-06-20). Sem variável obrigatória — placeholder neutro até definição final."
+    },
+    {
+      "id": "g17",
+      "ref": "G-17",
+      "type": "wait",
+      "block": "mimo_delivery",
+      "timeout": "4h",
+      "on_reply": "clf_g17",
+      "on_timeout": "msg51"
+    },
+    {
+      "id": "clf_g17",
+      "ref": "G-17",
+      "type": "conditional",
+      "block": "mimo_delivery",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "avisa que decisor respondeu",
+          "goto": "msg68"
+        }
+      ],
+      "default": "msg51"
+    },
+    {
+      "id": "msg51",
+      "ref": "MSG-51",
+      "type": "send_message",
+      "block": "mimo_delivery",
+      "text": "Oi! Ele/ela chegou a ouvir o áudio?",
+      "delay": "auto",
+      "next": "g18"
+    },
+    {
+      "id": "g18",
+      "ref": "G-18",
+      "type": "wait",
+      "block": "mimo_delivery",
+      "timeout": "2h",
+      "on_reply": "clf_g18",
+      "on_timeout": "g20_d1"
+    },
+    {
+      "id": "clf_g18",
+      "ref": "G-18",
+      "type": "conditional",
+      "block": "mimo_delivery",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, viu — aguardar resposta direta",
+          "goto": "msg68"
+        },
+        {
+          "when": "NÃO / sem resposta",
+          "goto": "g20_d1"
+        }
+      ],
+      "default": "g20_d1"
+    },
+    {
+      "id": "msg49",
+      "ref": "MSG-49 (nudge)",
+      "type": "send_message",
+      "block": "bloco4_nudge",
+      "text": "Imagino que deve estar bem apertado ai... Quando tiver um momento é só encaminhar. Mandei um textinho resumindo também, fica mais fácil de encaminhar junto.",
+      "delay": "auto",
+      "next": "g19"
+    },
+    {
+      "id": "g19",
+      "ref": "G-19",
+      "type": "wait",
+      "block": "bloco4_nudge",
+      "timeout": "2h",
+      "on_reply": "clf_g19",
+      "on_timeout": "msg52"
+    },
+    {
+      "id": "clf_g19",
+      "ref": "G-19",
+      "type": "conditional",
+      "block": "bloco4_nudge",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "encaminhou depois",
+          "goto": "mimo_gif"
+        }
+      ],
+      "default": "msg52"
+    },
+    {
+      "id": "msg52",
+      "ref": "MSG-52",
+      "type": "send_message",
+      "block": "bloco4_nudge",
+      "text": "Tudo bem! Pode guardar meu contato caso ele/ela tenha curiosidade depois.",
+      "delay": "auto",
+      "next": "end_encerrado_nao_encaminhou"
+    },
+    {
+      "id": "g20_d1",
+      "ref": "G-20",
+      "type": "wait",
+      "block": "bloco4_nao_a",
+      "timeout": "until_morning_d1",
+      "on_reply": "msg53",
+      "on_timeout": "msg53"
+    },
+    {
+      "id": "msg53",
+      "ref": "MSG-53",
+      "type": "send_message",
+      "block": "bloco4_nao_a",
+      "text": "Oi, bom dia! Ainda estou por aqui. Ele/ela conseguiu ouvir o áudio?",
+      "delay": "auto",
+      "next": "g21"
+    },
+    {
+      "id": "g21",
+      "ref": "G-21",
+      "type": "wait",
+      "block": "bloco4_nao_a",
+      "timeout": "4h",
+      "on_reply": "clf_g21",
+      "on_timeout": "msg54"
+    },
+    {
+      "id": "clf_g21",
+      "ref": "G-21",
+      "type": "conditional",
+      "block": "bloco4_nao_a",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "vai retornar / decisor vai ouvir",
+          "goto": "msg68"
+        },
+        {
+          "when": "desinteresse confirmado",
+          "goto": "msg55"
+        }
+      ],
+      "default": "msg54"
+    },
+    {
+      "id": "msg54",
+      "ref": "MSG-54",
+      "type": "send_message",
+      "block": "bloco4_nao_a",
+      "text": "Sem problema! Se um dia tiver curiosidade é só me chamar.",
+      "delay": "auto",
+      "next": "end_encerrado"
+    },
+    {
+      "id": "msg55",
+      "ref": "MSG-55",
+      "type": "send_message",
+      "block": "bloco4_nao_b",
+      "text": "Entendo! Só uma coisa — você sabe se teria alguma forma de eu falar diretamente com ele/ela? Pode ser que o resumo em texto faça mais sentido do que o áudio.",
+      "delay": "auto",
+      "next": "g22",
+      "note": "BLOCO 4 NÃO-B (recusa) — acionável quando atendente recusa após D+1."
+    },
+    {
+      "id": "g22",
+      "ref": "G-22",
+      "type": "wait",
+      "block": "bloco4_nao_b",
+      "timeout": "1h",
+      "on_reply": "clf_g22",
+      "on_timeout": "msg56"
+    },
+    {
+      "id": "clf_g22",
+      "ref": "G-22",
+      "type": "conditional",
+      "block": "bloco4_nao_b",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "fornece contato direto",
+          "goto": "end_contato_humano"
+        }
+      ],
+      "default": "msg56"
+    },
+    {
+      "id": "msg56",
+      "ref": "MSG-56",
+      "type": "send_message",
+      "block": "bloco4_nao_b",
+      "text": "Sem problema! Pode guardar meu contato caso mude de ideia.",
+      "delay": "auto",
+      "next": "end_encerrado_nao_encaminhou"
+    },
+    {
+      "id": "msg68",
+      "ref": "MSG-68",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Que bom que você retornou!",
+      "delay": "auto",
+      "next": "msg69"
+    },
+    {
+      "id": "msg69",
+      "ref": "MSG-69",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Você chegou a ver a página que mandei junto com o áudio?",
+      "delay": "auto",
+      "next": "g25"
+    },
+    {
+      "id": "g25",
+      "ref": "G-25",
+      "type": "wait",
+      "block": "pos_audio",
+      "timeout": "30min",
+      "on_reply": "clf_g25",
+      "on_timeout": "msg73"
+    },
+    {
+      "id": "clf_g25",
+      "ref": "G-25",
+      "type": "conditional",
+      "block": "pos_audio",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, viu",
+          "goto": "msg70"
+        },
+        {
+          "when": "NÃO / não achou",
+          "goto": "msg71"
+        },
+        {
+          "when": "responde com dúvida ou objeção",
+          "goto": "ob_route"
+        },
+        {
+          "when": "responde com interesse direto",
+          "goto": "msg72"
+        }
+      ],
+      "default": "msg71"
+    },
+    {
+      "id": "msg70",
+      "ref": "MSG-70",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "E fez sentido o que mostrei?",
+      "delay": "auto",
+      "next": "g26"
+    },
+    {
+      "id": "g26",
+      "ref": "G-26",
+      "type": "wait",
+      "block": "pos_audio",
+      "timeout": "30min",
+      "on_reply": "clf_g26",
+      "on_timeout": "msg72"
+    },
+    {
+      "id": "clf_g26",
+      "ref": "G-26",
+      "type": "conditional",
+      "block": "pos_audio",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "confirma / fez sentido",
+          "goto": "msg72"
+        },
+        {
+          "when": "tem dúvida",
+          "goto": "ai_duvida_g26"
+        },
+        {
+          "when": "NÃO / discorda",
+          "goto": "ob_route"
+        }
+      ],
+      "default": "msg72"
+    },
+    {
+      "id": "ai_duvida_g26",
+      "ref": "G-26",
+      "type": "ai_message",
+      "block": "pos_audio",
+      "mode": "strict",
+      "model": "gemini-2.5-flash",
+      "proactive": true,
+      "instruction": "Responder a dúvida em 1 mensagem curta e seguir para MSG-72.",
+      "limits": "Não promete preço.",
+      "next": "msg72"
+    },
+    {
+      "id": "msg71",
+      "ref": "MSG-71",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Sem problema. Segue o link:\n\nlp.grupototum.com\n\nDá uma olhada e me fala o que achou?",
+      "delay": "auto",
+      "next": "g27"
+    },
+    {
+      "id": "g27",
+      "ref": "G-27",
+      "type": "wait",
+      "block": "pos_audio",
+      "timeout": "30min",
+      "on_reply": "clf_g27",
+      "on_timeout": "msg73"
+    },
+    {
+      "id": "clf_g27",
+      "ref": "G-27",
+      "type": "conditional",
+      "block": "pos_audio",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "viu e gostou",
+          "goto": "msg72"
+        },
+        {
+          "when": "viu e tem dúvida",
+          "goto": "ai_duvida_g26"
+        }
+      ],
+      "default": "msg73"
+    },
+    {
+      "id": "msg72",
+      "ref": "MSG-72",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Posso te mandar a prévia completa do que identifiquei na clínica de vocês?",
+      "delay": "auto",
+      "next": "g28"
+    },
+    {
+      "id": "g28",
+      "ref": "G-28",
+      "type": "wait",
+      "block": "pos_audio",
+      "timeout": "20min",
+      "on_reply": "clf_g28",
+      "on_timeout": "ob_route"
+    },
+    {
+      "id": "clf_g28",
+      "ref": "G-28",
+      "type": "conditional",
+      "block": "pos_audio",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM",
+          "goto": "msg74"
+        },
+        {
+          "when": "objeção",
+          "goto": "ob_route"
+        }
+      ],
+      "default": "ob_route"
+    },
+    {
+      "id": "msg73",
+      "ref": "MSG-73",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Oi! Só queria saber se você teve tempo de ver a página.",
+      "delay": "auto",
+      "next": "g29"
+    },
+    {
+      "id": "g29",
+      "ref": "G-29",
+      "type": "wait",
+      "block": "pos_audio",
+      "timeout": "1h",
+      "on_reply": "clf_g29",
+      "on_timeout": "end_frio_pos_audio"
+    },
+    {
+      "id": "clf_g29",
+      "ref": "G-29",
+      "type": "conditional",
+      "block": "pos_audio",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, viu",
+          "goto": "msg70"
+        }
+      ],
+      "default": "end_frio_pos_audio"
+    },
+    {
+      "id": "msg74",
+      "ref": "MSG-74",
+      "type": "send_message",
+      "block": "pos_audio",
+      "text": "Ótimo! Vou preparar aqui. Precisa pra essa semana ou pode ser nas próximas 24 horas?",
+      "delay": "auto",
+      "effects": [
+        "crm:AGUARDANDO_ENVIO_PREVIA"
+      ],
+      "next": "g10",
+      "note": "G-30 reutiliza lógica de G-10."
+    },
+    {
+      "id": "ob_route",
+      "ref": "BLOCO OBJEÇÕES",
+      "type": "conditional",
+      "block": "objecoes",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "preço / quanto custa / qual o valor",
+          "goto": "msg64"
+        },
+        {
+          "when": "tempo / não é o momento / agora não dá / sem tempo",
+          "goto": "msg_ob_tempo"
+        },
+        {
+          "when": "já tenho agência / já sou atendido",
+          "goto": "msg60"
+        },
+        {
+          "when": "não preciso / não vejo necessidade / não faz sentido pra mim",
+          "goto": "msg_ob_naoprec"
+        },
+        {
+          "when": "genérica / não tenho interesse",
+          "goto": "msg57"
+        }
+      ],
+      "default": "msg57",
+      "note": "Entrada por objeção tardia (g09/g12/g28) ou precoce (interrupt). Ao destravar: tardia volta à prévia (PONTO_RETORNO=msg29/msg42); precoce volta a {{PONTO_RETORNO}}."
+    },
+    {
+      "id": "msg57",
+      "ref": "MSG-57/OB-01",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Entendo! Sem problema.",
+      "delay": "auto",
+      "next": "msg58"
+    },
+    {
+      "id": "msg58",
+      "ref": "MSG-58",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Só deixo uma coisa aqui com você: o que encontrei sobre a clínica não precisa de decisão agora. É só uma prévia do que identifiquei.",
+      "delay": "auto",
+      "next": "msg59"
+    },
+    {
+      "id": "msg59",
+      "ref": "MSG-59",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Quando tiver 5 minutos, você me fala. Fico guardado por aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ],
+      "next": "g31_route"
+    },
+    {
+      "id": "msg60",
+      "ref": "MSG-60/OB-02",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Ótimo! Agência boa é difícil de encontrar mesmo.",
+      "delay": "auto",
+      "next": "msg61"
+    },
+    {
+      "id": "msg61",
+      "ref": "MSG-61",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "O que tenho pra te mostrar não é pra substituir quem já está trabalhando com vocês. É uma oportunidade específica que identifiquei na clínica durante a pesquisa.",
+      "delay": "auto",
+      "next": "msg62"
+    },
+    {
+      "id": "msg62",
+      "ref": "MSG-62",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Pode ser que a agência de vocês já esteja trabalhando nisso. Mas como eu já fiz a análise, posso te mandar a prévia e você mesmo avalia se faz sentido?",
+      "delay": "auto",
+      "next": "g23"
+    },
+    {
+      "id": "g23",
+      "ref": "G-23",
+      "type": "wait",
+      "block": "objecoes",
+      "timeout": "30min",
+      "on_reply": "clf_g23",
+      "on_timeout": "msg63"
+    },
+    {
+      "id": "clf_g23",
+      "ref": "G-23",
+      "type": "conditional",
+      "block": "objecoes",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, aceita ver a prévia",
+          "goto": "msg_ponte"
+        }
+      ],
+      "default": "msg63",
+      "note": "SIM → retorna ao ponto de origem (prévia se tardia: msg29/msg42)."
+    },
+    {
+      "id": "msg63",
+      "ref": "MSG-63",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Sem problema! Se mudar de ideia, pode me chamar aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:ENCERRADO",
+        "notify_human"
+      ],
+      "next": "g31_route"
+    },
+    {
+      "id": "msg64",
+      "ref": "MSG-64/OB-03",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Boa pergunta. Só que prefiro não te falar nenhum número antes de você ver o que encontrei.",
+      "delay": "auto",
+      "next": "msg65"
+    },
+    {
+      "id": "msg65",
+      "ref": "MSG-65",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "O valor depende do que faz sentido pra clínica de vocês especificamente. E isso só fica claro depois da prévia.",
+      "delay": "auto",
+      "next": "msg66"
+    },
+    {
+      "id": "msg66",
+      "ref": "MSG-66",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Posso te mandar agora? Sem nenhum compromisso.",
+      "delay": "auto",
+      "next": "g24"
+    },
+    {
+      "id": "g24",
+      "ref": "G-24",
+      "type": "wait",
+      "block": "objecoes",
+      "timeout": "20min",
+      "on_reply": "clf_g24",
+      "on_timeout": "msg67"
+    },
+    {
+      "id": "clf_g24",
+      "ref": "G-24",
+      "type": "conditional",
+      "block": "objecoes",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM, aceita ver a prévia",
+          "goto": "msg_ponte"
+        },
+        {
+          "when": "NÃO / ainda insiste no preço",
+          "goto": "msg67"
+        }
+      ],
+      "default": "msg67"
+    },
+    {
+      "id": "msg67",
+      "ref": "MSG-67",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Entendo a dúvida. O valor depende do que eu identifiquei aí na clínica de vocês — por isso vou te mandar uma página com tudo organizado pra você ver com calma. Posso te mostrar antes?",
+      "delay": "auto",
+      "effects": [
+        "notify_human"
+      ],
+      "next": "g31_route",
+      "note": "Decisão Rael (2026-06-20): SDR não revela preço; redireciona para a landing page que será enviada. Variável PRECO_MINIMO removida."
+    },
+    {
+      "id": "g31_route",
+      "ref": "G-31/BLOCO AVALIAÇÃO",
+      "type": "conditional",
+      "block": "avaliacao",
+      "classifier": "rule",
+      "branches": [
+        {
+          "when": "{{tem_site}} == true",
+          "goto": "msg75_site"
+        },
+        {
+          "when": "{{tem_site}} == false",
+          "goto": "msg75_proj"
+        }
+      ],
+      "default": "msg75_proj"
+    },
+    {
+      "id": "msg75_site",
+      "ref": "MSG-75",
+      "type": "send_message",
+      "block": "avaliacao_site",
+      "text": "Antes de encerrar por aqui, quero deixar algo que pode ser útil pra você.",
+      "delay": "auto",
+      "next": "msg76_site"
+    },
+    {
+      "id": "msg76_site",
+      "ref": "MSG-76",
+      "type": "send_message",
+      "block": "avaliacao_site",
+      "text": "Fiz uma avaliação do site enquanto pesquisava a clínica. Você quer que eu mande?",
+      "delay": "auto",
+      "next": "g32"
+    },
+    {
+      "id": "g32",
+      "ref": "G-32",
+      "type": "wait",
+      "block": "avaliacao_site",
+      "timeout": "15min",
+      "on_reply": "clf_g32",
+      "on_timeout": "msg80"
+    },
+    {
+      "id": "clf_g32",
+      "ref": "G-32",
+      "type": "conditional",
+      "block": "avaliacao_site",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM",
+          "goto": "msg77"
+        },
+        {
+          "when": "NÃO",
+          "goto": "msg80"
+        }
+      ],
+      "default": "msg80"
+    },
+    {
+      "id": "msg77",
+      "ref": "MSG-77",
+      "type": "send_message",
+      "block": "avaliacao_site",
+      "text": "Segue o que encontrei:\n\n{{CAUSA}}\n\n{{CONSEQUENCIA}}",
+      "delay": "auto",
+      "next": "msg78"
+    },
+    {
+      "id": "msg78",
+      "ref": "MSG-78",
+      "type": "send_message",
+      "block": "avaliacao_site",
+      "text": "Não to dizendo isso pra te pressionar. Deixo pra você avaliar no seu tempo.",
+      "delay": "auto",
+      "next": "msg79"
+    },
+    {
+      "id": "msg79",
+      "ref": "MSG-79",
+      "type": "send_message",
+      "block": "avaliacao_site",
+      "text": "Se um dia fizer sentido conversar, é só me chamar aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ],
+      "next": "end_frio"
+    },
+    {
+      "id": "msg75_proj",
+      "ref": "MSG-75",
+      "type": "send_message",
+      "block": "projecao_perdas",
+      "text": "Antes de encerrar por aqui, quero deixar algo que pode ser útil pra você.",
+      "delay": "auto",
+      "next": "msg76_proj"
+    },
+    {
+      "id": "msg76_proj",
+      "ref": "MSG-76",
+      "type": "send_message",
+      "block": "projecao_perdas",
+      "text": "Fiz uma projeção do que a clínica pode estar deixando de capturar por não ter uma presença online mais clara. Você quer ver?",
+      "delay": "auto",
+      "next": "g33"
+    },
+    {
+      "id": "g33",
+      "ref": "G-33",
+      "type": "wait",
+      "block": "projecao_perdas",
+      "timeout": "15min",
+      "on_reply": "clf_g33",
+      "on_timeout": "msg80"
+    },
+    {
+      "id": "clf_g33",
+      "ref": "G-33",
+      "type": "conditional",
+      "block": "projecao_perdas",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "SIM",
+          "goto": "msg77b"
+        },
+        {
+          "when": "NÃO",
+          "goto": "msg80"
+        }
+      ],
+      "default": "msg80"
+    },
+    {
+      "id": "msg77b",
+      "ref": "MSG-77B",
+      "type": "send_message",
+      "block": "projecao_perdas",
+      "text": "Segue o que estimei:\n\nClínicas com {{QTD_AVALIACOES}} avaliações e a reputação que vocês têm costumam ter um volume de pesquisa mensal considerável. Sem uma página orientada a conversão, uma parte dessas buscas vai diretamente para concorrentes com presença mais clara.",
+      "delay": "auto",
+      "next": "msg78b"
+    },
+    {
+      "id": "msg78b",
+      "ref": "MSG-78",
+      "type": "send_message",
+      "block": "projecao_perdas",
+      "text": "Não é pra te pressionar. É pra você ter esse número em mente quando fizer sentido revisitar isso.",
+      "delay": "auto",
+      "next": "msg79b"
+    },
+    {
+      "id": "msg79b",
+      "ref": "MSG-79",
+      "type": "send_message",
+      "block": "projecao_perdas",
+      "text": "Se um dia quiser conversar, estou por aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ],
+      "next": "end_frio"
+    },
+    {
+      "id": "msg80",
+      "ref": "MSG-80",
+      "type": "send_message",
+      "block": "avaliacao",
+      "text": "Tudo bem! Pode guardar meu contato. Se um dia tiver curiosidade, é só me chamar.",
+      "delay": "auto",
+      "effects": [
+        "crm:ENCERRADO",
+        "notify_human"
+      ],
+      "next": "end_encerrado"
+    },
+    {
+      "id": "g34_in",
+      "ref": "G-34/BLOCO AGENDAMENTO",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Ótimo. O que você viu já é baseado no que encontrei especificamente na {{NOME_EMPRESA}}. Na reunião a gente apresenta o completo e alinha o que precisar antes de subir.",
+      "delay": "auto",
+      "next": "msg82",
+      "note": "MSG-81. Nunca mencionar preço neste bloco."
+    },
+    {
+      "id": "msg82",
+      "ref": "MSG-82",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Você tem uns 30 minutos essa semana? Pode escolher o horário aqui: {{LINK_AGENDA}}",
+      "delay": "auto",
+      "next": "g35"
+    },
+    {
+      "id": "g35",
+      "ref": "G-35",
+      "type": "wait",
+      "block": "agendamento",
+      "timeout": "24h",
+      "on_reply": "clf_g35",
+      "on_timeout": "msg84"
+    },
+    {
+      "id": "clf_g35",
+      "ref": "G-35",
+      "type": "conditional",
+      "block": "agendamento",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "agendou via link",
+          "goto": "msg83"
+        },
+        {
+          "when": "respondeu com horários manuais",
+          "goto": "msg85"
+        }
+      ],
+      "default": "msg84"
+    },
+    {
+      "id": "msg83",
+      "ref": "MSG-83",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Perfeito. Até lá!",
+      "delay": "auto",
+      "effects": [
+        "crm:AGENDADO",
+        "criar_evento_sdr_gestor",
+        "notify_upixel:lead agendado — {{NOME_EMPRESA}} / {{NOME_DECISOR}}"
+      ],
+      "next": "end_agendado"
+    },
+    {
+      "id": "msg84",
+      "ref": "MSG-84",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Oi! Só queria saber se conseguiu dar uma olhada no link da agenda.",
+      "delay": "auto",
+      "next": "g37"
+    },
+    {
+      "id": "g37",
+      "ref": "G-37",
+      "type": "wait",
+      "block": "agendamento",
+      "timeout": "1h",
+      "on_reply": "clf_g37",
+      "on_timeout": "msg86"
+    },
+    {
+      "id": "clf_g37",
+      "ref": "G-37",
+      "type": "conditional",
+      "block": "agendamento",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "agenda pelo link",
+          "goto": "msg83"
+        },
+        {
+          "when": "manda horários manuais",
+          "goto": "msg85"
+        }
+      ],
+      "default": "msg86"
+    },
+    {
+      "id": "msg85",
+      "ref": "MSG-85",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Anotado. Ficamos então para {horário informado pelo lead}. A gente se fala lá.",
+      "delay": "auto",
+      "effects": [
+        "crm:AGENDADO_MANUAL",
+        "criar_evento_sdr_gestor",
+        "notify_upixel:lead agendado — {{NOME_EMPRESA}} / {{NOME_DECISOR}}"
+      ],
+      "next": "end_agendado"
+    },
+    {
+      "id": "msg86",
+      "ref": "MSG-86",
+      "type": "send_message",
+      "block": "agendamento",
+      "text": "Sem problema. Se quiser marcar depois, é só me chamar aqui.",
+      "delay": "auto",
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ],
+      "next": "g38"
+    },
+    {
+      "id": "g38",
+      "ref": "G-38",
+      "type": "wait",
+      "block": "agendamento",
+      "timeout": "72h",
+      "on_reply": "msg82",
+      "on_timeout": "end_encerrado"
+    },
+    {
+      "id": "end_agendado",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "reuniao_marcada",
+        "agendou": true,
+        "temperatura": "quente"
+      }
+    },
+    {
+      "id": "end_frio",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "followup",
+        "temperatura": "frio"
+      }
+    },
+    {
+      "id": "end_frio_pos_audio",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "followup",
+        "temperatura": "frio",
+        "onde_travou": "não retornou após áudio"
+      },
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ]
+    },
+    {
+      "id": "end_encerrado",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "rejeitado",
+        "temperatura": "frio"
+      },
+      "effects": [
+        "crm:ENCERRADO",
+        "notify_human"
+      ]
+    },
+    {
+      "id": "end_encerrado_atendente",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "rejeitado",
+        "onde_travou": "atendente recusou"
+      },
+      "effects": [
+        "crm:ENCERRADO",
+        "notify_human"
+      ]
+    },
+    {
+      "id": "end_encerrado_nao_encaminhou",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "rejeitado",
+        "onde_travou": "não encaminhou"
+      },
+      "effects": [
+        "crm:ENCERRADO",
+        "notify_human"
+      ]
+    },
+    {
+      "id": "end_contato_humano",
+      "ref": "End",
+      "type": "end",
+      "block": "fecho",
+      "report": "hermes_report",
+      "set": {
+        "resultado": "followup",
+        "proxima_acao": "abordagem direta ao decisor"
+      },
+      "effects": [
+        "notify_human"
+      ]
+    },
+    {
+      "id": "impl_check",
+      "ref": "IMPLICAÇÃO (gate)",
+      "type": "conditional",
+      "block": "bloco_3a",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "lead JÁ verbalizou uma dor/consequência concreta nesta conversa",
+          "goto": "msg39"
+        }
+      ],
+      "default": "msg_impl",
+      "note": "Maestro 2026-06-20 (Amanda crítico #1): SPIN-Implicação condicional. Se o lead já sentiu/verbalizou a dor, pula a pergunta (não re-perguntar = não esfriar lead quente)."
+    },
+    {
+      "id": "msg_impl",
+      "ref": "IMPLICAÇÃO",
+      "type": "ai_message",
+      "block": "bloco_3a",
+      "mode": "strict",
+      "model": "gemini-2.5-flash",
+      "proactive": true,
+      "instruction": "PLACEHOLDER JONATHAN: devolver a dor nas palavras do próprio lead + 1 pergunta de implicação quantificável (frequência/impacto). Ex: 'Você perde agendamento quando o paciente não te acha rápido no Google — com que frequência isso acontece hoje?'. 1 mensagem curta.",
+      "limits": "Não promete preço, não inventa rota, não cita serviço. Só faz o lead dimensionar a própria dor.",
+      "next": "g_impl",
+      "note": "Instrução final = Jonathan. Estrutura wireada pelo Maestro."
+    },
+    {
+      "id": "g_impl",
+      "ref": "G-IMPL",
+      "type": "wait",
+      "block": "bloco_3a",
+      "timeout": "20min",
+      "on_reply": "clf_impl",
+      "on_timeout": "msg39"
+    },
+    {
+      "id": "clf_impl",
+      "ref": "G-IMPL",
+      "type": "conditional",
+      "block": "bloco_3a",
+      "classifier": "groq-llama-3.3-70b",
+      "branches": [
+        {
+          "when": "objeção real",
+          "goto": "ob_route",
+          "set": {
+            "PONTO_RETORNO": "msg39"
+          }
+        }
+      ],
+      "default": "msg39",
+      "note": "Qualquer resposta (dimensionou a dor) segue pra msg39. Objeção entra no bloco e volta pra msg39."
+    },
+    {
+      "id": "end_objecao_cap",
+      "ref": "CAP OBJEÇÕES",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Sem problema! Não quero insistir. Fico por aqui e, se fizer sentido pra você mais pra frente, é só me chamar.",
+      "delay": "auto",
+      "effects": [
+        "crm:FRIO",
+        "notify_human"
+      ],
+      "next": "end_encerrado",
+      "note": "Atingiu o teto de 2 iterações de objeção (loop_guards.objection_block). Encerra frio."
+    },
+    {
+      "id": "msg_ponte",
+      "ref": "PONTE-RETORNO",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "Entendido. Voltando ao que eu estava te mostrando...",
+      "delay": "auto",
+      "next": "{PONTO_RETORNO}",
+      "note": "Mensagem-ponte (Amanda): suaviza o retorno da objeção pro flow. Copy final = Jonathan."
+    },
+    {
+      "id": "msg_ob_tempo",
+      "ref": "OB-04/TEMPO",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "PLACEHOLDER JONATHAN (objeção TEMPO): validar que não toma tempo + reframe que a prévia é pra ver quando puder, sem compromisso. Termina oferecendo a prévia.",
+      "delay": "auto",
+      "next": "g23",
+      "note": "Copy = Jonathan. Estrutura wireada pelo Maestro (Amanda: 5 categorias)."
+    },
+    {
+      "id": "msg_ob_naoprec",
+      "ref": "OB-05/NAO-PRECISA",
+      "type": "send_message",
+      "block": "objecoes",
+      "text": "PLACEHOLDER JONATHAN (objeção NÃO PRECISO): nunca corrigir; reintroduzir como curiosidade — a prévia mostra uma oportunidade que ele talvez não tenha percebido. Termina oferecendo a prévia.",
+      "delay": "auto",
+      "next": "g23",
+      "note": "Copy = Jonathan. Estrutura wireada pelo Maestro (Amanda: 5 categorias)."
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.1",
+      "date": "2026-06-20",
+      "by": "ARQUITETO (Maestro)",
+      "changes": [
+        "Amanda crítico #1: nó de implicação SPIN (condicional) antes da oferta de prévia em bloco_3a.",
+        "Amanda crítico #2: loop_guards no bloco objeções (máx 2 iterações -> encerra frio) + mensagem-ponte no retorno.",
+        "Amanda: classificador de objeção expandido de 3 para 5 categorias.",
+        "Copy dos nós marcados PLACEHOLDER JONATHAN = pendente do COPYWRITER."
+      ]
+    },
+    {
+      "version": "1.1.1",
+      "date": "2026-06-20",
+      "by": "ARQUITETO (Maestro)",
+      "changes": [
+        "Adicionada var tipo_clinica (research).",
+        "Staging opening_variations (Amanda A/B/C + selector) — wiring/reconciliação = Jonathan pós-upload."
+      ]
+    }
+  ],
+  "opening_variations": {
+    "status": "PENDENTE_WIRING — Jonathan reconcilia com a abertura atual (msg01-05) quando os docs subirem em /docs/",
+    "selector": {
+      "by": "tipo_clinica",
+      "type": "conditional",
+      "position": "antes do entry (msg01)",
+      "map": {
+        "especializada": "A",
+        "geral|multiespecialidade": "B",
+        "solo": "C"
+      },
+      "default": "B",
+      "note": "Amanda 2026-06-20. {{ESPECIALIDADE}}/{{NOME_EMPRESA}}/{{NOME_DONO}} interpolados do research."
+    },
+    "A_especializada": {
+      "gatilho": "reconhecimento profissional (valida nível técnico)",
+      "indicador": "abertura por observação MAIOR",
+      "text": "Clínica {{NOME_EMPRESA}}, vi que vocês trabalham com {{ESPECIALIDADE}}. Serviço desse nível normalmente gera procura — mas a presença digital não está capturando isso. Paciente que pesquisa antes de ligar provavelmente não está chegando até vocês.\n\nTenho algo específico pra te mostrar com base no que analisei. Posso compartilhar?"
+    },
+    "B_geral": {
+      "gatilho": "prova social implícita (medo de perder pra concorrente)",
+      "indicador": "abertura MÉDIA",
+      "text": "{{NOME_DONO}}, fui pesquisar a clínica antes de entrar em contato. Clínicas com múltiplas especialidades na mesma cidade normalmente aparecem bem no Google — e captam paciente que estava indo pra concorrente só por visibilidade. Não é o caso de vocês ainda.\n\nEncontrei algumas coisas que vale olhar. Faz sentido te mostrar?"
+    },
+    "C_solo": {
+      "gatilho": "empatia individual (evitar linguagem de 'clínica'/'empresa')",
+      "indicador": "abertura por empatia MAIOR",
+      "text": "Dr(a). {{NOME_DONO}}, vi seu consultório e reparei que você tem um trabalho consistente com os pacientes. Mas quem pesquisa antes de agendar no Google provavelmente não está chegando até você — o número que aparece é quase zero.\n\nPra quem atende sozinho, cada paciente novo conta. Tenho algo curto pra te mostrar."
+    },
+    "maestro_recomendacao": "NÃO substituir msg01-05 em bloco. msg01 confirma decisor (função real). Recomendo: Jonathan funde o tailoring por tipo_clinica DENTRO da sequência existente (variar a 1ª observação por segmento, manter a confirmação de decisor). Selector entra como conditional antes de msg01, escolhendo a 1ª linha; o resto da abertura segue igual."
+  }
+}

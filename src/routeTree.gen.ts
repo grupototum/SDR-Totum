@@ -9,11 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as PesquisaRouteImport } from './routes/pesquisa'
+import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PesquisaIndexRouteImport } from './routes/pesquisa/index'
-import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa/historico'
+import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa.historico'
 
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PesquisaRoute = PesquisaRouteImport.update({
+  id: '/pesquisa',
+  path: '/pesquisa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConversationsRoute = ConversationsRouteImport.update({
+  id: '/conversations',
+  path: '/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BuilderRoute = BuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
@@ -24,53 +41,95 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PesquisaIndexRoute = PesquisaIndexRouteImport.update({
-  id: '/pesquisa/',
-  path: '/pesquisa/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PesquisaHistoricoRoute = PesquisaHistoricoRouteImport.update({
-  id: '/pesquisa/historico',
-  path: '/pesquisa/historico',
-  getParentRoute: () => rootRouteImport,
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => PesquisaRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
+  '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
-  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
+  '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
-  '/pesquisa': typeof PesquisaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/pesquisa': typeof PesquisaRouteWithChildren
+  '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
-  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/builder' | '/pesquisa/historico' | '/pesquisa/'
+  fullPaths:
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/builder' | '/pesquisa/historico' | '/pesquisa'
-  id: '__root__' | '/' | '/builder' | '/pesquisa/historico' | '/pesquisa/'
+  to:
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
+  id:
+    | '__root__'
+    | '/'
+    | '/builder'
+    | '/conversations'
+    | '/pesquisa'
+    | '/reports'
+    | '/pesquisa/historico'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
-  PesquisaHistoricoRoute: typeof PesquisaHistoricoRoute
-  PesquisaIndexRoute: typeof PesquisaIndexRoute
+  ConversationsRoute: typeof ConversationsRoute
+  PesquisaRoute: typeof PesquisaRouteWithChildren
+  ReportsRoute: typeof ReportsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pesquisa': {
+      id: '/pesquisa'
+      path: '/pesquisa'
+      fullPath: '/pesquisa'
+      preLoaderRoute: typeof PesquisaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conversations': {
+      id: '/conversations'
+      path: '/conversations'
+      fullPath: '/conversations'
+      preLoaderRoute: typeof ConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/builder': {
       id: '/builder'
       path: '/builder'
@@ -85,28 +144,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pesquisa/': {
-      id: '/pesquisa/'
-      path: '/pesquisa'
-      fullPath: '/pesquisa/'
-      preLoaderRoute: typeof PesquisaIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/pesquisa/historico': {
       id: '/pesquisa/historico'
-      path: '/pesquisa/historico'
+      path: '/historico'
       fullPath: '/pesquisa/historico'
       preLoaderRoute: typeof PesquisaHistoricoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PesquisaRoute
     }
   }
 }
 
+interface PesquisaRouteChildren {
+  PesquisaHistoricoRoute: typeof PesquisaHistoricoRoute
+}
+
+const PesquisaRouteChildren: PesquisaRouteChildren = {
+  PesquisaHistoricoRoute: PesquisaHistoricoRoute,
+}
+
+const PesquisaRouteWithChildren = PesquisaRoute._addFileChildren(
+  PesquisaRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
-  PesquisaHistoricoRoute: PesquisaHistoricoRoute,
-  PesquisaIndexRoute: PesquisaIndexRoute,
+  ConversationsRoute: ConversationsRoute,
+  PesquisaRoute: PesquisaRouteWithChildren,
+  ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
