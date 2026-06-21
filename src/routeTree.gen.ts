@@ -9,9 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConversationsRoute = ConversationsRouteImport.update({
+  id: '/conversations',
+  path: '/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BuilderRoute = BuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
@@ -26,31 +38,53 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/conversations': typeof ConversationsRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/builder'
+  fullPaths: '/' | '/builder' | '/conversations' | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/builder'
-  id: '__root__' | '/' | '/builder'
+  to: '/' | '/builder' | '/conversations' | '/reports'
+  id: '__root__' | '/' | '/builder' | '/conversations' | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
+  ConversationsRoute: typeof ConversationsRoute
+  ReportsRoute: typeof ReportsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conversations': {
+      id: '/conversations'
+      path: '/conversations'
+      fullPath: '/conversations'
+      preLoaderRoute: typeof ConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/builder': {
       id: '/builder'
       path: '/builder'
@@ -71,7 +105,19 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
+  ConversationsRoute: ConversationsRoute,
+  ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

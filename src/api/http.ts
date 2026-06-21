@@ -1,0 +1,61 @@
+/**
+ * http.ts — implementação real via fetch, bate na VPS.
+ * Ativa quando VITE_API_BASE_URL está preenchida.
+ */
+
+import type {
+  ApiClient,
+  ConversationDetail,
+  ConversationSummary,
+  FlowSummary,
+  ReportSchema,
+  ReportSummary,
+  StartConversationPayload,
+} from "./types";
+
+const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
+    throw new Error((err as { error?: { message?: string } }).error?.message ?? res.statusText);
+  }
+  return res.json() as Promise<T>;
+}
+
+export const httpApi: ApiClient = {
+  getHealth: () => req("/health"),
+
+  listFlows: () => req<FlowSummary[]>("/api/flows"),
+  getFlow: (id) => req<Record<string, unknown>>(`/api/flows/${id}`),
+  createFlow: (flow) =>
+    req<{ id: string }>("/api/flows", { method: "POST", body: JSON.stringify(flow) }),
+  updateFlow: (id, flow) =>
+    req<{ id: string; updatedAt: string }>(`/api/flows/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(flow),
+    }),
+
+  listConversations: (status) =>
+    req<ConversationSummary[]>(`/api/conversations${status ? `?status=${status}` : ""}`),
+  getConversation: (id) => req<ConversationDetail>(`/api/conversations/${id}`),
+  sendMessage: (id, text) =>
+    req<{ id: string }>(`/api/conversations/${id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+  takeover: (id) => req<{ ok: boolean }>(`/api/conversations/${id}/takeover`, { method: "POST" }),
+  resume: (id) => req<{ ok: boolean }>(`/api/conversations/${id}/resume`, { method: "POST" }),
+  startConversation: (payload: StartConversationPayload) =>
+    req<{ conversationId: string }>("/api/conversations/start", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  listReports: () => req<ReportSummary[]>("/api/reports"),
+  getReport: (id) => req<ReportSchema>(`/api/reports/${id}`),
+};
