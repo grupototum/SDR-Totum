@@ -53,7 +53,7 @@ function StartConversationModal({ onClose }: { onClose: () => void }) {
     onError: (e) => toast.error(`Erro: ${(e as Error).message}`),
   });
 
-  const varFields: Array<[keyof StartConversationPayload["variables"], string]> = [
+  const varFields: Array<[string, string]> = [
     ["NOME_EMPRESA", "Nome da empresa"],
     ["NOME_DONO", "Nome do dono"],
     ["ESPECIALIDADE", "Especialidade"],
