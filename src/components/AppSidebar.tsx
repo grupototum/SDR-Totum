@@ -51,7 +51,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = isActive(item.url, item.exact);
+                const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
