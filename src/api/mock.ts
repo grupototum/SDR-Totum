@@ -243,10 +243,7 @@ export const mockApi: ApiClient = {
 
   async getFlow(_id) {
     await delay();
-    // Dynamically import the flow JSON as passthrough
-    const mod = await import("../../docs/flow_odonto_sdr_v1.json", {
-      with: { type: "json" },
-    });
+    const mod = await import("../../docs/flow_odonto_sdr_v1.json");
     return mod.default as Record<string, unknown>;
   },
 
