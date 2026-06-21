@@ -1,30 +1,62 @@
 /**
- * Conteúdo da Ordem de Pesquisa — derivado do prompt de especificação.
+ * Conteúdo da Ordem de Pesquisa — fonte da verdade: docs/MESTRE_DE_PESQUISA_v2.md (v2.0).
  *
- * TODO(mestre): reconciliar TODO este arquivo com docs/MESTRE_DE_PESQUISA_v2.md
- * quando ele for adicionado ao repo. As cidades da FASE 0, os campos da FASE 6
- * (blocos A–G) e a lista de fontes da FASE 2 são aproximações sensatas baseadas
- * no domínio SDR + nos campos nomeados explicitamente no prompt
- * (DIFERENCIAL_REAL, GANCHO_ABERTURA, CATEGORIA_PRINCIPAL, CAUSA, CONSEQUENCIA,
- * ARGUMENTO_AUDIO). Não inventar campos novos sem checar o mestre.
+ * Geografia (FASE 0), gate (FASE 1), fontes (FASE 2) e schema por prospect
+ * (FASE 6 + blocos da FASE 2, bloqueantes da FASE 5) reconciliados 1:1 com o
+ * mestre. Não inventar campos fora do mestre.
  */
 import type { AngleId, IcpGate, OrderData, OutputBlock, OutputField, ProspectType } from "./types";
 
 /** Estados pré-populados (FASE 0). */
 export const ESTADOS = ["SP", "MG", "ES"] as const;
 
-/** Cidades por estado (FASE 0). TODO(mestre): substituir pela lista oficial. */
+/** Cidades por estado (FASE 0 — geografia da campanha do mestre). */
 export const CIDADES_POR_ESTADO: Record<string, string[]> = {
-  SP: ["São Paulo", "Campinas", "Ribeirão Preto", "Sorocaba", "São José dos Campos", "Santos"],
-  MG: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim"],
-  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Linhares"],
+  SP: [
+    "São José do Rio Preto",
+    "Ribeirão Preto",
+    "Araraquara",
+    "São Carlos",
+    "Jundiaí",
+    "Sorocaba",
+    "Limeira",
+    "Piracicaba",
+    "Americana",
+    "Indaiatuba",
+  ],
+  MG: [
+    "Varginha",
+    "Poços de Caldas",
+    "Pouso Alegre",
+    "Lavras",
+    "Divinópolis",
+    "Patos de Minas",
+    "Uberaba",
+    "Uberlândia",
+    "Nova Lima",
+    "Sete Lagoas",
+  ],
+  ES: [
+    "Vitória",
+    "Vila Velha",
+    "Serra",
+    "Cariacica",
+    "Linhares",
+    "Colatina",
+    "Cachoeiro de Itapemirim",
+    "Aracruz",
+  ],
 };
 
-/** Tipos de prospecção (FASE 0). */
+/** Tipos de oportunidade (FASE 0). */
 export const TIPOS: { id: ProspectType; label: string; descricao: string }[] = [
-  { id: "A", label: "Tipo A", descricao: "Encaixe direto e óbvio no ICP." },
-  { id: "B", label: "Tipo B", descricao: "Encaixe parcial, exige adaptação." },
-  { id: "C", label: "Tipo C", descricao: "Encaixe lateral / upsell futuro." },
+  { id: "A", label: "Tipo A", descricao: "Sem site." },
+  { id: "B", label: "Tipo B", descricao: "Site antigo." },
+  {
+    id: "C",
+    label: "Tipo C",
+    descricao: "Link da bio só leva a Instagram/WhatsApp.",
+  },
 ];
 
 /** Ângulos de munição (FASE 0). */
@@ -32,7 +64,7 @@ export const ANGULOS: { id: AngleId; label: string; descricao: string }[] = [
   {
     id: "diferencial_escondido",
     label: "Diferencial escondido",
-    descricao: "Algo forte que a empresa tem mas não comunica.",
+    descricao: "Algo forte que a clínica tem mas não comunica.",
   },
   {
     id: "comparacao_concorrente",
@@ -57,9 +89,14 @@ export const ANGULOS: { id: AngleId; label: string; descricao: string }[] = [
 ];
 
 /** Exclusões padrão (FASE 0). */
-export const EXCLUSOES_PADRAO = ["Franquias", "Grandes redes", "Marcas nacionais", "Corporativas"];
+export const EXCLUSOES_PADRAO = [
+  "Franquias",
+  "Grandes redes",
+  "Marcas nacionais",
+  "Clínicas corporativas",
+];
 
-/** Gate ICP default (FASE 1) — editável. */
+/** Gate ICP default (FASE 1) — 50+ avaliações e 4,5+ (mais restritivo). */
 export const GATE_DEFAULT: IcpGate = {
   minAvaliacoes: 50,
   notaMinima: 4.5,
@@ -68,20 +105,17 @@ export const GATE_DEFAULT: IcpGate = {
   somenteNaoIndividual: true,
 };
 
-/** Fontes de pesquisa (FASE 2). TODO(mestre): conferir com o mestre. */
+/** Fontes de pesquisa por prospect (FASE 2 — ordem das fontes). */
 export const FONTES_FASE2 = [
-  "Google Maps / Google Meu Negócio (GMB)",
-  "Instagram (perfil, frequência, engajamento)",
-  "Site oficial / landing page",
-  "Busca Google (nome + cidade + categoria)",
-  "Receita Federal / consulta CNPJ",
-  "Reclamações públicas e avaliações recentes",
+  "Google Maps (perfil)",
+  "Site",
+  "Instagram",
+  "Maps (especialidade + cidade → concorrentes)",
+  "Google Search (nome)",
+  "CNPJ / Receita",
 ];
 
-/**
- * Schema de saída POR PROSPECT (FASE 6), agrupado por bloco A–G.
- * TODO(mestre): validar nomes/placeholders e flags `blocking`/`munition`.
- */
+/** Blocos do schema POR PROSPECT (FASE 2 / FASE 6). */
 export const OUTPUT_BLOCKS: { id: OutputBlock; label: string }[] = [
   { id: "A", label: "Identificação" },
   { id: "B", label: "GMB (Google Meu Negócio)" },
@@ -89,11 +123,33 @@ export const OUTPUT_BLOCKS: { id: OutputBlock; label: string }[] = [
   { id: "D", label: "Site" },
   { id: "E", label: "Concorrentes" },
   { id: "F", label: "CNPJ" },
-  { id: "G", label: "Enriquecimento / Munição" },
+  { id: "G", label: "Enriquecimento" },
 ];
 
-/** Os 6 campos de munição marcados por padrão (nomeados no prompt). */
-const MUNICAO_DEFAULT = new Set([
+/**
+ * Bloqueantes — FASE 5 (checklist pré-disparo) é a lista canônica.
+ * NOTA_SEO é bloqueante apenas se TEM_SITE = sim.
+ */
+const BLOQUEANTES = new Set([
+  "NOME_EMPRESA",
+  "CIDADE",
+  "ESPECIALIDADE",
+  "TIPO_OPORTUNIDADE",
+  "NOME_DONO",
+  "INSTAGRAM",
+  "QTD_AVALIACOES",
+  "CONTEUDO_RECENTE",
+  "TEM_SITE",
+  "NOTA_SEO",
+  "CONCORRENTE_1",
+  "CONCORRENTE_2",
+  "CONCORRENTE_3",
+  "CAUSA",
+  "CONSEQUENCIA",
+]);
+
+/** Munição (FASE 3) marcada por padrão — campos nomeados no prompt/mestre. */
+const MUNICAO = new Set([
   "DIFERENCIAL_REAL",
   "GANCHO_ABERTURA",
   "CATEGORIA_PRINCIPAL",
@@ -102,81 +158,73 @@ const MUNICAO_DEFAULT = new Set([
   "ARGUMENTO_AUDIO",
 ]);
 
-const rawFields: Omit<OutputField, "defaultOn">[] = [
+/**
+ * Catálogo de campos POR PROSPECT (FASE 6 — formato de entrega), agrupado
+ * pelos blocos A–G da FASE 2. Cada `label` traz a dica do mestre quando útil.
+ */
+const rawFields: { key: string; label: string; block: OutputBlock }[] = [
   // Bloco A — Identificação
-  { key: "NOME_EMPRESA", label: "Nome da empresa", block: "A", blocking: true },
-  { key: "CATEGORIA_PRINCIPAL", label: "Categoria principal", block: "A", munition: true },
-  { key: "CIDADE_UF", label: "Cidade / UF", block: "A", blocking: true },
-  { key: "ENDERECO", label: "Endereço", block: "A" },
-  { key: "TELEFONE", label: "Telefone", block: "A" },
-  { key: "WHATSAPP", label: "WhatsApp", block: "A", blocking: true },
-  { key: "SITE_URL", label: "URL do site", block: "A" },
-  { key: "RESPONSAVEL_DECISOR", label: "Responsável / decisor", block: "A" },
+  { key: "NOME_EMPRESA", label: "Nome da empresa", block: "A" },
+  { key: "CIDADE", label: "Cidade", block: "A" },
+  { key: "ESPECIALIDADE", label: "Especialidade", block: "A" },
+  { key: "TIPO_CLINICA", label: "Tipo de clínica (especializada/geral/solo)", block: "A" },
+  { key: "TIPO_OPORTUNIDADE", label: "Tipo de oportunidade (A/B/C)", block: "A" },
+  { key: "NOME_DONO", label: "Nome do dono (+ fonte)", block: "A" },
+  { key: "NOME_DECISOR_2", label: "2º decisor", block: "A" },
+  { key: "WHATSAPP", label: "WhatsApp", block: "A" },
+  { key: "INSTAGRAM", label: "Instagram (@handle — gate)", block: "A" },
 
   // Bloco B — GMB
-  { key: "GMB_NOTA", label: "Nota no Google", block: "B", blocking: true },
-  { key: "GMB_TOTAL_AVALIACOES", label: "Total de avaliações", block: "B", blocking: true },
-  { key: "GMB_CATEGORIA", label: "Categoria GMB", block: "B" },
-  { key: "GMB_RECLAMACOES_RECENTES", label: "Reclamações recentes", block: "B", munition: true },
-  { key: "GMB_FOTOS_QTD", label: "Quantidade de fotos", block: "B" },
-  { key: "GMB_HORARIO_ATUALIZADO", label: "Horário atualizado", block: "B" },
-  { key: "GMB_LINK", label: "Link do perfil GMB", block: "B" },
+  { key: "QTD_AVALIACOES", label: "Qtd. de avaliações (≥50)", block: "B" },
+  { key: "NOTA_GMB", label: "Nota no Google", block: "B" },
+  { key: "RESPONDE_AVALIACOES", label: "Responde avaliações", block: "B" },
 
   // Bloco C — Instagram
-  { key: "INSTAGRAM_HANDLE", label: "@ do Instagram", block: "C", blocking: true },
-  { key: "INSTAGRAM_SEGUIDORES", label: "Seguidores", block: "C" },
-  {
-    key: "INSTAGRAM_ULTIMO_POST_DIAS",
-    label: "Dias desde o último post",
-    block: "C",
-    blocking: true,
-  },
-  { key: "INSTAGRAM_FREQUENCIA_POSTS", label: "Frequência de posts", block: "C" },
-  { key: "INSTAGRAM_ENGAJAMENTO", label: "Engajamento médio", block: "C" },
-  { key: "INSTAGRAM_BIO", label: "Bio / proposta", block: "C" },
+  { key: "SEGUIDORES", label: "Seguidores", block: "C" },
+  { key: "FREQUENCIA_POSTS", label: "Frequência de posts", block: "C" },
+  { key: "CONTEUDO_RECENTE", label: "Conteúdo recente (último post)", block: "C" },
+  { key: "LINK_BIO", label: "Link da bio", block: "C" },
 
-  // Bloco D — Site
-  { key: "SITE_TIPO", label: "Tipo de site (institucional/landing/nenhum)", block: "D" },
-  { key: "SITE_TEM_AGENDAMENTO", label: "Tem agendamento online", block: "D" },
-  { key: "SITE_VELOCIDADE", label: "Velocidade / performance", block: "D" },
-  { key: "SITE_MOBILE_OK", label: "Responsivo (mobile)", block: "D" },
-  {
-    key: "SITE_PROBLEMA_PRINCIPAL",
-    label: "Problema principal do site",
-    block: "D",
-    munition: true,
-  },
+  // Bloco D — Site (só se TEM_SITE = sim)
+  { key: "TEM_SITE", label: "Tem site", block: "D" },
+  { key: "URL_SITE", label: "URL do site", block: "D" },
+  { key: "NOTA_SEO", label: "Nota SEO (PageSpeed)", block: "D" },
+  { key: "TEM_HTTPS", label: "Tem HTTPS", block: "D" },
+  { key: "TEM_CTA", label: "Tem CTA", block: "D" },
+  { key: "VELOCIDADE_MOBILE", label: "Velocidade mobile", block: "D" },
 
-  // Bloco E — Concorrentes
-  { key: "CONCORRENTE_PROXIMO", label: "Concorrente próximo", block: "E", munition: true },
-  { key: "CONCORRENTE_NOTA", label: "Nota do concorrente", block: "E" },
-  { key: "CONCORRENTE_DIFERENCIAL", label: "Diferencial do concorrente", block: "E" },
-  { key: "COMPARACAO_RESUMO", label: "Resumo comparativo", block: "E", munition: true },
+  // Bloco E — Concorrentes (nome | aval | nota | site? | insta? | ads?)
+  { key: "CONCORRENTE_1", label: "Concorrente 1 (nome|aval|nota|site?|insta?|ads?)", block: "E" },
+  { key: "CONCORRENTE_2", label: "Concorrente 2 (nome|aval|nota|site?|insta?|ads?)", block: "E" },
+  { key: "CONCORRENTE_3", label: "Concorrente 3 (nome|aval|nota|site?|insta?|ads?)", block: "E" },
 
   // Bloco F — CNPJ
-  { key: "CNPJ", label: "CNPJ", block: "F" },
-  { key: "RAZAO_SOCIAL", label: "Razão social", block: "F" },
-  { key: "PORTE", label: "Porte", block: "F" },
-  { key: "DATA_ABERTURA", label: "Data de abertura", block: "F" },
-  { key: "SOCIOS", label: "Sócios", block: "F" },
-  { key: "SITUACAO_CADASTRAL", label: "Situação cadastral", block: "F" },
+  { key: "EMAIL_OFICIAL", label: "E-mail oficial (+ fonte / 'a verificar (CNPJ)')", block: "F" },
+  { key: "CNPJ_RAZAO_SOCIAL", label: "Razão social", block: "F" },
+  { key: "CNPJ_ABERTURA", label: "Data de abertura", block: "F" },
+  { key: "CNPJ_PORTE", label: "Porte", block: "F" },
 
-  // Bloco G — Enriquecimento / Munição
-  { key: "DIFERENCIAL_REAL", label: "Diferencial real", block: "G", munition: true },
-  { key: "GANCHO_ABERTURA", label: "Gancho de abertura", block: "G", munition: true },
-  { key: "CAUSA", label: "Causa (o porquê do problema)", block: "G", munition: true },
-  { key: "CONSEQUENCIA", label: "Consequência (impacto)", block: "G", munition: true },
-  { key: "ARGUMENTO_AUDIO", label: "Argumento para áudio", block: "G", munition: true },
-  { key: "TEMPERATURA_LEAD", label: "Temperatura do lead", block: "G" },
-  { key: "SCORE_FIT", label: "Score de fit", block: "G" },
-  { key: "OBSERVACAO_PERSONALIZADA", label: "Observação personalizada", block: "G" },
+  // Bloco G — Enriquecimento / Análise (Dado→Problema→Impacto→Oportunidade)
+  { key: "DIFERENCIAL_REAL", label: "Diferencial real (com evidência)", block: "G" },
+  { key: "GANCHO_ABERTURA", label: "Gancho de abertura", block: "G" },
+  { key: "CATEGORIA_PRINCIPAL", label: "Categoria principal (maior perda)", block: "G" },
+  { key: "CAUSA", label: "Causa (1 frase, sem jargão)", block: "G" },
+  { key: "CONSEQUENCIA", label: "Consequência (foco na perda)", block: "G" },
+  { key: "ARGUMENTO_AUDIO", label: "Argumento para áudio (ângulo variado)", block: "G" },
+  { key: "ACHADOS_SECUNDARIOS", label: "Achados secundários", block: "G" },
+  {
+    key: "ENRIQUECIMENTO",
+    label: "Enriquecimento (ads/velocidade/tecnologias/convênios/obs)",
+    block: "G",
+  },
 ];
 
-/** Schema FASE 6 com `defaultOn` calculado (bloqueantes + 6 munição). */
-export const OUTPUT_FIELDS: OutputField[] = rawFields.map((f) => ({
-  ...f,
-  defaultOn: Boolean(f.blocking) || MUNICAO_DEFAULT.has(f.key),
-}));
+/** Schema FASE 6 com flags e `defaultOn` (bloqueantes + 6 de munição). */
+export const OUTPUT_FIELDS: OutputField[] = rawFields.map((f) => {
+  const blocking = BLOQUEANTES.has(f.key);
+  const munition = MUNICAO.has(f.key);
+  return { ...f, blocking, munition, defaultOn: blocking || munition };
+});
 
 /** Keys marcadas por padrão no passo 5. */
 export const DEFAULT_OUTPUT_KEYS = OUTPUT_FIELDS.filter((f) => f.defaultOn).map((f) => f.key);
@@ -185,9 +233,10 @@ export const DEFAULT_OUTPUT_KEYS = OUTPUT_FIELDS.filter((f) => f.defaultOn).map(
 export function createDefaultOrder(): OrderData {
   return {
     nicho: "Clínicas odontológicas",
-    descricaoIcp: "",
+    descricaoIcp:
+      "Ticket justifica marketing; dependem de WhatsApp; Instagram ativo mas conversão fraca; boas avaliações / site fraco.",
     encaixeNatural: "Landing Page Express",
-    upsellFuturo: "",
+    upsellFuturo: "Google Ads, CRM, automação, site completo, SEO local.",
     estados: ["SP", "MG", "ES"],
     cidades: [...CIDADES_POR_ESTADO.SP, ...CIDADES_POR_ESTADO.MG, ...CIDADES_POR_ESTADO.ES],
     gate: { ...GATE_DEFAULT },

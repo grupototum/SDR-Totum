@@ -555,6 +555,14 @@ function StepCampos({ order, patch }: StepProps) {
                       bloqueante
                     </span>
                   )}
+                  {f.munition && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#a06ff6]"
+                      style={{ background: "rgba(107,33,239,0.15)" }}
+                    >
+                      munição
+                    </span>
+                  )}
                 </label>
               ))}
             </div>

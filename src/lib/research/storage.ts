@@ -1,11 +1,18 @@
 /**
  * Camada de dados das Ordens de Pesquisa.
  *
- * AGORA: persistência via localStorage (mock).
- * TODO(http): trocar a implementação destes métodos por chamadas ao endpoint
- *   `/api/research-orders` (GET/POST/DELETE) usando a camada http do projeto
- *   (ver API_CONTRACT.md quando existir). Os componentes consomem só este
- *   módulo + o hook `useResearchOrders` — NÃO usar fetch direto nas telas.
+ * Esta é a implementação "mock" no padrão do API_CONTRACT.md: uma única camada
+ * de acesso a dados, trocável entre mock e http via VITE_API_BASE_URL (vazio =
+ * mock; preenchido = http real na VPS). Os componentes consomem só este módulo
+ * + o hook `useResearchOrders` — NÃO usar fetch direto nas telas.
+ *
+ * Nota: o API_CONTRACT.md (escopo demo) NÃO define endpoint de research-orders
+ * — a ordem de pesquisa é um artefato do frontend (gera o prompt e persiste
+ * localmente). As variáveis produzidas aqui alimentam o POST
+ * /api/conversations/start (NOME_EMPRESA, NOME_DONO, ESPECIALIDADE, CIDADE,
+ * QTD_AVALIACOES, CONTEUDO_RECENTE, CONCORRENTE_1/2/3, tipo_clinica).
+ * TODO(http): se um endpoint de orders for adicionado ao contrato, trocar só a
+ * implementação destes métodos (mesma assinatura) — nenhuma reescrita de tela.
  */
 import { generateResearchPrompt } from "./generate-prompt";
 import type { OrderData, ResearchOrder, OrderStatus } from "./types";
