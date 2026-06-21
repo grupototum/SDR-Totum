@@ -15,6 +15,7 @@ import type {
   StartConversationPayload,
   ResearchOrder,
 } from "./types";
+import { generateResearchPrompt } from "@/lib/research-prompt";
 
 const FLOW_ID = "odonto_sdr_v1";
 const NOW = new Date().toISOString();
@@ -374,6 +375,7 @@ export const mockApi: ApiClient = {
       name: input.name,
       status: "rascunho",
       createdAt: new Date().toISOString(),
+      prompt: generateResearchPrompt(input.data),
       data: input.data,
     };
     writeOrders([order, ...readOrders()]);

@@ -30,10 +30,10 @@ function outputBlock(data: OrderData): string {
     if (fields.length === 0) continue;
     parts.push(`### ${block.title}`);
     for (const f of fields) {
-      const tags = [f.blocking ? "BLOQUEANTE" : "", f.ammo ? "munição" : ""]
+      const tags = [f.blocking ? "bloqueante" : "", f.ammo ? "munição" : ""]
         .filter(Boolean)
         .join(", ");
-      parts.push(`- ${f.label}: {${f.key}}${tags ? `  [${tags}]` : ""}`);
+      parts.push(`- **${f.key}**: {${f.key}} — ${f.label}${tags ? `  _(${tags})_` : ""}`);
     }
     parts.push("");
   }
@@ -41,38 +41,44 @@ function outputBlock(data: OrderData): string {
 }
 
 export function generateResearchPrompt(data: OrderData): string {
-  const cityCount = data.geography.reduce((n, g) => n + g.cities.length, 0);
-  const blockingCount = data.outputFields.filter((k) =>
-    OUTPUT_BLOCKS.some((b) => b.fields.some((f) => f.key === k && f.blocking)),
-  ).length;
+  const nota = data.minRating.toLocaleString("pt-BR");
 
   return `# ORDEM DE PESQUISA DE LOTE — TOTUM PROSPECTING OS
 > Gerada pela página Pesquisa. Fonte da verdade: MESTRE_DE_PESQUISA_v2.md.
 
 ## MISSÃO
-Revelar a OPORTUNIDADE escondida em cada prospect e municiar o SDR.
-Regra de ouro de cada achado: Dado → Problema → Impacto → Oportunidade.
-Nunca inventar dado. Nunca usar dado isolado. CAUSA/CONSEQUÊNCIA sem jargão.
+Para cada prospect do lote, revelar a OPORTUNIDADE real — nunca apenas coletar dados soltos.
+Regra de ouro de cada achado:
+
+> **Dado → Problema → Impacto → Oportunidade**
+
+Regras inegociáveis:
+- Nunca inventar dado; nunca entregar dado isolado.
+- DIFERENCIAL_REAL sempre com evidência (nada de "atendimento humanizado" sem fonte).
+- CAUSA e CONSEQUENCIA em 1 frase, sem jargão (leia em voz alta).
+- ARGUMENTO_AUDIO com ângulo VARIADO (não começar sempre por nº de avaliações).
+- Se SEO 9–10: não citar a nota; pivotar para percepção/UX.
+- E-mail vindo de CNPJ = "a verificar (CNPJ)".
 
 ## FASE 0 — PARÂMETROS DO LOTE
-- Nicho / ICP: ${data.niche}
-- Descrição do ICP: ${data.icpDescription}
-- Encaixe natural: ${data.naturalFit}
-- Upsell futuro (não entra na abordagem): ${data.upsellContext}
-- Tipos de oportunidade: ${typesBlock(data)}
-- Ângulos de munição: ${data.angles.join(" · ") || "(nenhum)"}
-- Exclusões: ${data.exclusions.join(", ") || "(nenhuma)"}
+- **Nicho / ICP:** ${data.niche}
+- **Descrição do ICP:** ${data.icpDescription}
+- **Encaixe natural:** ${data.naturalFit}
+- **Upsell futuro (não entra na abordagem):** ${data.upsellContext}
+- **Tipos de oportunidade:** ${typesBlock(data)}
+- **Ângulos de munição:** ${data.angles.join(" · ") || "(nenhum)"}
+- **Exclusões:** ${data.exclusions.join(", ") || "(nenhuma)"}
 
-Geografia da campanha:
+**Geografia da campanha:**
 ${geoBlock(data)}
 
 ## FASE 1 — GATE ICP (verificar ANTES de pesquisar; falhou → DESCARTAR)
-- Avaliações Google: ${data.minReviews}+ (número exato no Maps)
-- Nota Google: ${data.minRating.toString().replace(".", ",")}+
-- Nicho: Odontologia${data.nonIndividualOnly ? " (não consultório individual)" : ""}
+- Avaliações Google: **${data.minReviews}+** (número exato no Maps)
+- Nota Google: **${nota}+**
+- Nicho: Odontologia${data.nonIndividualOnly ? " (**não** consultório individual)" : ""}
 - Região: dentro da geografia do lote
-- WhatsApp: ${data.requireWhatsapp ? "obrigatório (visível no perfil ou site)" : "não obrigatório"}
-- Instagram ativo: perfil existe + postou nos últimos ${data.instagramActiveDays} dias
+- WhatsApp: ${data.requireWhatsapp ? "visível no perfil ou site" : "não obrigatório"}
+- Instagram ativo: perfil existe + postou nos últimos **${data.instagramActiveDays}** dias
 - Exclusão: ${data.exclusions.join(", ") || "(nenhuma)"}
 
 ## FASE 2 — PESQUISA POR PROSPECT (ordem das fontes)
@@ -86,8 +92,5 @@ ${outputBlock(data)}
 - Total avaliados / aprovados / descartados (com motivo).
 - Distribuição por tipo de oportunidade e por categoria principal.
 - Dono identificado vs. não identificado.
-- Top 5 por volume de avaliações.
-
----
-Parâmetros: ${cityCount} cidade(s) · ${data.outputFields.length} campo(s) de saída (${blockingCount} bloqueante(s)).`;
+- Top 5 por volume de avaliações.`;
 }

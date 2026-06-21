@@ -119,6 +119,8 @@ export interface ResearchOrder {
   name: string;
   status: "rascunho" | "pronta" | "em_execucao" | "concluida";
   createdAt: string;
+  /** Snapshot do prompt gerado no momento do salvamento. */
+  prompt: string;
   data: OrderData;
 }
 

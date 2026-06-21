@@ -27,7 +27,8 @@ const STATUS_LABEL: Record<ResearchOrder["status"], string> = {
 };
 
 function PromptModal({ order, onClose }: { order: ResearchOrder; onClose: () => void }) {
-  const prompt = generateResearchPrompt(order.data);
+  // Mostra o snapshot salvo; regenera só se faltar (ordens antigas).
+  const prompt = order.prompt || generateResearchPrompt(order.data);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
