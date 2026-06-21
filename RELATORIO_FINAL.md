@@ -110,3 +110,63 @@ bf289fc feat(T05-T10): API layer mock/http + Console + Relatórios + Disparo + N
 2f7935b Added builder & node system (pré-existente)
 ...
 ```
+
+---
+
+# Atualização — 2026-06-21
+
+**Branch:** feat/flow-builder-overnight (continuação)
+
+## Sessão A — Verificação do Flow Builder + harness de round-trip
+
+Auditoria empírica do trabalho noturno (não confiar em mensagens de commit):
+
+- **Spec versionada**: `docs/FLOW_FORMAT_SPEC.md`, `flow_odonto_sdr_v1.json` (v1.1.1, **181 nós**), `API_CONTRACT.md`, `MESTRE_DE_PESQUISA_v2.md` copiados para `/docs` (fonte da verdade no repo).
+- **Round-trip automatizado**: `scripts/roundtrip.mjs` + `npm run test:roundtrip` — esbuild transpila o serializer, faz import→export e deep-compara nó-a-nó. Antes era só conferido na UI; agora é repetível. **Resultado: 181 nós, 277 edges, zero campos perdidos** (ref, block, effects, note, detail, on_fail, branch.set, ids de variante, changelog, opening_variations, loop_guards).
+- **Lint corrigido** (estava quebrado): `prefer-const` em `api/mock.ts`; `.claude`/`.gstack` ignorados no `eslint.config.js` (worktree aninhado era duplo-lintado); Prettier. → **0 erros**.
+- **Dropdowns de modelo** alinhados aos ids reais do motor (`gemini-2.5-flash`, `groq-llama-3.3-70b`) — os 36 nós ai/conditional importados mostravam dropdown vazio.
+
+DELAY de dois relógios já estava correto (`min((words/40)*60, 8)` + `(words/225)*60`), **não** `length/15`.
+
+Commits: `docs: add flow format spec…` · `test: add lossless round-trip harness…` · `fix(builder): lint green + align model dropdowns…`
+
+## Sessão B — Página PESQUISA (wizard de ordem + histórico)
+
+Conforme `docs/REPROMPT_CLAUDE_CODE_WIZARD_PESQUISA.md`, conteúdo de `MESTRE_DE_PESQUISA_v2.md`.
+
+### Novos arquivos
+| Arquivo | Descrição |
+|---|---|
+| `src/lib/research-schema.ts` | Constantes do MESTRE: geografia (SP/MG/ES), gate, tipos, ângulos, schema A–G (bloqueantes + munição), `defaultOrderData`, `autoOrderName` |
+| `src/lib/research-prompt.ts` | `generateResearchPrompt(order)` — renderiza a ORDEM (MISSÃO, FASE 0/1/2/6, RESUMO); OUTPUT montado só com campos marcados; placeholders `{NOME_EMPRESA}` preservados |
+| `src/components/research/ResearchWizard.tsx` | Wizard 6 passos: stepper, validação por passo, footer; passo 6 com preview monospace + Copiar / Salvar / Rodar (desabilitado) |
+| `src/components/research/OrderHistory.tsx` | Histórico lista \| card (pref. localStorage), Ver prompt (modal), Duplicar |
+| `src/routes/pesquisa.tsx` | Rota `/pesquisa` (suporta `?dup=id` para reabrir pré-preenchido) |
+| `src/routes/pesquisa.historico.tsx` | Rota `/pesquisa/historico` |
+
+### Arquivos modificados
+| Arquivo | O que mudou |
+|---|---|
+| `src/api/types.ts` | `OrderData`, `ResearchGeography`, `ResearchOrder` + métodos list/get/create no `ApiClient` |
+| `src/api/mock.ts` | Research orders via localStorage (guarda SSR + fallback memória) |
+| `src/api/http.ts` | Stub `/api/research-orders` (TODO endpoint) |
+| `src/api/index.ts` | Re-export dos novos tipos |
+| `src/routes/index.tsx` | Link + card "Pesquisa" na home |
+
+### Verificação
+| Check | Status |
+|---|---|
+| `vite build` | ✅ rotas `/pesquisa` e `/pesquisa/historico` geradas |
+| `eslint .` | ✅ 0 erros |
+| Round-trip Flow Builder | ✅ continua 181 nós, 0 diffs (feature isolada, não tocou o builder) |
+| SSR das rotas | ✅ HTTP 200, sem erro (guarda de localStorage) |
+| Gerador de prompt | ✅ smoke test: todas as seções + placeholders presentes |
+| Sem dependência nova | ✅ framer-motion **não** instalado → stepper com transições CSS |
+
+### Decisões / o que ficou de fora
+- **framer-motion**: o reprompt sugeria, mas a regra "sem dependência nova" venceu → stepper animado via CSS/Tailwind.
+- **Base `multistep-form`**: não existia no repo → wizard construído enxuto do zero (primitivas locais Totum).
+- **Verificação visual no browser**: o preview headless falhou por EPERM de sandbox no ambiente; cobertura ficou via build (type-check), SSR 200 e smoke test do gerador.
+- **Persistência**: localStorage agora; endpoint HTTP é TODO (sem fetch direto, tudo via camada `api`).
+
+Commits: `feat(pesquisa): wizard de 6 passos + histórico…` · `docs: add pesquisa wizard reprompt…`
