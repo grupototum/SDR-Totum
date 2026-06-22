@@ -148,6 +148,8 @@ export interface SimTurnRequest {
   history: SimMessage[];
   /** Estágio atual (stage_to do último turno, ou entry_stage). */
   currentStage: string;
+  /** Estado de sessão encadeado entre turnos (objecao_count, etc.). */
+  sessionState?: Record<string, unknown>;
 }
 
 export interface SimTurnResponse {
@@ -157,6 +159,12 @@ export interface SimTurnResponse {
   temperatura: string;
   score: number;
   flags: SimFlags;
+  /** Contagem de objeções na sessão (loop de interrupção). */
+  objecao_count: number;
+  /** True se o turno violou um guard-rail (usado na métrica de saúde). */
+  guardrail_violation: boolean;
+  /** Estado de sessão para alimentar o próximo turno. */
+  sessionState: Record<string, unknown>;
   /** JSON cru do turno (para o painel lateral). */
   raw: Record<string, unknown>;
 }

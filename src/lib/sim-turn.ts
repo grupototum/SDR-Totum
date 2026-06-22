@@ -4,6 +4,9 @@
  * Avança um flow v2 (estágios) de forma determinística para testar a conversa
  * sem o motor real. É usado pelo mock da camada de dados E como FALLBACK no
  * cliente quando o engine (POST /api/sim/turn) está indisponível.
+ *
+ * Multi-turno real: encadeia `sessionState` (objecao_count) entre turnos e
+ * trata o loop de interrupção (objeção) com max_iterations / on_exceed do flow.
  */
 import type { SimTurnRequest, SimTurnResponse, SimFlags } from "@/api/types";
 
@@ -17,13 +20,30 @@ interface RawStage {
   terminal?: boolean;
 }
 
+interface RawInterrupt {
+  id: string;
+  handler_instruction?: string;
+  max_iterations?: number;
+  on_exceed?: { goto?: string; set?: Record<string, unknown> };
+  return?: string;
+}
+
 function interpolate(tpl: string, vars: Record<string, string>): string {
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] || `{{${k}}}`);
 }
 
-/** Calcula um turno simulado a partir do flow + histórico + estágio atual. */
+/** Heurística: a última fala do lead parece uma objeção? */
+function isObjection(text: string): boolean {
+  return /\b(pre[çc]o|caro|valor|quanto custa|n[ãa]o (preciso|quero|tenho interesse)|j[áa] tenho|ag[êe]ncia|depois|sem tempo|n[ãa]o é o momento|ocupad)/i.test(
+    text,
+  );
+}
+
+/** Calcula um turno simulado a partir do flow + histórico + estado de sessão. */
 export function mockSimTurn(req: SimTurnRequest): SimTurnResponse {
   const stages = (Array.isArray(req.flow.stages) ? req.flow.stages : []) as RawStage[];
+  const session = { ...(req.sessionState ?? {}) } as { objecao_count?: number };
+  let objecaoCount = Number(session.objecao_count ?? 0);
 
   // Flow sem estágios (v1 legado ou vazio): resposta genérica.
   if (stages.length === 0) {
@@ -34,6 +54,9 @@ export function mockSimTurn(req: SimTurnRequest): SimTurnResponse {
       temperatura: "morno",
       score: 5,
       flags: { send_preview: false, booked: false, precisa_humano: false, done: false },
+      objecao_count: objecaoCount,
+      guardrail_violation: false,
+      sessionState: { ...session, objecao_count: objecaoCount },
       raw: { mock: true, note: "flow sem stages v2" },
     };
   }
@@ -46,6 +69,61 @@ export function mockSimTurn(req: SimTurnRequest): SimTurnResponse {
   );
   const stage = stages[idx] ?? stages[0];
 
+  const lastLead = [...req.history].reverse().find((m) => m.role === "lead")?.text ?? "";
+  const interrupt = (Array.isArray(req.flow.interrupts) ? req.flow.interrupts : [])[0] as
+    | RawInterrupt
+    | undefined;
+
+  // ── Loop de interrupção (objeção): acolhe e volta ao ponto de origem ──
+  if (interrupt && !stage.terminal && isObjection(lastLead)) {
+    objecaoCount += 1;
+    const maxIter = Number(interrupt.max_iterations ?? 2);
+    if (objecaoCount > maxIter) {
+      const goto = interrupt.on_exceed?.goto ?? fromId;
+      return {
+        reply: "Sem problema, não quero tomar seu tempo. Qualquer coisa estou à disposição 🙏",
+        stage_from: fromId,
+        stage_to: goto,
+        temperatura: "frio",
+        score: 2,
+        flags: { send_preview: false, booked: false, precisa_humano: false, done: true },
+        objecao_count: objecaoCount,
+        guardrail_violation: false,
+        sessionState: { ...session, objecao_count: objecaoCount },
+        raw: {
+          mock: true,
+          interrupt: interrupt.id,
+          on_exceed: interrupt.on_exceed,
+          objecao_count: objecaoCount,
+        },
+      };
+    }
+    const reply = interpolate(
+      interrupt.handler_instruction
+        ? "Entendo total. Sem te prender a nada — só queria te mostrar o que enxerguei. Posso seguir?"
+        : "Entendo!",
+      req.variables,
+    );
+    return {
+      reply,
+      stage_from: fromId,
+      stage_to: fromId, // volta ao ponto de origem (PONTO_RETORNO)
+      temperatura: "morno",
+      score: 4,
+      flags: { send_preview: false, booked: false, precisa_humano: false, done: false },
+      objecao_count: objecaoCount,
+      guardrail_violation: false,
+      sessionState: { ...session, objecao_count: objecaoCount },
+      raw: {
+        mock: true,
+        interrupt: interrupt.id,
+        return: interrupt.return,
+        objecao_count: objecaoCount,
+      },
+    };
+  }
+
+  // ── Avanço normal de estágio ──
   const refs = stage.reference_copy ?? [];
   const replyTpl = refs[0] ?? stage.goal ?? "Certo!";
   const reply = interpolate(replyTpl, req.variables);
@@ -78,6 +156,9 @@ export function mockSimTurn(req: SimTurnRequest): SimTurnResponse {
     temperatura,
     score,
     flags,
+    objecao_count: objecaoCount,
+    guardrail_violation: false,
+    sessionState: { ...session, objecao_count: objecaoCount },
     raw: {
       mock: true,
       stage_from: fromId,
@@ -87,6 +168,7 @@ export function mockSimTurn(req: SimTurnRequest): SimTurnResponse {
       flags,
       temperatura,
       score,
+      objecao_count: objecaoCount,
       turn: req.history.filter((m) => m.role === "sdr").length + 1,
     },
   };

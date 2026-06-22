@@ -4,12 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/api";
 import type { SimMessage, SimTurnResponse } from "@/api";
 import { mockSimTurn } from "@/lib/sim-turn";
+import { runBattery, type BatterySummary } from "@/lib/sim-harness";
 import { useFlowV2Store } from "@/stores/flow-v2-store";
 import { TotumButton } from "@/components/ui/totum-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FlaskConical, RotateCcw, Send, BotMessageSquare, User } from "lucide-react";
+import { FlaskConical, RotateCcw, Send, BotMessageSquare, User, Activity } from "lucide-react";
+
+/** Um turno via proxy server-side /api/engine; fallback mock se sem engine. */
+async function simTurnWithFallback(payload: Parameters<typeof api.simTurn>[0]) {
+  try {
+    return await api.simTurn(payload);
+  } catch {
+    return mockSimTurn(payload);
+  }
+}
 
 export const Route = createFileRoute("/simulator")({
   head: () => ({
@@ -40,8 +50,11 @@ function SimulatorPage() {
   const [source, setSource] = useState<string>(DRAFT);
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [sessionState, setSessionState] = useState<Record<string, unknown>>({});
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [battery, setBattery] = useState<BatterySummary | null>(null);
+  const [batteryRunning, setBatteryRunning] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: flowList = [] } = useQuery({ queryKey: ["flows"], queryFn: () => api.listFlows() });
@@ -95,17 +108,11 @@ function SimulatorPage() {
       { role: "sdr" as const, text: t.reply },
     ]);
     history.push({ role: "lead", text });
-    const payload = { flow: activeFlow, variables, history, currentStage };
+    const payload = { flow: activeFlow, variables, history, currentStage, sessionState };
     try {
-      let res: SimTurnResponse;
-      try {
-        res = await api.simTurn(payload);
-      } catch {
-        // Fallback mock se o engine estiver indisponível.
-        res = mockSimTurn(payload);
-        toast.info("Engine indisponível — usando simulação mock");
-      }
+      const res: SimTurnResponse = await simTurnWithFallback(payload);
       setTurns((t) => [...t, { lead: text, ...res }]);
+      setSessionState(res.sessionState); // encadeia o estado pro próximo turno
     } catch (e) {
       toast.error(`Erro no turno: ${(e as Error).message}`);
     } finally {
@@ -115,7 +122,22 @@ function SimulatorPage() {
 
   function reset() {
     setTurns([]);
+    setSessionState({});
     setInput("");
+  }
+
+  async function rodarBateria() {
+    if (!activeFlow || batteryRunning) return;
+    setBatteryRunning(true);
+    try {
+      const summary = await runBattery(activeFlow, simTurnWithFallback);
+      setBattery(summary);
+      toast.success(`Bateria: ${Math.round(summary.healthRate * 100)}% saudável`);
+    } catch (e) {
+      toast.error(`Erro na bateria: ${(e as Error).message}`);
+    } finally {
+      setBatteryRunning(false);
+    }
   }
 
   return (
@@ -190,14 +212,66 @@ function SimulatorPage() {
             ))}
           </div>
 
-          <TotumButton variant="outline" size="sm" onClick={reset} className="self-start">
-            <RotateCcw className="size-3.5" /> Reset
-          </TotumButton>
+          <div className="flex gap-2">
+            <TotumButton variant="outline" size="sm" onClick={reset}>
+              <RotateCcw className="size-3.5" /> Reset
+            </TotumButton>
+            <TotumButton
+              variant="primary"
+              size="sm"
+              onClick={rodarBateria}
+              disabled={!activeFlow || batteryRunning}
+            >
+              <Activity className="size-3.5" />
+              {batteryRunning ? "Rodando…" : "Rodar bateria"}
+            </TotumButton>
+          </div>
         </div>
       </aside>
 
       {/* ── Centro: chat ── */}
       <main className="flex flex-col overflow-hidden" style={{ background: "#0e0918" }}>
+        {battery && (
+          <div
+            className="flex items-center justify-between gap-4 px-5 py-3"
+            style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[color:var(--color-text-muted)]">Saúde do flow</span>
+              <span
+                className="text-2xl"
+                style={{
+                  color:
+                    battery.healthRate >= 0.75
+                      ? "#35a670"
+                      : battery.healthRate >= 0.5
+                        ? "#f59e0b"
+                        : "#da2128",
+                }}
+              >
+                {Math.round(battery.healthRate * 100)}%
+              </span>
+              <span className="text-xs text-[color:var(--color-text-muted)]">
+                {battery.healthy}/{battery.total} booked sem violar guard-rail
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {battery.results.map((r) => (
+                <span
+                  key={r.persona}
+                  title={`${r.persona}: ${r.turns} turnos → ${r.finalStage}${r.booked ? " · booked" : ""}${r.guardrail_violation ? " · guard-rail!" : ""}`}
+                  className="rounded-full px-2 py-0.5 text-[10px]"
+                  style={{
+                    background: r.healthy ? "rgba(53,166,112,0.18)" : "rgba(218,33,40,0.15)",
+                    color: r.healthy ? "#35a670" : "#ef9a9a",
+                  }}
+                >
+                  {r.persona}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
           {turns.length === 0 && (
             <p className="mt-10 text-center text-sm text-[color:var(--color-text-muted)]">
@@ -321,6 +395,7 @@ function SimulatorPage() {
               <div className="text-[11px] text-[color:var(--color-text-muted)]">
                 <span className="text-white">{t.stage_from}</span> →{" "}
                 <span className="text-white">{t.stage_to}</span>
+                <span className="ml-2">objeções: {t.objecao_count}</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {(["send_preview", "booked", "precisa_humano", "done"] as const).map((f) => (
