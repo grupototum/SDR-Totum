@@ -21,3 +21,4 @@ Branch: `feat/control-surface-overnight`. Estado em disco, atualizado a cada tar
 
 ## Log de execução
 - T1 ✓ — `active` em FlowSummary; mock flow store em memória (seed odonto ativo) com list/get/create/update/publish lossless; `publishFlow` no ApiClient + http (PUT active=true). build+lint verdes.
+- T2 ✓ — store: `currentFlowId`/`published` + `setCurrentFlow`/`setPublished`/`resetFlow`; `loadFlow(json, {id,active})` propaga id/publicado. build+lint+round-trip verdes.
