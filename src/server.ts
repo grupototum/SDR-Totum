@@ -71,6 +71,60 @@ async function proxyEngine(request: Request): Promise<Response> {
   }
 }
 
+/**
+ * Same-origin proxy para o N8N (mesma regra de segurança da engine).
+ * O cliente chama `/api/n8n/<path>` (same-origin); aqui — e SÓ aqui, no
+ * servidor — injetamos o header `X-N8N-API-KEY` com a `N8N_API_KEY` lida de
+ * `process.env`. A chave NUNCA vai pro bundle do browser (não é VITE_*) e
+ * NUNCA é logada. Auth do n8n usa header `X-N8N-API-KEY` (não Bearer).
+ *
+ * Repassa GET/POST/PUT/PATCH/DELETE preservando querystring + body.
+ * Erro de rede no upstream → 502.
+ */
+async function proxyN8n(request: Request): Promise<Response> {
+  const N8N_API_URL = process.env.N8N_API_URL;
+  const N8N_API_KEY = process.env.N8N_API_KEY;
+  const jsonHeaders = { "content-type": "application/json" };
+
+  if (!N8N_API_URL || !N8N_API_KEY) {
+    return new Response(JSON.stringify({ error: "n8n not configured" }), {
+      status: 503,
+      headers: jsonHeaders,
+    });
+  }
+
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/^\/api\/n8n\/?/, "");
+  const target = `${N8N_API_URL.replace(/\/$/, "")}/${path}${url.search}`;
+
+  const init: RequestInit = {
+    method: request.method,
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+      "X-N8N-API-KEY": N8N_API_KEY,
+    },
+  };
+  if (!["GET", "HEAD"].includes(request.method)) {
+    init.body = await request.text();
+  }
+
+  try {
+    const resp = await fetch(target, init);
+    const body = await resp.text();
+    return new Response(body, {
+      status: resp.status,
+      headers: { "content-type": resp.headers.get("content-type") ?? "application/json" },
+    });
+  } catch {
+    // Nunca logar nada que contenha a key/X-N8N-API-KEY.
+    return new Response(JSON.stringify({ error: "upstream unavailable" }), {
+      status: 502,
+      headers: jsonHeaders,
+    });
+  }
+}
+
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
@@ -96,6 +150,10 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/engine" || pathname.startsWith("/api/engine/")) {
       return proxyEngine(request);
+    }
+    // Rota-proxy same-origin do N8N: injeta o X-N8N-API-KEY no servidor.
+    if (pathname === "/api/n8n" || pathname.startsWith("/api/n8n/")) {
+      return proxyN8n(request);
     }
     try {
       const handler = await getServerEntry();

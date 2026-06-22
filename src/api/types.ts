@@ -126,6 +126,18 @@ export interface ResearchOrder {
   data: OrderData;
 }
 
+// ── N8N bridge (same-origin /api/n8n → proxy injeta X-N8N-API-KEY) ────────────
+
+/** Item da lista de workflows do n8n (GET /workflows → { data: [...] }). */
+export interface N8nWorkflowSummary {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+/** Workflow completo do n8n (JSON cru: nodes, connections, settings, …). */
+export type N8nWorkflow = Record<string, unknown>;
+
 export interface ApiClient {
   // Health
   getHealth(): Promise<{ status: string; version: string }>;
@@ -154,4 +166,15 @@ export interface ApiClient {
   listResearchOrders(): Promise<ResearchOrder[]>;
   getResearchOrder(id: string): Promise<ResearchOrder>;
   createResearchOrder(input: { name: string; data: OrderData }): Promise<ResearchOrder>;
+
+  // N8N bridge (same-origin; a key vive só no servidor)
+  listN8nWorkflows(): Promise<N8nWorkflowSummary[]>;
+  getN8nWorkflow(id: string): Promise<N8nWorkflow>;
+  /** PUT /workflows/:id — round-trip lossless (envie o workflow inteiro). */
+  updateN8nWorkflow(id: string, body: N8nWorkflow): Promise<N8nWorkflow>;
+  /**
+   * Liga/desliga via POST /workflows/:id/(de)activate. No n8n, `active` é
+   * read-only no PUT — só muda por estes endpoints dedicados.
+   */
+  setN8nWorkflowActive(id: string, active: boolean): Promise<N8nWorkflow>;
 }

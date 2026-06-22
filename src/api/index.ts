@@ -20,6 +20,8 @@ export type {
   OrderData,
   ResearchGeography,
   ResearchOrder,
+  N8nWorkflow,
+  N8nWorkflowSummary,
 } from "./types";
 
 const isMock = !import.meta.env.VITE_API_BASE_URL;

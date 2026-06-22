@@ -14,6 +14,8 @@ import type {
   ReportSummary,
   StartConversationPayload,
   ResearchOrder,
+  N8nWorkflow,
+  N8nWorkflowSummary,
 } from "./types";
 import { generateResearchPrompt } from "@/lib/research-prompt";
 
@@ -261,6 +263,29 @@ function flowSummary(f: StoredFlow): FlowSummary {
   };
 }
 
+// ── N8N: workflows mock (sem rede; espelha o formato cru do n8n) ─────────────
+const n8nWorkflows: N8nWorkflow[] = [
+  {
+    id: "wf-001",
+    name: "Lead → CRM (Odonto)",
+    active: true,
+    nodes: [
+      { id: "n1", name: "Webhook", type: "n8n-nodes-base.webhook", position: [240, 300] },
+      { id: "n2", name: "Set", type: "n8n-nodes-base.set", position: [480, 300] },
+    ],
+    connections: { Webhook: { main: [[{ node: "Set", type: "main", index: 0 }]] } },
+    settings: { executionOrder: "v1" },
+  },
+  {
+    id: "wf-002",
+    name: "Followup 48h",
+    active: false,
+    nodes: [{ id: "n1", name: "Cron", type: "n8n-nodes-base.cron", position: [240, 300] }],
+    connections: {},
+    settings: { executionOrder: "v1" },
+  },
+];
+
 export const mockApi: ApiClient = {
   async getHealth() {
     await delay();
@@ -450,6 +475,42 @@ export const mockApi: ApiClient = {
     };
     writeOrders([order, ...readOrders()]);
     return order;
+  },
+
+  async listN8nWorkflows() {
+    await delay();
+    return n8nWorkflows.map(
+      (w) =>
+        ({
+          id: String(w.id),
+          name: String(w.name),
+          active: Boolean(w.active),
+        }) satisfies N8nWorkflowSummary,
+    );
+  },
+
+  async getN8nWorkflow(id) {
+    await delay();
+    const wf = n8nWorkflows.find((w) => String(w.id) === id);
+    if (!wf) throw new Error(`Workflow ${id} não encontrado`);
+    return wf;
+  },
+
+  async updateN8nWorkflow(id, body) {
+    await delay();
+    const idx = n8nWorkflows.findIndex((w) => String(w.id) === id);
+    if (idx === -1) throw new Error(`Workflow ${id} não encontrado`);
+    // Round-trip lossless: preserva o resto, aplica o body recebido.
+    n8nWorkflows[idx] = { ...n8nWorkflows[idx], ...body, id };
+    return n8nWorkflows[idx];
+  },
+
+  async setN8nWorkflowActive(id, active) {
+    await delay();
+    const wf = n8nWorkflows.find((w) => String(w.id) === id);
+    if (!wf) throw new Error(`Workflow ${id} não encontrado`);
+    wf.active = active;
+    return wf;
   },
 };
 
