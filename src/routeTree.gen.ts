@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
+import { Route as N8nRouteImport } from './routes/n8n'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
@@ -24,6 +25,11 @@ const ReportsRoute = ReportsRouteImport.update({
 const PesquisaRoute = PesquisaRouteImport.update({
   id: '/pesquisa',
   path: '/pesquisa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const N8nRoute = N8nRouteImport.update({
+  id: '/n8n',
+  path: '/n8n',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
   '/conversations': typeof ConversationsRoute
+  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/builder'
     | '/conversations'
+    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/pesquisa/historico'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/builder'
     | '/conversations'
+    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/pesquisa/historico'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/builder'
     | '/conversations'
+    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/pesquisa/historico'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
   ConversationsRoute: typeof ConversationsRoute
+  N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
 }
@@ -121,6 +134,13 @@ declare module '@tanstack/react-router' {
       path: '/pesquisa'
       fullPath: '/pesquisa'
       preLoaderRoute: typeof PesquisaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/n8n': {
+      id: '/n8n'
+      path: '/n8n'
+      fullPath: '/n8n'
+      preLoaderRoute: typeof N8nRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -170,6 +190,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
   ConversationsRoute: ConversationsRoute,
+  N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
 }
