@@ -12,7 +12,7 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
 function NotFoundComponent() {
@@ -175,10 +175,6 @@ function RootComponent() {
         <div className="flex min-h-screen w-full" style={{ background: "#0e0918" }}>
           <AppSidebar />
           <div className="relative flex-1 flex flex-col min-w-0">
-            <SidebarTrigger
-              className="absolute right-3 top-3 z-50 size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
-              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
-            />
             <main className="flex-1 min-w-0">
               <Outlet />
             </main>
