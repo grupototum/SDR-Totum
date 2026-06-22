@@ -6,6 +6,8 @@ export interface FlowSummary {
   version: string;
   niche: string;
   updatedAt: string;
+  /** Flow publicado = roteiro que o cérebro do motor usa. Só um fica ativo. */
+  active?: boolean;
 }
 
 export interface ConversationSummary {
@@ -133,6 +135,8 @@ export interface ApiClient {
   getFlow(id: string): Promise<Record<string, unknown>>;
   createFlow(flow: Record<string, unknown>): Promise<{ id: string }>;
   updateFlow(id: string, flow: Record<string, unknown>): Promise<{ id: string; updatedAt: string }>;
+  /** Publica o flow (PUT /api/flows/:id active=true) — vira o roteiro do motor. */
+  publishFlow(id: string): Promise<{ id: string; active: boolean; updatedAt: string }>;
 
   // Conversations
   listConversations(status?: string): Promise<ConversationSummary[]>;
