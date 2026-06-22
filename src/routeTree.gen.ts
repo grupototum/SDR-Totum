@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SimulatorRouteImport } from './routes/simulator'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as N8nRouteImport } from './routes/n8n'
@@ -18,6 +19,11 @@ import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa.historico'
 
+const SimulatorRoute = SimulatorRouteImport.update({
+  id: '/simulator',
+  path: '/simulator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/simulator': typeof SimulatorRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/simulator': typeof SimulatorRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/simulator': typeof SimulatorRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/n8n'
     | '/pesquisa'
     | '/reports'
+    | '/simulator'
     | '/pesquisa/historico'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/n8n'
     | '/pesquisa'
     | '/reports'
+    | '/simulator'
     | '/pesquisa/historico'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/n8n'
     | '/pesquisa'
     | '/reports'
+    | '/simulator'
     | '/pesquisa/historico'
   fileRoutesById: FileRoutesById
 }
@@ -131,10 +143,18 @@ export interface RootRouteChildren {
   N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
+  SimulatorRoute: typeof SimulatorRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/simulator': {
+      id: '/simulator'
+      path: '/simulator'
+      fullPath: '/simulator'
+      preLoaderRoute: typeof SimulatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
@@ -214,6 +234,7 @@ const rootRouteChildren: RootRouteChildren = {
   N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
+  SimulatorRoute: SimulatorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

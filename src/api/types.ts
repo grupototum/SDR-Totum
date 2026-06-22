@@ -126,6 +126,49 @@ export interface ResearchOrder {
   data: OrderData;
 }
 
+// ── Simulator (testar um flow SEM WhatsApp via POST /api/sim/turn) ───────────
+
+export interface SimFlags {
+  send_preview: boolean;
+  booked: boolean;
+  precisa_humano: boolean;
+  done: boolean;
+}
+
+export interface SimMessage {
+  role: "lead" | "sdr";
+  text: string;
+}
+
+export interface SimTurnRequest {
+  /** Envelope do flow (v2 estágios ou v1 legado). */
+  flow: Record<string, unknown>;
+  variables: Record<string, string>;
+  /** Histórico acumulado (lead/sdr alternados). */
+  history: SimMessage[];
+  /** Estágio atual (stage_to do último turno, ou entry_stage). */
+  currentStage: string;
+  /** Estado de sessão encadeado entre turnos (objecao_count, etc.). */
+  sessionState?: Record<string, unknown>;
+}
+
+export interface SimTurnResponse {
+  reply: string;
+  stage_from: string;
+  stage_to: string;
+  temperatura: string;
+  score: number;
+  flags: SimFlags;
+  /** Contagem de objeções na sessão (loop de interrupção). */
+  objecao_count: number;
+  /** True se o turno violou um guard-rail (usado na métrica de saúde). */
+  guardrail_violation: boolean;
+  /** Estado de sessão para alimentar o próximo turno. */
+  sessionState: Record<string, unknown>;
+  /** JSON cru do turno (para o painel lateral). */
+  raw: Record<string, unknown>;
+}
+
 // ── N8N bridge (same-origin /api/n8n → proxy injeta X-N8N-API-KEY) ────────────
 
 /** Item da lista de workflows do n8n (GET /workflows → { data: [...] }). */
@@ -177,4 +220,7 @@ export interface ApiClient {
    * read-only no PUT — só muda por estes endpoints dedicados.
    */
   setN8nWorkflowActive(id: string, active: boolean): Promise<N8nWorkflow>;
+
+  // Simulator
+  simTurn(payload: SimTurnRequest): Promise<SimTurnResponse>;
 }

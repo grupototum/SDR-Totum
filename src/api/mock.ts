@@ -16,8 +16,10 @@ import type {
   ResearchOrder,
   N8nWorkflow,
   N8nWorkflowSummary,
+  SimTurnRequest,
 } from "./types";
 import { generateResearchPrompt } from "@/lib/research-prompt";
+import { mockSimTurn } from "@/lib/sim-turn";
 
 const FLOW_ID = "odonto_sdr_v1";
 const NOW = new Date().toISOString();
@@ -511,6 +513,11 @@ export const mockApi: ApiClient = {
     if (!wf) throw new Error(`Workflow ${id} não encontrado`);
     wf.active = active;
     return wf;
+  },
+
+  async simTurn(payload: SimTurnRequest) {
+    await delay(400);
+    return mockSimTurn(payload);
   },
 };
 
