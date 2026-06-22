@@ -169,6 +169,23 @@ export interface SimTurnResponse {
   raw: Record<string, unknown>;
 }
 
+/**
+ * Report de saúde da bateria (GET /api/sim/report) — métrica de decisão de GO.
+ * IMPORTANTE: a decisão de GO só vale contra o engine REAL. Quando `mock=true`
+ * o cockpit mostra mas marca como "não vale p/ GO".
+ */
+export interface SimReport {
+  /** 0..1 — % de personas que fecham (booked) SEM violar guard-rail. */
+  healthRate: number;
+  healthy: number;
+  total: number;
+  guardrail_violations?: number;
+  generatedAt?: string;
+  /** True se o report veio do mock (não vale como baseline de GO). */
+  mock?: boolean;
+  [k: string]: unknown;
+}
+
 // ── N8N bridge (same-origin /api/n8n → proxy injeta X-N8N-API-KEY) ────────────
 
 /** Item da lista de workflows do n8n (GET /workflows → { data: [...] }). */
@@ -223,4 +240,6 @@ export interface ApiClient {
 
   // Simulator
   simTurn(payload: SimTurnRequest): Promise<SimTurnResponse>;
+  /** Report de saúde da bateria (GET /api/sim/report) — fonte da métrica de GO. */
+  getSimReport(): Promise<SimReport>;
 }

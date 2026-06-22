@@ -21,6 +21,7 @@ import type {
   N8nWorkflowSummary,
   SimTurnRequest,
   SimTurnResponse,
+  SimReport,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -117,4 +118,6 @@ export const httpApi: ApiClient = {
   // mock se isto falhar (engine indisponível).
   simTurn: (payload: SimTurnRequest) =>
     req<SimTurnResponse>("/api/sim/turn", { method: "POST", body: JSON.stringify(payload) }),
+  // Report de GO — vem do engine real (via proxy). Métrica oficial de decisão.
+  getSimReport: () => req<SimReport>("/api/sim/report"),
 };

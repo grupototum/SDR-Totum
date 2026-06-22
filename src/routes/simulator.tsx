@@ -18,6 +18,9 @@ import {
   User,
   Activity,
   AlertTriangle,
+  RefreshCw,
+  HeartPulse,
+  Rocket,
 } from "lucide-react";
 
 /** Um turno via proxy server-side /api/engine; fallback mock se sem engine. */
@@ -66,6 +69,8 @@ function SimulatorPage() {
   const [pending, setPending] = useState(false);
   const [battery, setBattery] = useState<BatterySummary | null>(null);
   const [batteryRunning, setBatteryRunning] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: flowList = [] } = useQuery({ queryKey: ["flows"], queryFn: () => api.listFlows() });
@@ -75,6 +80,10 @@ function SimulatorPage() {
     queryFn: () => api.getFlow(source),
     enabled: source !== DRAFT,
   });
+
+  // Report de saúde da bateria lido do motor (GET /api/sim/report) — fonte de GO.
+  const reportQuery = useQuery({ queryKey: ["sim-report"], queryFn: () => api.getSimReport() });
+  const report = reportQuery.data;
 
   const activeFlow: Record<string, unknown> | null =
     source === DRAFT
@@ -137,6 +146,25 @@ function SimulatorPage() {
     setTurns([]);
     setSessionState({});
     setInput("");
+  }
+
+  async function publicarFlow() {
+    if (!activeFlow || publishing) return;
+    setPublishing(true);
+    try {
+      let id = source === DRAFT ? null : source;
+      if (!id) {
+        const created = await api.createFlow(activeFlow);
+        id = created.id;
+      }
+      await api.publishFlow(id);
+      setPublishedId(id);
+      toast.success(`Flow publicado e ativo: ${id}`);
+    } catch (e) {
+      toast.error(`Erro ao publicar: ${(e as Error).message}`);
+    } finally {
+      setPublishing(false);
+    }
   }
 
   async function rodarBateria() {
@@ -239,11 +267,83 @@ function SimulatorPage() {
               {batteryRunning ? "Rodando…" : "Rodar bateria"}
             </TotumButton>
           </div>
+
+          {/* ── Publicar / Ativar flow ── */}
+          <div
+            className="flex flex-col gap-2 rounded-xl p-3"
+            style={{ background: "rgba(218,33,40,0.08)", border: "1px solid rgba(218,33,40,0.25)" }}
+          >
+            <p className="text-[11px] font-medium text-[#e3433e]">Ativar em produção</p>
+            <p className="text-[10px] text-[color:var(--color-text-muted)]">
+              Salva + publica o flow testado como roteiro ativo do motor.
+              {MOCK_MODE && " (mock local — sem engine real conectada)"}
+            </p>
+            {publishedId && (
+              <p className="text-[10px] text-[#35a670]">✓ Ativo: {publishedId}</p>
+            )}
+            <TotumButton
+              variant="primary"
+              size="sm"
+              onClick={publicarFlow}
+              disabled={!activeFlow || publishing}
+              style={{ background: publishing ? undefined : "#da2128", borderColor: "#da2128" }}
+            >
+              <Rocket className="size-3.5" />
+              {publishing ? "Publicando…" : "Publicar / Ativar este flow"}
+            </TotumButton>
+          </div>
         </div>
       </aside>
 
       {/* ── Centro: chat ── */}
       <main className="flex flex-col overflow-hidden" style={{ background: "#0e0918" }}>
+        {/* Report do motor (GET /api/sim/report) — saúde da bateria / fonte de GO */}
+        {report && (
+          <div
+            className="flex items-center justify-between gap-4 px-5 py-3"
+            style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+          >
+            <div className="flex items-center gap-3">
+              <HeartPulse className="size-4 text-[#e3433e]" />
+              <span className="text-xs text-[color:var(--color-text-muted)]">
+                Report do motor (GO)
+              </span>
+              <span
+                className="text-2xl"
+                style={{
+                  color:
+                    report.healthRate >= 0.75
+                      ? "#35a670"
+                      : report.healthRate >= 0.5
+                        ? "#f59e0b"
+                        : "#da2128",
+                }}
+              >
+                {Math.round(report.healthRate * 100)}%
+              </span>
+              <span className="text-xs text-[color:var(--color-text-muted)]">
+                {report.healthy}/{report.total} booked sem violar guard-rail
+              </span>
+              {report.mock && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+                  style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
+                  title="Report veio do mock — não vale como baseline de GO"
+                >
+                  <AlertTriangle className="size-3" /> mock · não vale p/ GO
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => reportQuery.refetch()}
+              disabled={reportQuery.isFetching}
+              className="text-[color:var(--color-text-muted)] hover:text-white disabled:opacity-50"
+              title="Recarregar report"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+          </div>
+        )}
         {(MOCK_MODE || turns.some((t) => t.mock)) && (
           <div
             className="flex items-center gap-2 px-5 py-2 text-xs font-medium"

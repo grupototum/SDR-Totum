@@ -20,6 +20,7 @@ import type {
 } from "./types";
 import { generateResearchPrompt } from "@/lib/research-prompt";
 import { mockSimTurn } from "@/lib/sim-turn";
+import { runBattery } from "@/lib/sim-harness";
 
 const FLOW_ID = "odonto_sdr_v1";
 const NOW = new Date().toISOString();
@@ -518,6 +519,23 @@ export const mockApi: ApiClient = {
   async simTurn(payload: SimTurnRequest) {
     await delay(400);
     return mockSimTurn(payload);
+  },
+
+  async getSimReport() {
+    await delay();
+    // Sem engine real: computa a MESMA métrica localmente e marca mock=true
+    // (a decisão de GO só vale contra o engine real — o cockpit desqualifica isto).
+    const mod = await import("../../docs/flow_odonto_stages_v2.json");
+    const flow = mod.default as unknown as Record<string, unknown>;
+    const summary = await runBattery(flow, async (req) => mockSimTurn(req));
+    return {
+      healthRate: summary.healthRate,
+      healthy: summary.healthy,
+      total: summary.total,
+      guardrail_violations: 0,
+      generatedAt: new Date().toISOString(),
+      mock: true,
+    };
   },
 };
 

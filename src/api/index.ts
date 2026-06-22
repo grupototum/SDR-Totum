@@ -26,6 +26,7 @@ export type {
   SimMessage,
   SimTurnRequest,
   SimTurnResponse,
+  SimReport,
 } from "./types";
 
 const isMock = !import.meta.env.VITE_API_BASE_URL;
