@@ -1,6 +1,10 @@
 /**
- * http.ts — implementação real via fetch, bate na VPS.
- * Ativa quando VITE_API_BASE_URL está preenchida.
+ * http.ts — implementação real via fetch.
+ * Ativa quando VITE_API_BASE_URL está preenchida (use `/api/engine` = same-origin).
+ *
+ * SEGURANÇA: o cliente fala SÓ same-origin (`/api/engine/*`). O Bearer com a
+ * SDR_API_KEY é injetado no servidor (src/server.ts, proxyEngine), nunca aqui.
+ * NÃO referenciar SDR_API_KEY/Authorization/URL do motor neste arquivo (client).
  */
 
 import type {

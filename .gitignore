@@ -34,3 +34,7 @@ dist-ssr
 # tooling local (não versionar)
 .claude/
 .gstack/
+
+# segredos locais
+.env
+.env.local
