@@ -10,7 +10,7 @@ Protocolo: 1 commit por tarefa · auto-verificação (build+lint+round-trip 181)
 ## DoD-1 (prioridade máxima)
 - [x] T1 — Data layer flows: `active` no FlowSummary; flow store em memória no mock (seed odonto = ativo) com list/get/create/update/publish lossless; `publishFlow` no ApiClient + http stub. Verify: build+lint ✓.
 - [x] T2 — Store wiring: `currentFlowId`, `published` + ações `setCurrentFlow`/`setPublished`/`resetFlow`; `loadFlow(json, meta)` seta id/active. Verify: build+lint+round-trip ✓.
-- [ ] T3 — Toolbar: Salvar (create/update via api), Publicar (publishFlow), badge Publicado/Rascunho no header; Import/Export JSON mantidos; erros→toast. Verify: build+lint.
+- [x] T3 — Toolbar: Salvar (create/update via api), Publicar (persist+publishFlow), badge Publicado/Rascunho no header; Import/Export mantidos; erros→toast; invalida ["flows"]. Verify: build+lint ✓.
 - [ ] T4 — Sidebar: lista flows de `api.listFlows()` (react-query, fallback mock), clicar carrega no canvas (getFlow→import→setCurrentFlow), Novo Flow reseta; ponto de ativo; erros→toast nunca tela branca. Verify: build+lint.
 - [ ] T5 — Verificação integrada: nenhuma tela usa fetch direto; build+lint+round-trip 181+SSR 200. Verify.
 
