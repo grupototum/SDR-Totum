@@ -104,6 +104,10 @@ interface FlowStore {
   humanization: HumanizationConfig;
   interrupts: InterruptConfig[];
   envelope: FlowEnvelope;
+  /** id do flow no backend (null = ainda não salvo). */
+  currentFlowId: string | null;
+  /** flow publicado = roteiro que o cérebro do motor usa. */
+  published: boolean;
 
   setFlowName: (name: string) => void;
   onNodesChange: (changes: NodeChange[]) => void;
@@ -117,8 +121,11 @@ interface FlowStore {
   addInterrupt: () => void;
   updateInterrupt: (id: string, patch: Partial<InterruptConfig>) => void;
   removeInterrupt: (id: string) => void;
-  loadFlow: (jsonStr: string) => void;
+  loadFlow: (jsonStr: string, meta?: { id?: string | null; active?: boolean }) => void;
   exportToJSON: () => string;
+  setCurrentFlow: (id: string | null, active?: boolean) => void;
+  setPublished: (v: boolean) => void;
+  resetFlow: () => void;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -200,6 +207,8 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   humanization: defaultHumanization,
   interrupts: defaultInterrupts,
   envelope: defaultEnvelope,
+  currentFlowId: null,
+  published: false,
 
   setFlowName: (name) => set({ flowName: name }),
   onNodesChange: (changes) =>
@@ -248,7 +257,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     })),
   removeInterrupt: (id) => set((s) => ({ interrupts: s.interrupts.filter((i) => i.id !== id) })),
 
-  loadFlow: (jsonStr) => {
+  loadFlow: (jsonStr, meta) => {
     try {
       const result = importFlow(jsonStr);
       const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
@@ -261,6 +270,8 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         interrupts: result.interrupts.length > 0 ? result.interrupts : defaultInterrupts,
         selectedNodeId: null,
         flowName: name,
+        currentFlowId: meta?.id ?? null,
+        published: meta?.active ?? false,
       });
     } catch (err) {
       throw new Error(`Falha ao importar flow: ${(err as Error).message}`);
@@ -277,4 +288,28 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       interrupts: s.interrupts,
     });
   },
+
+  setCurrentFlow: (id, active) =>
+    set((s) => ({ currentFlowId: id, published: active ?? s.published })),
+  setPublished: (v) => set({ published: v }),
+
+  resetFlow: () =>
+    set({
+      flowName: "Flow sem título",
+      nodes: [
+        {
+          id: "start-1",
+          type: "start",
+          position: { x: 80, y: 200 },
+          data: defaultDataFor("start"),
+        },
+      ],
+      edges: [],
+      selectedNodeId: null,
+      humanization: defaultHumanization,
+      interrupts: defaultInterrupts,
+      envelope: defaultEnvelope,
+      currentFlowId: null,
+      published: false,
+    }),
 }));

@@ -111,10 +111,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f300d38b-0102-4421-ae66-2c5680b4f417/id-preview-2f7935b2--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1781987730109.png",
       },
-      { property: "og:description", content: "Build visual flows for WhatsApp conversation automation." },
-      { name: "twitter:description", content: "Build visual flows for WhatsApp conversation automation." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png" },
+      {
+        property: "og:description",
+        content: "Build visual flows for WhatsApp conversation automation.",
+      },
+      {
+        name: "twitter:description",
+        content: "Build visual flows for WhatsApp conversation automation.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -160,7 +174,7 @@ function RootComponent() {
       <SidebarProvider defaultOpen={false}>
         <div className="flex min-h-screen w-full" style={{ background: "#0e0918" }}>
           <AppSidebar />
-        <div className="relative flex-1 flex flex-col min-w-0">
+          <div className="relative flex-1 flex flex-col min-w-0">
             <SidebarTrigger
               className="absolute right-3 top-3 z-50 size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
               style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}

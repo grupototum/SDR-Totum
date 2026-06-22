@@ -237,7 +237,12 @@ function Home() {
               <div>
                 <div
                   className="text-white"
-                  style={{ fontSize: 36, fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                  style={{
+                    fontSize: 36,
+                    fontWeight: 300,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
                 >
                   {card.value}
                 </div>

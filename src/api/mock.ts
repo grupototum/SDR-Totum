@@ -222,6 +222,45 @@ function writeOrders(orders: ResearchOrder[]) {
   }
 }
 
+// ── Flows: store em memória (seed lazy do odonto) ────────────────────────────
+// lossless: guarda o envelope inteiro; `active` = flow publicado (roteiro do motor).
+interface StoredFlow {
+  id: string;
+  name: string;
+  envelope: Record<string, unknown>;
+  active: boolean;
+  updatedAt: string;
+}
+let flowsMem: StoredFlow[] | null = null;
+
+async function ensureFlows(): Promise<StoredFlow[]> {
+  if (flowsMem) return flowsMem;
+  const mod = await import("../../docs/flow_odonto_sdr_v1.json");
+  const env = mod.default as Record<string, unknown>;
+  flowsMem = [
+    {
+      id: (env.flow_id as string) ?? FLOW_ID,
+      name: "SDR Odonto v1.1.1",
+      envelope: env,
+      active: true,
+      updatedAt: NOW,
+    },
+  ];
+  return flowsMem;
+}
+
+function flowSummary(f: StoredFlow): FlowSummary {
+  const e = f.envelope;
+  return {
+    id: f.id,
+    name: f.name,
+    version: (e.version as string) ?? "1.0",
+    niche: (e.niche as string) ?? "",
+    updatedAt: f.updatedAt,
+    active: f.active,
+  };
+}
+
 export const mockApi: ApiClient = {
   async getHealth() {
     await delay();
@@ -230,31 +269,65 @@ export const mockApi: ApiClient = {
 
   async listFlows() {
     await delay();
-    return [
-      {
-        id: FLOW_ID,
-        name: "SDR Odonto v1.1.1",
-        version: "1.1.1",
-        niche: "odontologia",
-        updatedAt: NOW,
-      } satisfies FlowSummary,
-    ];
+    const flows = await ensureFlows();
+    return flows.map(flowSummary);
   },
 
-  async getFlow(_id) {
+  async getFlow(id) {
     await delay();
-    const mod = await import("../../docs/flow_odonto_sdr_v1.json");
-    return mod.default as Record<string, unknown>;
+    const flows = await ensureFlows();
+    const f = flows.find((x) => x.id === id) ?? flows[0];
+    if (!f) throw new Error(`Flow ${id} não encontrado`);
+    return f.envelope;
   },
 
-  async createFlow(_flow) {
+  async createFlow(flow) {
     await delay();
-    return { id: `flow-${Date.now()}` };
+    const flows = await ensureFlows();
+    const env = flow as Record<string, unknown>;
+    const id = `flow-${Date.now()}`;
+    flows.push({
+      id,
+      name: (env.flow_id as string) ?? "Novo flow",
+      envelope: env,
+      active: false,
+      updatedAt: new Date().toISOString(),
+    });
+    return { id };
   },
 
-  async updateFlow(id, _flow) {
+  async updateFlow(id, flow) {
     await delay();
-    return { id, updatedAt: new Date().toISOString() };
+    const flows = await ensureFlows();
+    const env = flow as Record<string, unknown>;
+    const updatedAt = new Date().toISOString();
+    const existing = flows.find((x) => x.id === id);
+    if (existing) {
+      existing.envelope = env;
+      existing.name = (env.flow_id as string) ?? existing.name;
+      existing.updatedAt = updatedAt;
+    } else {
+      flows.push({
+        id,
+        name: (env.flow_id as string) ?? id,
+        envelope: env,
+        active: false,
+        updatedAt,
+      });
+    }
+    return { id, updatedAt };
+  },
+
+  async publishFlow(id) {
+    await delay();
+    const flows = await ensureFlows();
+    const target = flows.find((x) => x.id === id);
+    if (!target) throw new Error(`Flow ${id} não encontrado`);
+    const updatedAt = new Date().toISOString();
+    // Só um flow ativo por vez: o publicado vira o roteiro do motor.
+    for (const f of flows) f.active = f.id === id;
+    target.updatedAt = updatedAt;
+    return { id, active: true, updatedAt };
   },
 
   async listConversations(status) {

@@ -170,3 +170,44 @@ Conforme `docs/REPROMPT_CLAUDE_CODE_WIZARD_PESQUISA.md`, conteúdo de `MESTRE_DE
 - **Persistência**: localStorage agora; endpoint HTTP é TODO (sem fetch direto, tudo via camada `api`).
 
 Commits: `feat(pesquisa): wizard de 6 passos + histórico…` · `docs: add pesquisa wizard reprompt…`
+
+---
+
+# Build noturno — 2026-06-21 — Flow Builder como CONTROL SURFACE do motor
+
+**Branch:** `feat/control-surface-overnight` (a partir de `main`, sem push). Protocolo: TASKS.md+PROGRESS.md, 1 commit/tarefa, auto-verificação antes de `[x]`.
+
+## DoD-1 — ENTREGUE (T1–T5 verdes)
+O Flow Builder agora é a superfície de controle do roteiro que o cérebro do motor usa.
+
+| # | Entrega | Como |
+|---|---|---|
+| 1 | Criar/editar/Salvar/Carregar via `/api/flows` (lossless) | mock com flow store em memória (seed odonto), `getFlow` devolve envelope inteiro (preserva changelog/opening_variations/loop_guards via serializer `_raw`); Salvar = create/update. Nenhuma tela usa fetch direto (só `src/api/*`). |
+| 2 | Publicar = roteiro do motor | `publishFlow` (PUT active=true) com **um único ativo**; badge **Publicado/Rascunho** no header do builder. |
+| 3 | Sidebar lista flows de `/api/flows` | react-query `["flows"]`; clique carrega no canvas; ponto verde = publicado; erro → toast + estado vazio (nunca tela branca). |
+| 4 | Round-trip 181 + build + lint | todos verdes (ver abaixo). |
+
+### Arquivos tocados
+- `src/api/types.ts` — `FlowSummary.active`; `ApiClient.publishFlow`.
+- `src/api/mock.ts` — flow store em memória (list/get/create/update/publishFlow, single-active, lossless).
+- `src/api/http.ts` — `publishFlow` (PUT `/api/flows/:id` active=true).
+- `src/stores/flow-store.ts` — `currentFlowId`, `published`, `setCurrentFlow/setPublished/resetFlow`, `loadFlow(json, {id,active})`.
+- `src/components/flow/BuilderToolbar.tsx` — Salvar/Publicar reais (react-query) + badge.
+- `src/components/flow/BuilderSidebar.tsx` — lista via api, carregar/novo flow, erros→toast.
+
+### Verificação (no resultado final)
+- `vite build` (client+server) ✓ · `eslint .` ✓ 0 erros · round-trip **181 nós** ✓.
+- SSR 200 em `/`, `/builder`, `/pesquisa`, `/pesquisa/historico`, `/conversations`, `/reports`.
+- Smoke funcional do mock de flows: seed odonto ativo → create (inativo) → publish (troca p/ single-active) → getFlow lossless → update renomeia. ✓
+- Nenhuma tela com `fetch(` direto (só `src/server.ts`, entry SSR).
+
+## DoD-2 — N8N — **[BLOCKED]**
+`N8N_API_KEY` ausente no ambiente e sem URL pública confirmada do motor → impossível listar/abrir/PUT em `n8n.grupototum.com/api/v1`. Gap de formato (nosso flow JSON ≠ schema N8N) documentado em PROGRESS.md; **não** foi gerado workflow N8N (evita quebrar, conforme instrução). Caminho recomendado quando houver chave: round-trip seguro GET→editar escalares→PUT antes de transpilar.
+
+## Como conectar ao motor real
+`VITE_API_BASE_URL=http://127.0.0.1:3000` (ou proxy /api) → o gateway troca mock→http sem reescrever tela. Publicar passa a bater `PUT /api/flows/:id`.
+
+## Não feito / pendente
+- Persistência de flows no mock é em memória (reseta no reload) — suficiente pro demo; backend real persiste no Postgres.
+- T6 (N8N) aguarda credencial.
+- Sem push (conforme instrução — trabalhei só na branch).

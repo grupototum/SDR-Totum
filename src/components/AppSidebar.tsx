@@ -36,14 +36,8 @@ export function AppSidebar() {
         className="h-14 flex-row items-center gap-2 px-3"
         style={{ boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.06)" }}
       >
-        <img
-          src={logo}
-          alt="SDR Totum"
-          className="size-8 shrink-0 object-contain"
-        />
-        {!collapsed && (
-          <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>
-        )}
+        <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
+        {!collapsed && <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>}
       </SidebarHeader>
 
       <SidebarContent style={{ background: "var(--color-card-totum)" }}>

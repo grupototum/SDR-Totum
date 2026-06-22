@@ -1,98 +1,21 @@
-# TASKS — Flow Builder Overnight (feat/flow-builder-overnight)
+# TASKS — Build noturno: Flow Builder como CONTROL SURFACE do motor
 
-Estado em disco — fonte de verdade do progresso. Atualizar a cada tarefa.
+Branch: `feat/control-surface-overnight` (a partir de `main`)
+Protocolo: 1 commit por tarefa · auto-verificação (build+lint+round-trip 181) antes de `[x]` · 3 falhas → `[BLOCKED]`.
+(Histórico do build anterior: ver RELATORIO_FINAL.md.)
 
 ## Legenda
-- `[ ]` pendente  
-- `[x]` concluída  
-- `[BLOCKED: motivo]` travada  
+`[ ]` pendente · `[x]` concluída · `[BLOCKED: motivo]` travada
 
----
+## DoD-1 (prioridade máxima)
+- [x] T1 — Data layer flows: `active` no FlowSummary; flow store em memória no mock (seed odonto = ativo) com list/get/create/update/publish lossless; `publishFlow` no ApiClient + http stub. Verify: build+lint ✓.
+- [x] T2 — Store wiring: `currentFlowId`, `published` + ações `setCurrentFlow`/`setPublished`/`resetFlow`; `loadFlow(json, meta)` seta id/active. Verify: build+lint+round-trip ✓.
+- [x] T3 — Toolbar: Salvar (create/update via api), Publicar (persist+publishFlow), badge Publicado/Rascunho no header; Import/Export mantidos; erros→toast; invalida ["flows"]. Verify: build+lint ✓.
+- [x] T4 — Sidebar: lista flows de `api.listFlows()` (react-query), clicar carrega (getFlow→loadFlow com id/active), Novo Flow=resetFlow; ponto verde=ativo; erro→toast + estado vazio (nunca tela branca). Verify: build+lint ✓.
+- [x] T5 — Verificação integrada: nenhuma tela usa fetch direto (só src/server.ts SSR); build+lint+round-trip 181+SSR 200 (6 rotas) + smoke funcional de flows (create/list/publish single-active/get/update). ✓
 
-## T01 — Serializer: importFlow + exportFlow (lossless round-trip)
-**Critério de aceite:** `src/lib/flow-serializer.ts` exportado; importar o flow_odonto_sdr_v1.json e exportar produz objeto deep-equal ao original (ignora ordem de chave, preserva changelog/opening_variations/runtime_variables/channel).
+## DoD-2 (secundário — tentar; BLOCKED se não sair limpo)
+- [BLOCKED: sem N8N_API_KEY no ambiente + sem URL pública do motor] T6 — Ponte N8N. Gap documentado em PROGRESS.md. Não foi gerado workflow N8N (formato ≠; risco de quebrar). Conforme instrução, DoD-1 entregue mesmo assim.
 
-- [x] CONCLUÍDA — round-trip 181 nós deep-equal verificado headless
-
-## T02 — Store: envelope + loadFlow + exportJSON
-**Critério de aceite:** `useFlowStore` tem `envelope`, `loadFlow(json)` e `exportToJSON()`. Build passa.
-
-- [x] CONCLUÍDA
-
-## T03 — Toolbar: botões Importar JSON e Exportar JSON
-**Critério de aceite:** Botão "Importar JSON" abre file-picker; "Exportar JSON" baixa arquivo. Toast de sucesso/erro.
-
-- [x] CONCLUÍDA
-
-## T04 — Round-trip test headless (lint + build)
-**Critério de aceite:** `npm run build` e `npm run lint` passam sem erro. Comentário no serializer descreve o teste manual.
-
-- [x] CONCLUÍDA — build passou; lint só tem warnings pre-existentes de prettier
-
-## T05 — API layer: src/api/ (mock + http, dual implementation)
-**Critério de aceite:** `src/api/index.ts` (interface), `src/api/mock.ts` (dados fixos inc. flow_odonto_sdr_v1), `src/api/http.ts` (fetch contra VITE_API_BASE_URL). Switch via env var.
-
-- [x] CONCLUÍDA
-
-## T06 — Console de Conversas: rota /conversations
-**Critério de aceite:** `/conversations` renderiza lista + detalhe de conversa com timeline bot/human/lead. Dados do mock. Botão takeover/resume funciona via mock.
-
-- [x] CONCLUÍDA
-
-## T07 — Relatórios: rota /reports
-**Critério de aceite:** `/reports` renderiza lista e detalhe com REPORT SCHEMA. Dados do mock.
-
-- [x] CONCLUÍDA
-
-## T08 — Disparo: modal/rota de iniciar conversa
-**Critério de aceite:** Botão "Iniciar Conversa" (na nav ou /conversations) abre modal com flowId + número + variáveis. POST /api/conversations/start via mock.
-
-- [x] CONCLUÍDA — modal na home e no nav
-
-## T09 — App Nav: menu lateral com links para Builder, Conversas, Relatórios
-**Critério de aceite:** Layout com nav de navegação. `/` redireciona para `/builder`.
-
-- [x] CONCLUÍDA — nav top na home com links para /builder, /conversations, /reports
-
-## T10 — End node: alinhar result values com spec (reuniao_marcada / rejeitado / followup)
-**Critério de aceite:** EndForm usa "reuniao_marcada" | "rejeitado" | "followup". Serializer mapeia corretamente.
-
-- [x] CONCLUÍDA — serializer mapeia meeting↔reuniao_marcada, store usa valores internos
-
----
-
-## T11 — Verificação visual: canvas + formulários de nó na UI
-
-**Critério de aceite:** Verificado via browse headless:
-- [x] Canvas renderiza 181 nós após import (confirmado via `querySelectorAll`)
-- [x] 276 edges renderizados
-- [x] SendMessage: textarea + variações A/B + dois relógios de delay
-- [x] Conditional: N ramos + "Adicionar ramo" + default implícito
-- [x] AiMessage: Strict/Flexible (sem Creative) + "sempre proativo" locked
-- [x] Action: tipo de ação
-- [x] End: resultado + nota
-- [x] Wait: timeout + ação no timeout
-- [x] Globais Humanização: 225 PPM / 40 PPM / máx 3 / 08-22h / America/Sao_Paulo
-- [x] Globais Interrupções: lista editável com objecao_precoce
-
-- [x] CONCLUÍDA — verificação visual completa via browse
-
-## T12 — Round-trip validado na UI
-
-**Critério de aceite:** import → render → export → 0 diffs em 181 nós
-
-- [x] CONCLUÍDA — 0 issues em 181 nós; action nodes não-padrão preservados; changelog/opening_variations/runtime_variables preservados
-
----
-
-## DEFINITION OF DONE — STATUS
-
-1. [x] build + lint passam
-2. [x] Importa flow_odonto_sdr_v1.json (181 nós + 276 edges) no canvas — VERIFICADO NA UI
-3. [x] Round-trip sem perda (deep-equal) — VERIFICADO NA UI — 0 diffs
-4. [x] AiMessage sem "Creative" — VERIFICADO NA UI. Conditional N ramos — VERIFICADO NA UI. Action, SendMessage com variações, End, Wait — VERIFICADO NA UI. Globais (Humanização + Interrupções) — VERIFICADO NA UI
-5. [x] Design system Totum aplicado
-6. [x] API layer mock/http dual
-7. [x] Console de Conversas + Relatórios + Disparo
-
-✅ DEFINITION OF DONE ATINGIDA — VERIFICAÇÃO VISUAL COMPLETA
+## DoD
+DoD-1 = T1..T5 verdes. Parar no DoD-1 completo ou 3 iterações sem progresso.

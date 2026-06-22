@@ -41,6 +41,11 @@ export const httpApi: ApiClient = {
       method: "PUT",
       body: JSON.stringify(flow),
     }),
+  publishFlow: (id) =>
+    req<{ id: string; active: boolean; updatedAt: string }>(`/api/flows/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ active: true }),
+    }),
 
   listConversations: (status) =>
     req<ConversationSummary[]>(`/api/conversations${status ? `?status=${status}` : ""}`),
