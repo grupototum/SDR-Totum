@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:roundtrip": "node scripts/roundtrip.mjs"
+    "test:roundtrip": "node scripts/roundtrip.mjs",
+    "test:roundtrip:v2": "node scripts/roundtrip-v2.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

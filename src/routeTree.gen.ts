@@ -13,6 +13,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as N8nRouteImport } from './routes/n8n'
 import { Route as ConversationsRouteImport } from './routes/conversations'
+import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa.historico'
@@ -37,6 +38,11 @@ const ConversationsRoute = ConversationsRouteImport.update({
   path: '/conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuilderLegacyRoute = BuilderLegacyRouteImport.update({
+  id: '/builder-legacy',
+  path: '/builder-legacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BuilderRoute = BuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
@@ -56,6 +62,7 @@ const PesquisaHistoricoRoute = PesquisaHistoricoRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/builder': typeof BuilderRoute
+  '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/builder'
+    | '/builder-legacy'
     | '/conversations'
     | '/n8n'
     | '/pesquisa'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/builder'
+    | '/builder-legacy'
     | '/conversations'
     | '/n8n'
     | '/pesquisa'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/builder'
+    | '/builder-legacy'
     | '/conversations'
     | '/n8n'
     | '/pesquisa'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuilderRoute: typeof BuilderRoute
+  BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
   N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/conversations'
       fullPath: '/conversations'
       preLoaderRoute: typeof ConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/builder-legacy': {
+      id: '/builder-legacy'
+      path: '/builder-legacy'
+      fullPath: '/builder-legacy'
+      preLoaderRoute: typeof BuilderLegacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/builder': {
@@ -189,6 +209,7 @@ const PesquisaRouteWithChildren = PesquisaRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuilderRoute: BuilderRoute,
+  BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
   N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
