@@ -23,6 +23,8 @@ export interface BatteryResult {
   turns: number;
   finalStage: string;
   healthy: boolean;
+  /** Algum turno veio do mock (não validado pelo motor real). */
+  mock: boolean;
 }
 
 export interface BatterySummary {
@@ -30,6 +32,8 @@ export interface BatterySummary {
   total: number;
   healthy: number;
   healthRate: number; // 0..1 — % booked sem violar guard-rail
+  /** True se qualquer persona rodou (parcial ou total) no mock → NÃO vale para GO. */
+  mock: boolean;
 }
 
 const ODONTO_VARS: Record<string, string> = {
@@ -109,6 +113,7 @@ export async function runPersona(
   const history: SimMessage[] = [];
   let booked = false;
   let guardrail = false;
+  let mock = false;
   let turns = 0;
 
   for (let i = 0; i < maxTurns; i++) {
@@ -127,6 +132,7 @@ export async function runPersona(
     turns++;
     if (res.flags.booked) booked = true;
     if (res.guardrail_violation) guardrail = true;
+    if (res.raw.mock === true) mock = true;
     if (res.flags.done) break;
   }
 
@@ -137,6 +143,7 @@ export async function runPersona(
     turns,
     finalStage: stage,
     healthy: booked && !guardrail,
+    mock,
   };
 }
 
@@ -151,5 +158,6 @@ export async function runBattery(
     total: results.length,
     healthy,
     healthRate: results.length ? healthy / results.length : 0,
+    mock: results.some((r) => r.mock),
   };
 }

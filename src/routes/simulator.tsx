@@ -10,7 +10,15 @@ import { TotumButton } from "@/components/ui/totum-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FlaskConical, RotateCcw, Send, BotMessageSquare, User, Activity } from "lucide-react";
+import {
+  FlaskConical,
+  RotateCcw,
+  Send,
+  BotMessageSquare,
+  User,
+  Activity,
+  AlertTriangle,
+} from "lucide-react";
 
 /** Um turno via proxy server-side /api/engine; fallback mock se sem engine. */
 async function simTurnWithFallback(payload: Parameters<typeof api.simTurn>[0]) {
@@ -36,7 +44,10 @@ export const Route = createFileRoute("/simulator")({
 
 const DRAFT = "__draft__";
 
-type Turn = { lead: string } & SimTurnResponse;
+/** Sem VITE_API_BASE_URL o app inteiro usa mock — o simulador nunca toca o motor real. */
+const MOCK_MODE = !import.meta.env.VITE_API_BASE_URL;
+
+type Turn = { lead: string; mock: boolean } & SimTurnResponse;
 
 function tempColor(t: string) {
   if (t === "quente") return "#da2128";
@@ -111,8 +122,10 @@ function SimulatorPage() {
     const payload = { flow: activeFlow, variables, history, currentStage, sessionState };
     try {
       const res: SimTurnResponse = await simTurnWithFallback(payload);
-      setTurns((t) => [...t, { lead: text, ...res }]);
+      const mock = res.raw.mock === true;
+      setTurns((t) => [...t, { lead: text, mock, ...res }]);
       setSessionState(res.sessionState); // encadeia o estado pro próximo turno
+      if (mock) toast.info("Turno via MOCK — não validado pelo motor real");
     } catch (e) {
       toast.error(`Erro no turno: ${(e as Error).message}`);
     } finally {
@@ -231,6 +244,19 @@ function SimulatorPage() {
 
       {/* ── Centro: chat ── */}
       <main className="flex flex-col overflow-hidden" style={{ background: "#0e0918" }}>
+        {(MOCK_MODE || turns.some((t) => t.mock)) && (
+          <div
+            className="flex items-center gap-2 px-5 py-2 text-xs font-medium"
+            style={{
+              background: "rgba(245,158,11,0.15)",
+              color: "#f59e0b",
+              boxShadow: "inset 0 -1px 0 0 rgba(245,158,11,0.3)",
+            }}
+          >
+            <AlertTriangle className="size-3.5" />
+            MODO MOCK — não validado pelo motor real
+          </div>
+        )}
         {battery && (
           <div
             className="flex items-center justify-between gap-4 px-5 py-3"
@@ -254,6 +280,15 @@ function SimulatorPage() {
               <span className="text-xs text-[color:var(--color-text-muted)]">
                 {battery.healthy}/{battery.total} booked sem violar guard-rail
               </span>
+              {battery.mock && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+                  style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
+                  title="Bateria rodou no mock — não vale como baseline de GO"
+                >
+                  <AlertTriangle className="size-3" /> mock · não vale p/ GO
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {battery.results.map((r) => (
@@ -308,8 +343,18 @@ function SimulatorPage() {
                   style={{ background: "#1b1728", color: "#fff", boxShadow: "var(--shadow-card)" }}
                 >
                   {t.reply}
-                  <div className="mt-1 text-[10px] text-[color:var(--color-text-muted)]">
-                    {t.stage_from} → {t.stage_to}
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-[color:var(--color-text-muted)]">
+                    <span>
+                      {t.stage_from} → {t.stage_to}
+                    </span>
+                    {t.mock && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
+                        style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
+                      >
+                        mock
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -384,7 +429,17 @@ function SimulatorPage() {
               style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-white">Turno {i + 1}</span>
+                <span className="flex items-center gap-1.5 text-xs text-white">
+                  Turno {i + 1}
+                  {t.mock && (
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
+                      style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
+                    >
+                      mock
+                    </span>
+                  )}
+                </span>
                 <span
                   className="rounded-full px-2 py-0.5 text-[10px] text-white"
                   style={{ background: tempColor(t.temperatura) }}
