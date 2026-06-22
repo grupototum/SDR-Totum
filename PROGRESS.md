@@ -24,3 +24,10 @@ Branch: `feat/control-surface-overnight`. Estado em disco, atualizado a cada tar
 - T2 ✓ — store: `currentFlowId`/`published` + `setCurrentFlow`/`setPublished`/`resetFlow`; `loadFlow(json, {id,active})` propaga id/publicado. build+lint+round-trip verdes.
 - T3 ✓ — Toolbar: Salvar (create/update), Publicar (persist→publishFlow→setPublished), badge Publicado/Rascunho, invalida ["flows"], erros→toast. build+lint verdes.
 - T4 ✓ — Sidebar: lista via api.listFlows() (react-query), clique=getFlow+loadFlow(id,active), Novo Flow=resetFlow, ponto verde=ativo, erro→toast+estado vazio. build+lint verdes.
+- T5 ✓ — integrada: sem fetch direto em telas (só src/server.ts SSR); build+lint+round-trip 181+SSR 200 nas 6 rotas; smoke funcional de flows OK (create/list/publish single-active/get/update lossless).
+- T6 [BLOCKED] — ver seção DoD-2/N8N abaixo.
+
+## DoD-2 / N8N — gap documentado (T6 BLOCKED)
+**Motivo do bloqueio:** `N8N_API_KEY` ausente no ambiente (`env | grep N8N` vazio) e sem URL pública confirmada do motor. Sem credencial não dá pra listar/abrir/PUT workflows no n8n.grupototum.com/api/v1.
+**Gap de formato (por que não gerar do zero agora):** nosso flow JSON (FLOW_FORMAT_SPEC: nodes com `next/branches/on_reply/on_timeout/effects`, interrupts globais com retorno a `{PONTO_RETORNO}`) ≠ schema do N8N (nodes com `parameters/credentials/typeVersion/position` + `connections` por porta/índice). A transpilação fiel exige mapear cada tipo nosso para nós N8N (HTTP Request/IF/Switch/Wait/Code/Webhook) e remontar `connections` — não validável sem uma instância real pra testar o PUT. Gerar às cegas produziria workflow quebrado (proibido pela instrução).
+**Caminho recomendado quando houver chave:** começar pelo round-trip seguro (GET /workflows/:id → editar só campos escalares → PUT de volta) antes de transpilar do nosso formato. Alinhar com CAMINHO_A_N8N_HANDOFF.md (cérebro no motor; N8N orquestra START/INBOUND, não é o cérebro).
