@@ -199,21 +199,9 @@ function Home() {
         </TotumButton>
       </nav>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-5xl px-6 py-24 text-center">
-        <h1
-          className="text-white"
-          style={{ fontSize: 72, fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1 }}
-        >
-          SDR Totum
-        </h1>
-        <p
-          className="mx-auto mt-6 max-w-2xl"
-          style={{ fontSize: 20, fontWeight: 300, color: "#d1cece" }}
-        >
-          Automação de conversas que parecem humanas.
-        </p>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+      {/* Dashboard */}
+      <section className="mx-auto max-w-5xl px-6 py-16">
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
           <TotumButton asChild variant="primary" size="lg">
             <Link to="/builder">
               <Plus className="size-4" /> Novo Flow
@@ -222,6 +210,43 @@ function Home() {
           <TotumButton variant="secondary" size="lg" onClick={() => setShowDisparo(true)}>
             <Rocket className="size-4" /> Iniciar Conversa
           </TotumButton>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Conversas Ativas", value: 12, icon: MessageCircle },
+            { label: "Leads Quentes", value: 5, icon: BarChart3 },
+            { label: "Flows Criados", value: 8, icon: Workflow },
+            { label: "Pesquisas Hoje", value: 3, icon: Search },
+          ].map((card) => (
+            <div
+              key={card.label}
+              className="flex flex-col gap-3 p-5"
+              style={{
+                background: "#1b1728",
+                borderRadius: 24,
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              <div
+                className="flex size-10 items-center justify-center rounded-full text-white"
+                style={{ backgroundImage: "var(--gradient-secondary)" }}
+              >
+                <card.icon className="size-4" />
+              </div>
+              <div>
+                <div
+                  className="text-white"
+                  style={{ fontSize: 36, fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                >
+                  {card.value}
+                </div>
+                <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                  {card.label}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
