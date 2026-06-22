@@ -23,7 +23,7 @@ export const Route = createFileRoute("/builder")({
 function BuilderPage() {
   return (
     <div
-      className="grid h-screen w-screen overflow-hidden"
+      className="grid h-screen w-full overflow-hidden"
       style={{ gridTemplateColumns: "280px 1fr 320px" }}
     >
       <BuilderSidebar />

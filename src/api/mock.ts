@@ -235,7 +235,7 @@ let flowsMem: StoredFlow[] | null = null;
 
 async function ensureFlows(): Promise<StoredFlow[]> {
   if (flowsMem) return flowsMem;
-  const mod = await import("../../docs/flow_odonto_sdr_v1.json", { with: { type: "json" } });
+  const mod = await import("../../docs/flow_odonto_sdr_v1.json");
   const env = mod.default as Record<string, unknown>;
   flowsMem = [
     {

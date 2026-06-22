@@ -12,6 +12,8 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 function NotFoundComponent() {
   return (
@@ -76,20 +78,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SDR Totum — Flow Builder" },
+      { title: "SDR Totum | Flow Builder" },
       {
         name: "description",
         content:
           "SDR Totum: construa fluxos visuais de automação de conversas no WhatsApp que parecem humanas.",
       },
-      { property: "og:title", content: "SDR Totum — Flow Builder" },
+      { property: "og:title", content: "SDR Totum | Flow Builder" },
       {
         property: "og:description",
         content: "Automação de conversas que parecem humanas.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "SDR Totum — Flow Builder" },
+      { name: "twitter:title", content: "SDR Totum | Flow Builder" },
       { name: "description", content: "Build visual flows for WhatsApp conversation automation." },
       {
         property: "og:description",
@@ -109,9 +111,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f300d38b-0102-4421-ae66-2c5680b4f417/id-preview-2f7935b2--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1781987730109.png",
       },
+      {
+        property: "og:description",
+        content: "Build visual flows for WhatsApp conversation automation.",
+      },
+      {
+        name: "twitter:description",
+        content: "Build visual flows for WhatsApp conversation automation.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a311eccd-9967-4bf6-af4c-11cc2075cb56/id-preview-90d38be8--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1782047010958.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "preconnect", href: "https://api.fontshare.com" },
       { rel: "preconnect", href: "https://cdn.fontshare.com", crossOrigin: "anonymous" },
       {
@@ -149,7 +171,20 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <SidebarProvider defaultOpen={false}>
+        <div className="flex min-h-screen w-full" style={{ background: "#0e0918" }}>
+          <AppSidebar />
+          <div className="relative flex-1 flex flex-col min-w-0">
+            <SidebarTrigger
+              className="absolute right-3 top-3 z-50 size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
+            />
+            <main className="flex-1 min-w-0">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
       <Toaster
         theme="dark"
         position="bottom-right"
