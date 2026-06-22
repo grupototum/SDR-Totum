@@ -1,18 +1,43 @@
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useFlowStore } from "@/stores/flow-store";
+import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { Search, Workflow, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-const pesquisas = [
-  { id: "p1", name: "SaaS B2B Brasil" },
-  { id: "p2", name: "Agências de marketing" },
-];
-const flows = [
-  { id: "f1", name: "Outbound frio · v1", active: true },
-  { id: "f2", name: "Reativação 90d" },
-];
-
 export function BuilderSidebar() {
+  const navigate = useNavigate();
+  const loadFlow = useFlowStore((s) => s.loadFlow);
+  const resetFlow = useFlowStore((s) => s.resetFlow);
+  const currentFlowId = useFlowStore((s) => s.currentFlowId);
+
+  const {
+    data: flows = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["flows"],
+    queryFn: () => api.listFlows(),
+  });
+
+  // Erro = toast, nunca tela branca (a aside renderiza estado vazio).
+  useEffect(() => {
+    if (isError) toast.error(`Erro ao listar flows: ${(error as Error).message}`);
+  }, [isError, error]);
+
+  async function openFlow(f: FlowSummary) {
+    try {
+      const env = await api.getFlow(f.id);
+      loadFlow(JSON.stringify(env), { id: f.id, active: f.active });
+      toast.success(`Flow "${f.name}" carregado`);
+    } catch (e) {
+      toast.error(`Erro ao carregar flow: ${(e as Error).message}`);
+    }
+  }
+
   return (
     <aside
       className="flex h-full w-[280px] shrink-0 flex-col gap-6 p-5"
@@ -31,31 +56,56 @@ export function BuilderSidebar() {
       </div>
 
       <Section title="Pesquisas" icon={Search}>
-        {pesquisas.map((p) => (
-          <ListItem key={p.id}>{p.name}</ListItem>
-        ))}
+        <Link
+          to="/pesquisa/historico"
+          className="rounded-lg px-3 py-2 text-left text-sm text-[color:var(--color-text-body)] transition-colors hover:bg-[#272333]"
+        >
+          Ver histórico de pesquisas
+        </Link>
       </Section>
 
       <Section title="Flows" icon={Workflow}>
+        {isLoading && (
+          <span className="px-3 py-2 text-xs text-[color:var(--color-text-muted)]">
+            Carregando…
+          </span>
+        )}
+        {!isLoading && flows.length === 0 && (
+          <span className="px-3 py-2 text-xs text-[color:var(--color-text-muted)]">
+            {isError ? "Indisponível — tente novamente" : "Nenhum flow ainda"}
+          </span>
+        )}
         {flows.map((f) => (
-          <ListItem key={f.id} active={f.active}>
-            {f.name}
-          </ListItem>
+          <button
+            key={f.id}
+            onClick={() => openFlow(f)}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors"
+            style={{
+              background: currentFlowId === f.id ? "#272333" : "transparent",
+              color: currentFlowId === f.id ? "#fff" : "#d1cece",
+            }}
+            title={f.active ? "Publicado (roteiro do motor)" : "Rascunho"}
+          >
+            <span
+              className="size-1.5 shrink-0 rounded-full"
+              style={{ background: f.active ? "#35a670" : "#3a3447" }}
+            />
+            <span className="truncate">{f.name}</span>
+          </button>
         ))}
       </Section>
 
       <div className="mt-auto flex flex-col gap-2">
-        <TotumButton
-          variant="primary"
-          size="sm"
-          onClick={() => toast.info("Nova pesquisa em breve")}
-        >
+        <TotumButton variant="primary" size="sm" onClick={() => navigate({ to: "/pesquisa" })}>
           <Plus className="size-3.5" /> Nova Pesquisa
         </TotumButton>
         <TotumButton
           variant="secondary"
           size="sm"
-          onClick={() => toast.info("Novo flow em branco")}
+          onClick={() => {
+            resetFlow();
+            toast.success("Novo flow em branco");
+          }}
         >
           <Plus className="size-3.5" /> Novo Flow
         </TotumButton>
@@ -81,19 +131,5 @@ function Section({
       </div>
       <div className="flex flex-col gap-0.5">{children}</div>
     </div>
-  );
-}
-
-function ListItem({ children, active }: { children: React.ReactNode; active?: boolean }) {
-  return (
-    <button
-      className="rounded-lg px-3 py-2 text-left text-sm transition-colors"
-      style={{
-        background: active ? "#272333" : "transparent",
-        color: active ? "#fff" : "#d1cece",
-      }}
-    >
-      {children}
-    </button>
   );
 }

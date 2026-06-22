@@ -23,3 +23,4 @@ Branch: `feat/control-surface-overnight`. Estado em disco, atualizado a cada tar
 - T1 ✓ — `active` em FlowSummary; mock flow store em memória (seed odonto ativo) com list/get/create/update/publish lossless; `publishFlow` no ApiClient + http (PUT active=true). build+lint verdes.
 - T2 ✓ — store: `currentFlowId`/`published` + `setCurrentFlow`/`setPublished`/`resetFlow`; `loadFlow(json, {id,active})` propaga id/publicado. build+lint+round-trip verdes.
 - T3 ✓ — Toolbar: Salvar (create/update), Publicar (persist→publishFlow→setPublished), badge Publicado/Rascunho, invalida ["flows"], erros→toast. build+lint verdes.
+- T4 ✓ — Sidebar: lista via api.listFlows() (react-query), clique=getFlow+loadFlow(id,active), Novo Flow=resetFlow, ponto verde=ativo, erro→toast+estado vazio. build+lint verdes.
