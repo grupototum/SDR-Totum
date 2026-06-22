@@ -71,6 +71,7 @@ function SimulatorPage() {
   const [batteryRunning, setBatteryRunning] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
+  const [confirmingPublish, setConfirmingPublish] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: flowList = [] } = useQuery({ queryKey: ["flows"], queryFn: () => api.listFlows() });
@@ -274,23 +275,106 @@ function SimulatorPage() {
             style={{ background: "rgba(218,33,40,0.08)", border: "1px solid rgba(218,33,40,0.25)" }}
           >
             <p className="text-[11px] font-medium text-[#e3433e]">Ativar em produção</p>
-            <p className="text-[10px] text-[color:var(--color-text-muted)]">
-              Salva + publica o flow testado como roteiro ativo do motor.
-              {MOCK_MODE && " (mock local — sem engine real conectada)"}
-            </p>
-            {publishedId && (
-              <p className="text-[10px] text-[#35a670]">✓ Ativo: {publishedId}</p>
+
+            {!confirmingPublish ? (
+              <>
+                <p className="text-[10px] text-[color:var(--color-text-muted)]">
+                  Publica o flow como roteiro ativo do motor (autosend ligado).
+                  {MOCK_MODE && " Mock local — sem engine real."}
+                </p>
+                {publishedId && (
+                  <p className="text-[10px] text-[#35a670]">✓ Publicado: {publishedId}</p>
+                )}
+                <TotumButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmingPublish(true)}
+                  disabled={!activeFlow}
+                  style={{ borderColor: "#da2128", color: "#e3433e" }}
+                >
+                  <Rocket className="size-3.5" />
+                  Publicar / Ativar este flow…
+                </TotumButton>
+              </>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-semibold text-[#e3433e]">
+                  ⚠️ Ativar em PRODUÇÃO com autosend
+                </p>
+                <p className="text-[10px] text-[color:var(--color-text-muted)]">
+                  O motor começa a usar este flow imediatamente em conversas reais.
+                  {MOCK_MODE && " (simulado — sem engine real conectada)"}
+                </p>
+                {/* Saúde do flow antes de confirmar */}
+                {(battery || report) && (
+                  <div
+                    className="rounded-lg px-2 py-1.5 text-[10px]"
+                    style={{ background: "#0e0918" }}
+                  >
+                    {battery && (
+                      <span
+                        style={{
+                          color:
+                            battery.healthRate >= 0.75
+                              ? "#35a670"
+                              : battery.healthRate >= 0.5
+                                ? "#f59e0b"
+                                : "#da2128",
+                        }}
+                      >
+                        Bateria local: {Math.round(battery.healthRate * 100)}% (
+                        {battery.healthy}/{battery.total})
+                        {battery.mock && " · mock"}
+                      </span>
+                    )}
+                    {report && (
+                      <span
+                        className={battery ? " · " : ""}
+                        style={{
+                          color:
+                            report.healthRate >= 0.75
+                              ? "#35a670"
+                              : report.healthRate >= 0.5
+                                ? "#f59e0b"
+                                : "#da2128",
+                        }}
+                      >
+                        Motor: {Math.round(report.healthRate * 100)}%
+                        {report.mock && " · mock"}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {!battery && !report && (
+                  <p className="text-[10px] text-[#f59e0b]">
+                    Rode a bateria acima para ver a saúde antes de confirmar.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <TotumButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmingPublish(false)}
+                    disabled={publishing}
+                  >
+                    Cancelar
+                  </TotumButton>
+                  <TotumButton
+                    variant="primary"
+                    size="sm"
+                    onClick={async () => {
+                      setConfirmingPublish(false);
+                      await publicarFlow();
+                    }}
+                    disabled={publishing}
+                    style={{ background: "#da2128", borderColor: "#da2128" }}
+                  >
+                    <Rocket className="size-3.5" />
+                    {publishing ? "Publicando…" : "Confirmar — ativar"}
+                  </TotumButton>
+                </div>
+              </div>
             )}
-            <TotumButton
-              variant="primary"
-              size="sm"
-              onClick={publicarFlow}
-              disabled={!activeFlow || publishing}
-              style={{ background: publishing ? undefined : "#da2128", borderColor: "#da2128" }}
-            >
-              <Rocket className="size-3.5" />
-              {publishing ? "Publicando…" : "Publicar / Ativar este flow"}
-            </TotumButton>
           </div>
         </div>
       </aside>
