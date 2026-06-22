@@ -4,6 +4,7 @@ import logo from "@/assets/sdr-logo.png";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -35,17 +36,11 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader
-        className="gap-2 px-3 py-2"
+        className="h-14 flex-row items-center gap-2 px-3"
         style={{ boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.06)" }}
       >
-        <div className="flex h-9 flex-row items-center gap-2">
-          <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
-          {!collapsed && <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>}
-        </div>
-        <SidebarTrigger
-          className="size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
-          style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
-        />
+        <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
+        {!collapsed && <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>}
       </SidebarHeader>
 
       <SidebarContent style={{ background: "var(--color-card-totum)" }}>
@@ -86,6 +81,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter
+        className="px-3 py-2"
+        style={{ boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.06)" }}
+      >
+        <SidebarTrigger
+          className="size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
+          style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
+        />
+      </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   );
