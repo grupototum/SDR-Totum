@@ -22,6 +22,10 @@ export type {
   ResearchOrder,
   N8nWorkflow,
   N8nWorkflowSummary,
+  SimFlags,
+  SimMessage,
+  SimTurnRequest,
+  SimTurnResponse,
 } from "./types";
 
 const isMock = !import.meta.env.VITE_API_BASE_URL;

@@ -19,6 +19,8 @@ import type {
   OrderData,
   N8nWorkflow,
   N8nWorkflowSummary,
+  SimTurnRequest,
+  SimTurnResponse,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -110,4 +112,9 @@ export const httpApi: ApiClient = {
     n8nReq<N8nWorkflow>(`/workflows/${id}/${active ? "activate" : "deactivate"}`, {
       method: "POST",
     }),
+
+  // Simulator — POST /api/sim/turn pelo proxy (engine). O cliente faz fallback
+  // mock se isto falhar (engine indisponível).
+  simTurn: (payload: SimTurnRequest) =>
+    req<SimTurnResponse>("/api/sim/turn", { method: "POST", body: JSON.stringify(payload) }),
 };

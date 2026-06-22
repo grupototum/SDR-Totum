@@ -1,5 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Search, Workflow, MessagesSquare, BarChart3, Webhook } from "lucide-react";
+import {
+  Home,
+  Search,
+  Workflow,
+  MessagesSquare,
+  BarChart3,
+  Webhook,
+  FlaskConical,
+} from "lucide-react";
 import logo from "@/assets/sdr-logo.png";
 import {
   Sidebar,
@@ -20,6 +28,7 @@ const items = [
   { title: "Início", url: "/", icon: Home },
   { title: "Pesquisa", url: "/pesquisa", icon: Search },
   { title: "Builder", url: "/builder", icon: Workflow },
+  { title: "Simulador", url: "/simulator", icon: FlaskConical },
   { title: "Conversas", url: "/conversations", icon: MessagesSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "N8N", url: "/n8n", icon: Webhook },

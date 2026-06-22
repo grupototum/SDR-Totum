@@ -1,0 +1,356 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "@/api";
+import type { SimMessage, SimTurnResponse } from "@/api";
+import { mockSimTurn } from "@/lib/sim-turn";
+import { useFlowV2Store } from "@/stores/flow-v2-store";
+import { TotumButton } from "@/components/ui/totum-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { FlaskConical, RotateCcw, Send, BotMessageSquare, User } from "lucide-react";
+
+export const Route = createFileRoute("/simulator")({
+  head: () => ({
+    meta: [
+      { title: "Simulador — SDR Totum" },
+      {
+        name: "description",
+        content: "Teste um flow do SDR Totum sem WhatsApp, conversando como lead.",
+      },
+    ],
+  }),
+  component: SimulatorPage,
+});
+
+const DRAFT = "__draft__";
+
+type Turn = { lead: string } & SimTurnResponse;
+
+function tempColor(t: string) {
+  if (t === "quente") return "#da2128";
+  if (t === "morno") return "#f59e0b";
+  if (t === "frio") return "#077ac7";
+  return "#9ca3af";
+}
+
+function SimulatorPage() {
+  const draftFlow = useFlowV2Store((s) => s.flow);
+  const [source, setSource] = useState<string>(DRAFT);
+  const [variables, setVariables] = useState<Record<string, string>>({});
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: flowList = [] } = useQuery({ queryKey: ["flows"], queryFn: () => api.listFlows() });
+
+  const serverFlowQuery = useQuery({
+    queryKey: ["flow", source],
+    queryFn: () => api.getFlow(source),
+    enabled: source !== DRAFT,
+  });
+
+  const activeFlow: Record<string, unknown> | null =
+    source === DRAFT
+      ? (draftFlow as unknown as Record<string, unknown> | null)
+      : (serverFlowQuery.data ?? null);
+
+  const requiredVars = useMemo(
+    () =>
+      Array.isArray(activeFlow?.required_variables)
+        ? (activeFlow!.required_variables as string[])
+        : [],
+    [activeFlow],
+  );
+  const entryStage = String(activeFlow?.entry_stage ?? "");
+  const currentStage = turns.length ? turns[turns.length - 1].stage_to : entryStage;
+
+  // Garante uma chave por variável requerida (sem apagar valores já digitados).
+  useEffect(() => {
+    setVariables((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const v of requiredVars)
+        if (!(v in next)) {
+          next[v] = "";
+          changed = true;
+        }
+      return changed ? next : prev;
+    });
+  }, [requiredVars]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [turns, pending]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || !activeFlow || pending) return;
+    setInput("");
+    setPending(true);
+    const history: SimMessage[] = turns.flatMap((t) => [
+      { role: "lead" as const, text: t.lead },
+      { role: "sdr" as const, text: t.reply },
+    ]);
+    history.push({ role: "lead", text });
+    const payload = { flow: activeFlow, variables, history, currentStage };
+    try {
+      let res: SimTurnResponse;
+      try {
+        res = await api.simTurn(payload);
+      } catch {
+        // Fallback mock se o engine estiver indisponível.
+        res = mockSimTurn(payload);
+        toast.info("Engine indisponível — usando simulação mock");
+      }
+      setTurns((t) => [...t, { lead: text, ...res }]);
+    } catch (e) {
+      toast.error(`Erro no turno: ${(e as Error).message}`);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function reset() {
+    setTurns([]);
+    setInput("");
+  }
+
+  return (
+    <div
+      className="grid h-screen w-full overflow-hidden"
+      style={{ gridTemplateColumns: "340px 1fr 360px" }}
+    >
+      {/* ── Esquerda: flow + persona ── */}
+      <aside
+        className="flex flex-col overflow-y-auto"
+        style={{ background: "var(--color-card-totum)", boxShadow: "inset -1px 0 0 0 #1f192a" }}
+      >
+        <div
+          className="flex items-center gap-2 px-5 py-4"
+          style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+        >
+          <FlaskConical className="size-4 text-[#e3433e]" />
+          <h1 className="text-sm text-white">Simulador (sem WhatsApp)</h1>
+        </div>
+
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-[color:var(--color-text-muted)]">Flow</Label>
+            <select
+              value={source}
+              onChange={(e) => {
+                setSource(e.target.value);
+                reset();
+              }}
+              className="h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[#1f192a] px-2 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
+            >
+              <option value={DRAFT}>Flow do builder (rascunho){draftFlow ? "" : " — vazio"}</option>
+              {flowList.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.id})
+                </option>
+              ))}
+            </select>
+            {!activeFlow && (
+              <p className="text-[11px] text-[#f59e0b]">
+                {source === DRAFT
+                  ? "Abra um flow no /builder primeiro, ou escolha um flow salvo."
+                  : "Carregando flow…"}
+              </p>
+            )}
+            {activeFlow && (
+              <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                {String(activeFlow.name ?? activeFlow.flow_id ?? "flow")} · entry:{" "}
+                {entryStage || "—"}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-[color:var(--color-text-muted)]">
+              Variáveis da persona ({requiredVars.length})
+            </Label>
+            {requiredVars.length === 0 && (
+              <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                Este flow não declara required_variables.
+              </p>
+            )}
+            {requiredVars.map((v) => (
+              <div key={v} className="flex flex-col gap-1">
+                <span className="text-[10px] text-[color:var(--color-text-muted)]">{v}</span>
+                <Input
+                  value={variables[v] ?? ""}
+                  onChange={(e) => setVariables((p) => ({ ...p, [v]: e.target.value }))}
+                  placeholder={v}
+                />
+              </div>
+            ))}
+          </div>
+
+          <TotumButton variant="outline" size="sm" onClick={reset} className="self-start">
+            <RotateCcw className="size-3.5" /> Reset
+          </TotumButton>
+        </div>
+      </aside>
+
+      {/* ── Centro: chat ── */}
+      <main className="flex flex-col overflow-hidden" style={{ background: "#0e0918" }}>
+        <div className="flex-1 space-y-3 overflow-y-auto p-5">
+          {turns.length === 0 && (
+            <p className="mt-10 text-center text-sm text-[color:var(--color-text-muted)]">
+              Digite como o lead para iniciar a conversa.
+            </p>
+          )}
+          {turns.map((t, i) => (
+            <div key={i} className="space-y-3">
+              {/* lead (direita) */}
+              <div className="flex flex-row-reverse gap-2">
+                <div
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "#432d33", color: "#ef9a9a" }}
+                >
+                  <User className="size-3.5" />
+                </div>
+                <div
+                  className="max-w-[75%] rounded-2xl px-3 py-2 text-sm"
+                  style={{ background: "#1f192a", color: "#d1cece" }}
+                >
+                  {t.lead}
+                </div>
+              </div>
+              {/* sdr (esquerda) */}
+              <div className="flex gap-2">
+                <div
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "#272333", color: "#9ca3af" }}
+                >
+                  <BotMessageSquare className="size-3.5" />
+                </div>
+                <div
+                  className="max-w-[75%] rounded-2xl px-3 py-2 text-sm"
+                  style={{ background: "#1b1728", color: "#fff", boxShadow: "var(--shadow-card)" }}
+                >
+                  {t.reply}
+                  <div className="mt-1 text-[10px] text-[color:var(--color-text-muted)]">
+                    {t.stage_from} → {t.stage_to}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {pending && (
+            <div className="flex gap-2">
+              <div
+                className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "#272333" }}
+              >
+                <BotMessageSquare className="size-3.5 text-[#9ca3af]" />
+              </div>
+              <div
+                className="rounded-2xl px-3 py-2 text-sm text-[color:var(--color-text-muted)]"
+                style={{ background: "#1b1728" }}
+              >
+                digitando…
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="flex gap-2 p-4" style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            placeholder={activeFlow ? "Responder como lead (Enter)…" : "Selecione um flow primeiro"}
+            disabled={!activeFlow || pending}
+            className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128] disabled:opacity-50"
+            style={{ background: "#1f192a" }}
+          />
+          <TotumButton
+            variant="primary"
+            size="sm"
+            onClick={send}
+            disabled={!activeFlow || pending || !input.trim()}
+          >
+            <Send className="size-3.5" />
+          </TotumButton>
+        </div>
+      </main>
+
+      {/* ── Direita: painel por turno ── */}
+      <aside
+        className="flex flex-col overflow-y-auto"
+        style={{ background: "var(--color-card-totum)", boxShadow: "inset 1px 0 0 0 #1f192a" }}
+      >
+        <div
+          className="px-5 py-4 text-sm text-white"
+          style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+        >
+          Análise por turno ({turns.length})
+        </div>
+        <div className="flex flex-col gap-3 p-4">
+          {turns.length === 0 && (
+            <p className="text-[11px] text-[color:var(--color-text-muted)]">
+              Cada turno mostra a transição de estágio, temperatura, score, flags e o JSON cru.
+            </p>
+          )}
+          {turns.map((t, i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-2 rounded-xl p-3"
+              style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white">Turno {i + 1}</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] text-white"
+                  style={{ background: tempColor(t.temperatura) }}
+                >
+                  {t.temperatura} · {t.score}/10
+                </span>
+              </div>
+              <div className="text-[11px] text-[color:var(--color-text-muted)]">
+                <span className="text-white">{t.stage_from}</span> →{" "}
+                <span className="text-white">{t.stage_to}</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(["send_preview", "booked", "precisa_humano", "done"] as const).map((f) => (
+                  <span
+                    key={f}
+                    className="rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider"
+                    style={{
+                      background: t.flags[f] ? "rgba(53,166,112,0.18)" : "#1f192a",
+                      color: t.flags[f] ? "#35a670" : "#9ca3af",
+                    }}
+                  >
+                    {f}
+                  </span>
+                ))}
+              </div>
+              <details>
+                <summary className="cursor-pointer text-[10px] text-[color:var(--color-text-muted)] hover:text-white">
+                  JSON cru
+                </summary>
+                <pre
+                  className="mt-1 max-h-48 overflow-auto rounded-lg p-2 text-[10px] leading-relaxed text-[#d1cece]"
+                  style={{ background: "#0e0918", fontFamily: "ui-monospace, Menlo, monospace" }}
+                >
+                  {JSON.stringify(t.raw, null, 2)}
+                </pre>
+              </details>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
