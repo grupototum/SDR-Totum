@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/api";
 import type { SimMessage, SimTurnResponse } from "@/api";
+import { httpApi } from "@/api/http";
 import { mockSimTurn } from "@/lib/sim-turn";
 import { runBattery, type BatterySummary } from "@/lib/sim-harness";
 import { useFlowV2Store } from "@/stores/flow-v2-store";
@@ -21,16 +22,17 @@ import {
   RefreshCw,
   HeartPulse,
   Rocket,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
 
 const ANALYSIS_KEY = "totum:simulator-analysis-collapsed";
 
-/** Um turno via proxy server-side /api/engine; fallback mock se sem engine. */
-async function simTurnWithFallback(payload: Parameters<typeof api.simTurn>[0]) {
+async function simTurnWithFallback(payload: Parameters<typeof httpApi.simTurn>[0]) {
   try {
-    return await api.simTurn(payload);
+    return await httpApi.simTurn(payload);
   } catch {
     return mockSimTurn(payload);
   }
@@ -50,9 +52,6 @@ export const Route = createFileRoute("/simulator")({
 });
 
 const DRAFT = "__draft__";
-
-/** Sem VITE_API_BASE_URL o app inteiro usa mock — o simulador nunca toca o motor real. */
-const MOCK_MODE = !import.meta.env.VITE_API_BASE_URL;
 
 type Turn = { lead: string; mock: boolean } & SimTurnResponse;
 
@@ -76,6 +75,8 @@ function SimulatorPage() {
   const [publishing, setPublishing] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [confirmingPublish, setConfirmingPublish] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [analysisCollapsed, setAnalysisCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -98,8 +99,8 @@ function SimulatorPage() {
     enabled: source !== DRAFT,
   });
 
-  // Report de saúde da bateria lido do motor (GET /api/sim/report) — fonte de GO.
-  const reportQuery = useQuery({ queryKey: ["sim-report"], queryFn: () => api.getSimReport() });
+  // Report de saúde do motor (GET /api/engine/api/sim/report) — proxy same-origin, fonte de GO.
+  const reportQuery = useQuery({ queryKey: ["sim-report"], queryFn: () => httpApi.getSimReport() });
   const report = reportQuery.data;
 
   const activeFlow: Record<string, unknown> | null =
@@ -198,18 +199,24 @@ function SimulatorPage() {
     }
   }
 
+  const cols = [leftOpen ? "340px" : "0px", "1fr", rightOpen ? "360px" : "0px"].join(" ");
+
   return (
     <div
       className="grid h-screen w-full overflow-hidden"
       style={{
-        gridTemplateColumns: analysisCollapsed ? "340px 1fr 44px" : "340px 1fr 360px",
+        gridTemplateColumns: [leftOpen ? "340px" : "0px", "1fr", rightOpen ? (analysisCollapsed ? "44px" : "360px") : "0px"].join(" "),
         transition: "grid-template-columns 200ms ease",
       }}
     >
       {/* ── Esquerda: flow + persona ── */}
       <aside
         className="flex flex-col overflow-y-auto"
-        style={{ background: "var(--color-card-totum)", boxShadow: "inset -1px 0 0 0 #1f192a" }}
+        style={{
+          background: "var(--color-card-totum)",
+          boxShadow: "inset -1px 0 0 0 #1f192a",
+          display: leftOpen ? undefined : "none",
+        }}
       >
         <div
           className="flex items-center gap-2 px-5 py-4"
@@ -299,7 +306,6 @@ function SimulatorPage() {
               <>
                 <p className="text-[10px] text-[color:var(--color-text-muted)]">
                   Publica o flow como roteiro ativo do motor (autosend ligado).
-                  {MOCK_MODE && " Mock local — sem engine real."}
                 </p>
                 {publishedId && (
                   <p className="text-[10px] text-[#35a670]">✓ Publicado: {publishedId}</p>
@@ -322,7 +328,6 @@ function SimulatorPage() {
                 </p>
                 <p className="text-[10px] text-[color:var(--color-text-muted)]">
                   O motor começa a usar este flow imediatamente em conversas reais.
-                  {MOCK_MODE && " (simulado — sem engine real conectada)"}
                 </p>
                 {/* Saúde do flow antes de confirmar */}
                 {(battery || report) && (
@@ -400,7 +405,27 @@ function SimulatorPage() {
 
       {/* ── Centro: chat ── */}
       <main className="flex flex-col overflow-hidden" style={{ background: "#0e0918" }}>
-        {/* Report do motor (GET /api/sim/report) — saúde da bateria / fonte de GO */}
+        {/* Barra superior com botões retrair */}
+        <div
+          className="flex items-center justify-between px-3 py-1.5"
+          style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+        >
+          <button
+            onClick={() => setLeftOpen((v) => !v)}
+            className="text-[color:var(--color-text-muted)] hover:text-white"
+            title={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
+          >
+            {leftOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          </button>
+          <button
+            onClick={() => setRightOpen((v) => !v)}
+            className="text-[color:var(--color-text-muted)] hover:text-white"
+            title={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
+          >
+            {rightOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+          </button>
+        </div>
+        {/* Report do motor (GET /api/engine/api/sim/report) — saúde da bateria / fonte de GO */}
         {report && (
           <div
             className="flex items-center justify-between gap-4 px-5 py-3"
@@ -447,7 +472,7 @@ function SimulatorPage() {
             </button>
           </div>
         )}
-        {(MOCK_MODE || turns.some((t) => t.mock)) && (
+        {turns.some((t) => t.mock) && (
           <div
             className="flex items-center gap-2 px-5 py-2 text-xs font-medium"
             style={{
@@ -611,7 +636,11 @@ function SimulatorPage() {
       {/* ── Direita: painel por turno (colapsável) ── */}
       <aside
         className="flex flex-col overflow-y-auto"
-        style={{ background: "var(--color-card-totum)", boxShadow: "inset 1px 0 0 0 #1f192a" }}
+        style={{
+          background: "var(--color-card-totum)",
+          boxShadow: "inset 1px 0 0 0 #1f192a",
+          display: rightOpen ? undefined : "none",
+        }}
       >
         <div
           className="flex items-center justify-between gap-2 px-3 py-3 text-sm text-white"

@@ -114,10 +114,13 @@ export const httpApi: ApiClient = {
       method: "POST",
     }),
 
-  // Simulator — POST /api/sim/turn pelo proxy (engine). O cliente faz fallback
-  // mock se isto falhar (engine indisponível).
+  // Simulator — SEMPRE via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
+  // Independente de VITE_API_BASE_URL: o proxy existe em server.ts e injeta o Bearer.
   simTurn: (payload: SimTurnRequest) =>
-    req<SimTurnResponse>("/api/sim/turn", { method: "POST", body: JSON.stringify(payload) }),
-  // Report de GO — vem do engine real (via proxy). Métrica oficial de decisão.
-  getSimReport: () => req<SimReport>("/api/sim/report"),
+    call<SimTurnResponse>("/api/engine/api/sim/turn", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  // Report de GO — via proxy (não via BASE). Métrica oficial de decisão.
+  getSimReport: () => call<SimReport>("/api/engine/api/sim/report"),
 };
