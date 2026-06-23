@@ -608,81 +608,97 @@ function SimulatorPage() {
         </div>
       </main>
 
-      {/* ── Direita: painel por turno ── */}
+      {/* ── Direita: painel por turno (colapsável) ── */}
       <aside
         className="flex flex-col overflow-y-auto"
         style={{ background: "var(--color-card-totum)", boxShadow: "inset 1px 0 0 0 #1f192a" }}
       >
         <div
-          className="px-5 py-4 text-sm text-white"
+          className="flex items-center justify-between gap-2 px-3 py-3 text-sm text-white"
           style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
         >
-          Análise por turno ({turns.length})
-        </div>
-        <div className="flex flex-col gap-3 p-4">
-          {turns.length === 0 && (
-            <p className="text-[11px] text-[color:var(--color-text-muted)]">
-              Cada turno mostra a transição de estágio, temperatura, score, flags e o JSON cru.
-            </p>
+          {!analysisCollapsed && (
+            <span className="px-2">Análise por turno ({turns.length})</span>
           )}
-          {turns.map((t, i) => (
-            <div
-              key={i}
-              className="flex flex-col gap-2 rounded-xl p-3"
-              style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs text-white">
-                  Turno {i + 1}
-                  {t.mock && (
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
-                      style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
-                    >
-                      mock
-                    </span>
-                  )}
-                </span>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] text-white"
-                  style={{ background: tempColor(t.temperatura) }}
-                >
-                  {t.temperatura} · {t.score}/10
-                </span>
-              </div>
-              <div className="text-[11px] text-[color:var(--color-text-muted)]">
-                <span className="text-white">{t.stage_from}</span> →{" "}
-                <span className="text-white">{t.stage_to}</span>
-                <span className="ml-2">objeções: {t.objecao_count}</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {(["send_preview", "booked", "precisa_humano", "done"] as const).map((f) => (
-                  <span
-                    key={f}
-                    className="rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider"
-                    style={{
-                      background: t.flags[f] ? "rgba(53,166,112,0.18)" : "#1f192a",
-                      color: t.flags[f] ? "#35a670" : "#9ca3af",
-                    }}
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
-              <details>
-                <summary className="cursor-pointer text-[10px] text-[color:var(--color-text-muted)] hover:text-white">
-                  JSON cru
-                </summary>
-                <pre
-                  className="mt-1 max-h-48 overflow-auto rounded-lg p-2 text-[10px] leading-relaxed text-[#d1cece]"
-                  style={{ background: "#0e0918", fontFamily: "ui-monospace, Menlo, monospace" }}
-                >
-                  {JSON.stringify(t.raw, null, 2)}
-                </pre>
-              </details>
-            </div>
-          ))}
+          <button
+            onClick={toggleAnalysis}
+            className="ml-auto flex size-8 items-center justify-center rounded-full text-[color:var(--color-text-muted)] hover:bg-[#1f192a] hover:text-white"
+            title={analysisCollapsed ? "Expandir análise" : "Recolher análise"}
+            aria-label={analysisCollapsed ? "Expandir análise" : "Recolher análise"}
+          >
+            {analysisCollapsed ? (
+              <PanelRightOpen className="size-4" />
+            ) : (
+              <PanelRightClose className="size-4" />
+            )}
+          </button>
         </div>
+        {!analysisCollapsed && (
+          <div className="flex flex-col gap-3 p-4">
+            {turns.length === 0 && (
+              <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                Cada turno mostra a transição de estágio, temperatura, score, flags e o JSON cru.
+              </p>
+            )}
+            {turns.map((t, i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-2 rounded-xl p-3"
+                style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs text-white">
+                    Turno {i + 1}
+                    {t.mock && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
+                        style={{ background: "rgba(245,158,11,0.2)", color: "#f59e0b" }}
+                      >
+                        mock
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] text-white"
+                    style={{ background: tempColor(t.temperatura) }}
+                  >
+                    {t.temperatura} · {t.score}/10
+                  </span>
+                </div>
+                <div className="text-[11px] text-[color:var(--color-text-muted)]">
+                  <span className="text-white">{t.stage_from}</span> →{" "}
+                  <span className="text-white">{t.stage_to}</span>
+                  <span className="ml-2">objeções: {t.objecao_count}</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(["send_preview", "booked", "precisa_humano", "done"] as const).map((f) => (
+                    <span
+                      key={f}
+                      className="rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider"
+                      style={{
+                        background: t.flags[f] ? "rgba(53,166,112,0.18)" : "#1f192a",
+                        color: t.flags[f] ? "#35a670" : "#9ca3af",
+                      }}
+                    >
+                      {f}
+                    </span>
+                  ))}
+                </div>
+                <details>
+                  <summary className="cursor-pointer text-[10px] text-[color:var(--color-text-muted)] hover:text-white">
+                    JSON cru
+                  </summary>
+                  <pre
+                    className="mt-1 max-h-48 overflow-auto rounded-lg p-2 text-[10px] leading-relaxed text-[#d1cece]"
+                    style={{ background: "#0e0918", fontFamily: "ui-monospace, Menlo, monospace" }}
+                  >
+                    {JSON.stringify(t.raw, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            ))}
+          </div>
+        )}
       </aside>
     </div>
   );
