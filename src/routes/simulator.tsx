@@ -77,6 +77,18 @@ function SimulatorPage() {
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [confirmingPublish, setConfirmingPublish] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [analysisCollapsed, setAnalysisCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ANALYSIS_KEY) === "1";
+  });
+  const toggleAnalysis = () => {
+    setAnalysisCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined")
+        window.localStorage.setItem(ANALYSIS_KEY, next ? "1" : "0");
+      return next;
+    });
+  };
 
   const { data: flowList = [] } = useQuery({ queryKey: ["flows"], queryFn: () => api.listFlows() });
 
