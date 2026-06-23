@@ -3,9 +3,10 @@
  * Histórico das ordens de pesquisa — modos Lista | Card (preferência em localStorage).
  * Ações: Ver prompt (modal), Duplicar (reabre o wizard pré-preenchido).
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid, List, Copy, FileText, X } from "lucide-react";
+import { LayoutGrid, List, Copy, FileText, X, Search, Workflow } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { generateResearchPrompt } from "@/lib/research-prompt";
@@ -69,6 +70,7 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["research-orders"],
@@ -80,52 +82,79 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
     if (typeof window !== "undefined") window.localStorage.setItem(VIEW_KEY, m);
   };
 
+  const filteredOrders = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return orders;
+    return orders.filter(
+      (o) =>
+        o.name.toLowerCase().includes(term) ||
+        o.data.niche.toLowerCase().includes(term) ||
+        geoSummary(o).toLowerCase().includes(term),
+    );
+  }, [orders, q]);
+
   const preview = orders.find((o) => o.id === previewId) ?? null;
 
   return (
     <div className="mx-auto max-w-5xl">
       {preview && <PromptModal order={preview} onClose={() => setPreviewId(null)} />}
 
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs text-[color:var(--color-text-muted)]">{orders.length} ordem(ns)</p>
-        <div className="flex gap-1 rounded-full p-1" style={{ background: "#1f192a" }}>
-          <button
-            onClick={() => setMode("list")}
-            className="rounded-full p-1.5"
-            style={{
-              background: view === "list" ? "#da2128" : "transparent",
-              color: view === "list" ? "#fff" : "#9ca3af",
-            }}
-            title="Lista"
-          >
-            <List className="size-3.5" />
-          </button>
-          <button
-            onClick={() => setMode("card")}
-            className="rounded-full p-1.5"
-            style={{
-              background: view === "card" ? "#da2128" : "transparent",
-              color: view === "card" ? "#fff" : "#9ca3af",
-            }}
-            title="Card"
-          >
-            <LayoutGrid className="size-3.5" />
-          </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-[color:var(--color-text-muted)]">
+          {filteredOrders.length} de {orders.length} ordem(ns)
+        </p>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por nome, nicho ou UF…"
+              className="h-9 w-64 rounded-md pl-9 pr-3 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
+              style={{ background: "#1f192a" }}
+            />
+          </div>
+          <div className="flex gap-1 rounded-full p-1" style={{ background: "#1f192a" }}>
+            <button
+              onClick={() => setMode("list")}
+              className="rounded-full p-1.5"
+              style={{
+                background: view === "list" ? "#da2128" : "transparent",
+                color: view === "list" ? "#fff" : "#9ca3af",
+              }}
+              title="Lista"
+            >
+              <List className="size-3.5" />
+            </button>
+            <button
+              onClick={() => setMode("card")}
+              className="rounded-full p-1.5"
+              style={{
+                background: view === "card" ? "#da2128" : "transparent",
+                color: view === "card" ? "#fff" : "#9ca3af",
+              }}
+              title="Card"
+            >
+              <LayoutGrid className="size-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
       {isLoading && <p className="text-sm text-[color:var(--color-text-muted)]">Carregando…</p>}
-      {!isLoading && orders.length === 0 && (
+      {!isLoading && filteredOrders.length === 0 && (
         <p
           className="rounded-2xl p-8 text-center text-sm text-[color:var(--color-text-muted)]"
           style={{ background: "#1b1728" }}
         >
-          Nenhuma ordem salva ainda. Crie uma no wizard de Pesquisa.
+          {orders.length === 0
+            ? "Nenhuma ordem salva ainda. Crie uma no wizard de Pesquisa."
+            : "Nenhuma ordem bate com a busca."}
         </p>
       )}
 
       {/* Lista */}
-      {view === "list" && orders.length > 0 && (
+      {view === "list" && filteredOrders.length > 0 && (
         <div
           className="overflow-hidden rounded-2xl"
           style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
@@ -142,7 +171,7 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => (
+              {filteredOrders.map((o) => (
                 <tr key={o.id} style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
                   <td className="max-w-[220px] truncate px-4 py-3 text-white">{o.name}</td>
                   <td className="px-4 py-3 text-[color:var(--color-text-body)]">{o.data.niche}</td>
@@ -172,10 +201,17 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
                       <button
                         onClick={() => onDuplicate(o.id)}
                         className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
-                        title="Duplicar"
+                        title="Duplicar / abrir no wizard"
                       >
                         <Copy className="size-3.5" />
                       </button>
+                      <Link
+                        to="/builder/edit"
+                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-[#e3433e]"
+                        title="Usar no fluxo (abrir Builder)"
+                      >
+                        <Workflow className="size-3.5" />
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -186,9 +222,9 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
       )}
 
       {/* Card */}
-      {view === "card" && orders.length > 0 && (
+      {view === "card" && filteredOrders.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {orders.map((o) => (
+          {filteredOrders.map((o) => (
             <div
               key={o.id}
               className="flex flex-col gap-3 rounded-3xl p-5"
@@ -222,9 +258,13 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
                   variant="outline"
                   size="sm"
                   onClick={() => onDuplicate(o.id)}
-                  className="flex-1"
                 >
-                  <Copy className="size-3.5" /> Duplicar
+                  <Copy className="size-3.5" />
+                </TotumButton>
+                <TotumButton asChild variant="outline" size="sm" title="Usar no fluxo">
+                  <Link to="/builder/edit">
+                    <Workflow className="size-3.5" />
+                  </Link>
                 </TotumButton>
               </div>
             </div>

@@ -1,17 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { History, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { TotumButton } from "@/components/ui/totum-button";
 import { OrderHistory } from "@/components/research/OrderHistory";
 
-/** Alias para compat — mesmo conteúdo da landing /pesquisa. */
-export const Route = createFileRoute("/pesquisa/historico")({
+export const Route = createFileRoute("/pesquisa/")({
   head: () => ({
-    meta: [{ title: "Histórico de Pesquisa — SDR Totum" }],
+    meta: [{ title: "Pesquisas — SDR Totum" }],
   }),
-  component: HistoricoPage,
+  component: PesquisaIndex,
 });
 
-function HistoricoPage() {
+function PesquisaIndex() {
   const navigate = useNavigate();
   return (
     <main className="min-h-screen" style={{ background: "#0e0918" }}>
@@ -23,20 +22,17 @@ function HistoricoPage() {
           boxShadow: "inset 0 -1px 0 0 #1f192a",
         }}
       >
-        <Link to="/" className="text-white font-medium">
-          SDR Totum
-        </Link>
         <h1 className="flex items-center gap-2 text-sm text-white">
-          <History className="size-4 text-[#da2128]" /> Histórico de Pesquisa
+          <Search className="size-4 text-[#da2128]" /> Pesquisa
         </h1>
         <TotumButton asChild variant="primary" size="sm">
           <Link to="/pesquisa/nova">
-            <Plus className="size-3.5" /> Nova
+            <Plus className="size-3.5" /> Nova pesquisa
           </Link>
         </TotumButton>
       </header>
 
-      <section className="px-6 py-10">
+      <section className="px-6 py-8">
         <OrderHistory
           onDuplicate={(id) => navigate({ to: "/pesquisa/nova", search: { dup: id } })}
         />

@@ -1,6 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { V2Builder } from "@/components/flow-v2/V2Builder";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
+/**
+ * /builder — layout. Contém:
+ *  - /builder        → index com lista/cards dos flows
+ *  - /builder/edit   → editor (Wizard|Builder do mesmo flow)
+ */
 export const Route = createFileRoute("/builder")({
   head: () => ({
     meta: [
@@ -8,15 +12,9 @@ export const Route = createFileRoute("/builder")({
       {
         name: "description",
         content:
-          "Editor de estágios (schema v2) do SDR Totum: edite estágios, interrupções e configurações globais e publique o roteiro do motor.",
+          "Construa o roteiro do SDR Totum em dois modos (Wizard guiado ou Builder visual de estágios v2).",
       },
-      { property: "og:title", content: "SDR Totum · Flow Builder (estágios v2)" },
-      { property: "og:description", content: "Editor de estágios para WhatsApp." },
     ],
   }),
-  component: BuilderPage,
+  component: () => <Outlet />,
 });
-
-function BuilderPage() {
-  return <V2Builder />;
-}
