@@ -3,9 +3,10 @@
  * Histórico das ordens de pesquisa — modos Lista | Card (preferência em localStorage).
  * Ações: Ver prompt (modal), Duplicar (reabre o wizard pré-preenchido).
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid, List, Copy, FileText, X } from "lucide-react";
+import { LayoutGrid, List, Copy, FileText, X, Search, Workflow } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { generateResearchPrompt } from "@/lib/research-prompt";
