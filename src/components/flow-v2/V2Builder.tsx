@@ -204,7 +204,13 @@ function V2Toolbar({
       }}
     >
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-[color:var(--color-text-muted)]">Flows v2</span>
+        <Link
+          to="/builder"
+          className="flex items-center gap-1 text-[color:var(--color-text-muted)] hover:text-white"
+          title="Voltar para fluxos"
+        >
+          <ArrowLeft className="size-3.5" /> Fluxos
+        </Link>
         <ChevronRight className="size-3.5 text-[color:var(--color-text-muted)]" />
         <input
           value={flow.name}
@@ -224,6 +230,39 @@ function V2Toolbar({
         </span>
       </div>
 
+      {/* Toggle Wizard | Builder — mesmo fluxo, vistas diferentes */}
+      <div
+        className="flex items-center gap-1 rounded-full p-1"
+        style={{ background: "#1f192a" }}
+        role="tablist"
+        aria-label="Modo de edição"
+      >
+        <button
+          onClick={() => setMode("wizard")}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
+          style={{
+            background: mode === "wizard" ? "#da2128" : "transparent",
+            color: mode === "wizard" ? "#fff" : "#9ca3af",
+          }}
+          aria-selected={mode === "wizard"}
+          role="tab"
+        >
+          <Wand2 className="size-3.5" /> Wizard
+        </button>
+        <button
+          onClick={() => setMode("builder")}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
+          style={{
+            background: mode === "builder" ? "#da2128" : "transparent",
+            color: mode === "builder" ? "#fff" : "#9ca3af",
+          }}
+          aria-selected={mode === "builder"}
+          role="tab"
+        >
+          <Workflow className="size-3.5" /> Builder
+        </button>
+      </div>
+
       <div className="flex items-center gap-2">
         <input
           ref={fileRef}
@@ -240,7 +279,8 @@ function V2Toolbar({
         </TotumButton>
         <Link
           to="/builder-legacy"
-          className="text-xs text-[color:var(--color-text-muted)] underline-offset-2 hover:text-white hover:underline"
+          className="text-[10px] text-[color:var(--color-text-muted)] underline-offset-2 hover:text-white hover:underline"
+          title="Builder legado v1 (deprecated)"
         >
           Legado v1
         </Link>
