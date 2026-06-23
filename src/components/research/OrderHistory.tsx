@@ -142,17 +142,19 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
       </div>
 
       {isLoading && <p className="text-sm text-[color:var(--color-text-muted)]">Carregando…</p>}
-      {!isLoading && orders.length === 0 && (
+      {!isLoading && filteredOrders.length === 0 && (
         <p
           className="rounded-2xl p-8 text-center text-sm text-[color:var(--color-text-muted)]"
           style={{ background: "#1b1728" }}
         >
-          Nenhuma ordem salva ainda. Crie uma no wizard de Pesquisa.
+          {orders.length === 0
+            ? "Nenhuma ordem salva ainda. Crie uma no wizard de Pesquisa."
+            : "Nenhuma ordem bate com a busca."}
         </p>
       )}
 
       {/* Lista */}
-      {view === "list" && orders.length > 0 && (
+      {view === "list" && filteredOrders.length > 0 && (
         <div
           className="overflow-hidden rounded-2xl"
           style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
@@ -169,7 +171,7 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => (
+              {filteredOrders.map((o) => (
                 <tr key={o.id} style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
                   <td className="max-w-[220px] truncate px-4 py-3 text-white">{o.name}</td>
                   <td className="px-4 py-3 text-[color:var(--color-text-body)]">{o.data.niche}</td>
@@ -199,10 +201,17 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
                       <button
                         onClick={() => onDuplicate(o.id)}
                         className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
-                        title="Duplicar"
+                        title="Duplicar / abrir no wizard"
                       >
                         <Copy className="size-3.5" />
                       </button>
+                      <Link
+                        to="/builder/edit"
+                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-[#e3433e]"
+                        title="Usar no fluxo (abrir Builder)"
+                      >
+                        <Workflow className="size-3.5" />
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -213,9 +222,9 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
       )}
 
       {/* Card */}
-      {view === "card" && orders.length > 0 && (
+      {view === "card" && filteredOrders.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {orders.map((o) => (
+          {filteredOrders.map((o) => (
             <div
               key={o.id}
               className="flex flex-col gap-3 rounded-3xl p-5"
@@ -249,9 +258,13 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
                   variant="outline"
                   size="sm"
                   onClick={() => onDuplicate(o.id)}
-                  className="flex-1"
                 >
-                  <Copy className="size-3.5" /> Duplicar
+                  <Copy className="size-3.5" />
+                </TotumButton>
+                <TotumButton asChild variant="outline" size="sm" title="Usar no fluxo">
+                  <Link to="/builder/edit">
+                    <Workflow className="size-3.5" />
+                  </Link>
                 </TotumButton>
               </div>
             </div>
