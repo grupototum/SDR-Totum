@@ -1,448 +1,357 @@
 /**
- * WizardMode.tsx — modo guiado passo-a-passo para construir o MESMO FlowV2
- * que o Builder edita. Mutaciona useFlowV2Store, então alternar modos
- * (Wizard|Builder) não perde nada.
- *
- * Passos:
- *  1. Identidade (nome, objetivo)
- *  2. Estágios (lista ordenada, add/remove/rename, marca entry)
- *  3. Conteúdo por estágio (goal, instruction, advance_when, next)
- *  4. Interrupções (objeções/loops)
- *  5. Revisão
+ * WizardMode.tsx — wizard guiado para criar um flow v2 por etapas.
+ * Popula o flow-v2-store (mesma fonte de verdade que o Builder).
+ * Trocar para o modo Builder após o wizard preserva tudo.
  */
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Flag, GripVertical, Check } from "lucide-react";
 import { useFlowV2Store } from "@/stores/flow-v2-store";
 import { TotumButton } from "@/components/ui/totum-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Plus, Trash2, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { toast } from "sonner";
+import type { FlowV2, V2Stage } from "@/lib/flow-v2";
+import flowV2Default from "../../../docs/flow_odonto_stages_v2.json";
 
-const STEPS = [
-  "Identidade",
-  "Estágios",
-  "Conteúdo por estágio",
-  "Interrupções",
-  "Revisão",
-] as const;
+const STEP_LABELS = ["Identidade", "Estágios", "Revisão"];
 
-export function WizardMode() {
-  const [step, setStep] = useState(0);
-
+function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden" style={{ background: "#0e0918" }}>
-      <Stepper step={step} onStep={setStep} />
-      <div className="flex-1 overflow-y-auto">
-        {step === 0 && <StepIdentity />}
-        {step === 1 && <StepStages />}
-        {step === 2 && <StepContent />}
-        {step === 3 && <StepInterrupts />}
-        {step === 4 && <StepReview />}
-      </div>
-      <div
-        className="flex items-center justify-between px-6 py-3"
-        style={{ boxShadow: "inset 0 1px 0 0 #1f192a", background: "var(--color-card-totum)" }}
-      >
-        <TotumButton
-          variant="ghost"
-          size="sm"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-        >
-          <ChevronLeft className="size-3.5" /> Voltar
-        </TotumButton>
-        <span className="text-[11px] text-[color:var(--color-text-muted)]">
-          Passo {step + 1} de {STEPS.length}
-        </span>
-        <TotumButton
-          variant="primary"
-          size="sm"
-          onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-          disabled={step === STEPS.length - 1}
-        >
-          Próximo <ChevronRight className="size-3.5" />
-        </TotumButton>
-      </div>
-    </div>
-  );
-}
-
-function Stepper({ step, onStep }: { step: number; onStep: (n: number) => void }) {
-  return (
-    <div
-      className="flex gap-1 px-6 py-4"
-      style={{ background: "var(--color-card-totum)", boxShadow: "inset 0 -1px 0 0 #1f192a" }}
-    >
-      {STEPS.map((label, i) => {
-        const active = i === step;
-        const done = i < step;
-        return (
-          <button
-            key={label}
-            onClick={() => onStep(i)}
-            className={cn(
-              "flex-1 rounded-full px-3 py-1.5 text-[11px] transition-colors",
-              active
-                ? "text-white"
-                : done
-                  ? "text-[#35a670]"
-                  : "text-[color:var(--color-text-muted)] hover:text-white",
-            )}
-            style={
-              active
-                ? {
-                    background:
-                      "linear-gradient(135deg, rgba(227,67,62,0.22), rgba(218,33,40,0.22))",
-                    boxShadow: "inset 0 0 0 1px rgba(218,33,40,0.45)",
-                  }
-                : done
-                  ? { background: "rgba(53,166,112,0.10)" }
-                  : { background: "#1f192a" }
-            }
+    <div className="flex items-center gap-2">
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div
+            className="flex size-6 items-center justify-center rounded-full text-[11px] font-medium"
+            style={{
+              background: i < current ? "#35a670" : i === current ? "#da2128" : "#272333",
+              color: i <= current ? "#fff" : "#9ca3af",
+            }}
           >
-            {done && <Check className="mr-1 inline size-3" />}
-            {i + 1}. {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Passo 1: Identidade ─────────────────────────────────────────────────────
-function StepIdentity() {
-  const flow = useFlowV2Store((s) => s.flow)!;
-  const patchMeta = useFlowV2Store((s) => s.patchMeta);
-  return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-5 p-8">
-      <h2 className="text-lg text-white">Como vamos chamar este fluxo?</h2>
-      <p className="text-sm text-[color:var(--color-text-muted)]">
-        Dê um nome curto e descreva o objetivo. Isso é a "capa" que aparece na lista de fluxos.
-      </p>
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">Nome do fluxo</Label>
-        <Input
-          value={flow.name}
-          onChange={(e) => patchMeta({ name: e.target.value })}
-          placeholder="Ex: SDR Odonto v2"
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">
-          Objetivo (uma frase — o que o bot precisa conseguir?)
-        </Label>
-        <Textarea
-          value={flow.objective ?? ""}
-          onChange={(e) => patchMeta({ objective: e.target.value })}
-          rows={3}
-          placeholder="Ex: Marcar reunião com donos de clínicas odontológicas qualificadas."
-        />
-      </div>
-      <p className="text-xs text-[color:var(--color-text-muted)]">
-        Versão atual: <code className="text-white">{flow.version}</code> · ID:{" "}
-        <code className="text-white">{flow.flow_id}</code>
-      </p>
-    </div>
-  );
-}
-
-// ─── Passo 2: Estágios ───────────────────────────────────────────────────────
-function StepStages() {
-  const flow = useFlowV2Store((s) => s.flow)!;
-  const addStage = useFlowV2Store((s) => s.addStage);
-  const removeStage = useFlowV2Store((s) => s.removeStage);
-  const updateStage = useFlowV2Store((s) => s.updateStage);
-  const moveStage = useFlowV2Store((s) => s.moveStage);
-  const patchEntry = (id: string) =>
-    useFlowV2Store.setState((s) => (s.flow ? { flow: { ...s.flow, entry_stage: id } } : s));
-
-  return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-lg text-white">Quais estágios o bot vai passar?</h2>
-          <p className="text-sm text-[color:var(--color-text-muted)]">
-            Pense em "etapas" da conversa. Marque o ponto de partida (entry).
-          </p>
-        </div>
-        <TotumButton variant="outline" size="sm" onClick={addStage}>
-          <Plus className="size-3.5" /> Novo estágio
-        </TotumButton>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {flow.stages.map((st, i) => {
-          const isEntry = flow.entry_stage === st.id;
-          return (
-            <div
-              key={st.id}
-              className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{
-                background: "#1b1728",
-                boxShadow: isEntry ? "inset 0 0 0 1px rgba(218,33,40,0.45)" : "var(--shadow-card)",
-              }}
-            >
-              <div className="flex flex-col text-[color:var(--color-text-muted)]">
-                <button
-                  onClick={() => moveStage(st.id, -1)}
-                  disabled={i === 0}
-                  className="hover:text-white disabled:opacity-30"
-                >
-                  ▲
-                </button>
-                <button
-                  onClick={() => moveStage(st.id, 1)}
-                  disabled={i === flow.stages.length - 1}
-                  className="hover:text-white disabled:opacity-30"
-                >
-                  ▼
-                </button>
-              </div>
-              <GripVertical className="size-3.5 text-[color:var(--color-text-muted)]" />
-              <Input
-                value={st.id}
-                onChange={(e) => updateStage(st.id, { id: e.target.value })}
-                className="flex-1"
-              />
-              <button
-                onClick={() => patchEntry(st.id)}
-                className={cn(
-                  "rounded-full px-2 py-1 text-[10px] transition-colors",
-                  isEntry
-                    ? "text-white"
-                    : "text-[color:var(--color-text-muted)] hover:text-white",
-                )}
-                style={{
-                  background: isEntry ? "rgba(218,33,40,0.25)" : "#1f192a",
-                }}
-                title="Marcar como entry stage"
-              >
-                {isEntry ? "✓ entry" : "entry"}
-              </button>
-              <button
-                onClick={() => updateStage(st.id, { terminal: !st.terminal || undefined })}
-                className="rounded-full px-2 py-1 text-[10px]"
-                style={{
-                  background: st.terminal ? "rgba(53,166,112,0.20)" : "#1f192a",
-                  color: st.terminal ? "#35a670" : "#9ca3af",
-                }}
-              >
-                <Flag className="inline size-3" /> terminal
-              </button>
-              <button
-                onClick={() => removeStage(st.id)}
-                disabled={flow.stages.length <= 1}
-                className="text-[color:var(--color-text-muted)] hover:text-[#da2128] disabled:opacity-30"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── Passo 3: Conteúdo por estágio ───────────────────────────────────────────
-function StepContent() {
-  const flow = useFlowV2Store((s) => s.flow)!;
-  const updateStage = useFlowV2Store((s) => s.updateStage);
-  const [idx, setIdx] = useState(0);
-  const stage = flow.stages[idx];
-  if (!stage) return null;
-  const stageIds = flow.stages.map((s) => s.id).filter((id) => id !== stage.id);
-
-  return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-5 p-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg text-white">
-          Estágio {idx + 1}/{flow.stages.length}:{" "}
-          <span className="text-[#e3433e]">{stage.id}</span>
-        </h2>
-        <div className="flex gap-2">
-          <button
-            disabled={idx === 0}
-            onClick={() => setIdx((i) => i - 1)}
-            className="text-[color:var(--color-text-muted)] hover:text-white disabled:opacity-30"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <button
-            disabled={idx === flow.stages.length - 1}
-            onClick={() => setIdx((i) => i + 1)}
-            className="text-[color:var(--color-text-muted)] hover:text-white disabled:opacity-30"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">
-          Objetivo deste estágio (uma frase)
-        </Label>
-        <Textarea
-          value={stage.goal ?? ""}
-          onChange={(e) => updateStage(stage.id, { goal: e.target.value })}
-          rows={2}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">
-          Como o bot deve conduzir (instrução para o modelo)
-        </Label>
-        <Textarea
-          value={stage.instruction ?? ""}
-          onChange={(e) => updateStage(stage.id, { instruction: e.target.value })}
-          rows={5}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">
-          Quando avançar para o próximo (condição em linguagem natural)
-        </Label>
-        <Textarea
-          value={stage.advance_when ?? ""}
-          onChange={(e) => updateStage(stage.id, { advance_when: e.target.value })}
-          rows={2}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">Próximo estágio</Label>
-        <select
-          value={stage.next ?? ""}
-          onChange={(e) => updateStage(stage.id, { next: e.target.value || undefined })}
-          className="h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[#1f192a] px-2 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
-        >
-          <option value="">— (nenhum / terminal)</option>
-          {stageIds.map((id) => (
-            <option key={id} value={id}>
-              {id}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-// ─── Passo 4: Interrupções ───────────────────────────────────────────────────
-function StepInterrupts() {
-  const flow = useFlowV2Store((s) => s.flow)!;
-  const addInterrupt = useFlowV2Store((s) => s.addInterrupt);
-  const updateInterrupt = useFlowV2Store((s) => s.updateInterrupt);
-  const removeInterrupt = useFlowV2Store((s) => s.removeInterrupt);
-  const interrupts = flow.interrupts ?? [];
-
-  return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-lg text-white">Interrupções (objeções e desvios)</h2>
-          <p className="text-sm text-[color:var(--color-text-muted)]">
-            Situações em que o lead "sai do trilho" e o bot precisa responder antes de voltar.
-          </p>
-        </div>
-        <TotumButton variant="outline" size="sm" onClick={addInterrupt}>
-          <Plus className="size-3.5" /> Nova
-        </TotumButton>
-      </div>
-
-      {interrupts.length === 0 && (
-        <p className="text-sm text-[color:var(--color-text-muted)]">
-          Nenhuma interrupção configurada. Tudo bem — comece sem nenhuma e adicione conforme aparece
-          nas conversas reais.
-        </p>
-      )}
-
-      {interrupts.map((it) => (
-        <div
-          key={it.id}
-          className="flex flex-col gap-3 rounded-xl p-4"
-          style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
-        >
-          <div className="flex items-center gap-2">
-            <Input
-              value={it.id}
-              onChange={(e) => updateInterrupt(it.id, { id: e.target.value })}
-              className="max-w-[240px]"
-            />
-            <button
-              onClick={() => removeInterrupt(it.id)}
-              className="ml-auto text-[color:var(--color-text-muted)] hover:text-[#da2128]"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            {i < current ? <Check className="size-3" /> : i + 1}
           </div>
-          <Textarea
-            value={it.trigger ?? ""}
-            onChange={(e) => updateInterrupt(it.id, { trigger: e.target.value })}
-            rows={2}
-            placeholder="Quando dispara (ex: lead pergunta preço)"
-          />
-          <Textarea
-            value={it.handler_instruction ?? ""}
-            onChange={(e) => updateInterrupt(it.id, { handler_instruction: e.target.value })}
-            rows={3}
-            placeholder="Como o bot trata"
-          />
+          {i < total - 1 && (
+            <div
+              className="h-px w-8"
+              style={{ background: i < current ? "#35a670" : "#272333" }}
+            />
+          )}
         </div>
       ))}
     </div>
   );
 }
 
-// ─── Passo 5: Revisão ────────────────────────────────────────────────────────
-function StepReview() {
-  const flow = useFlowV2Store((s) => s.flow)!;
+// ── Step 1: identidade ──────────────────────────────────────────────────────
+
+function Step1({
+  name,
+  setName,
+  objective,
+  setObjective,
+  niche,
+  setNiche,
+}: {
+  name: string;
+  setName: (v: string) => void;
+  objective: string;
+  setObjective: (v: string) => void;
+  niche: string;
+  setNiche: (v: string) => void;
+}) {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
-      <h2 className="text-lg text-white">Revisão</h2>
-      <p className="text-sm text-[color:var(--color-text-muted)]">
-        Confira o resumo. Use o botão "Salvar" ou "Publicar" no topo para persistir.
-      </p>
-      <div
-        className="grid grid-cols-2 gap-3 rounded-xl p-4 text-sm"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
-      >
-        <Cell label="Nome" value={flow.name} />
-        <Cell label="Versão" value={flow.version} />
-        <Cell label="Entry" value={flow.entry_stage} />
-        <Cell label="Estágios" value={String(flow.stages.length)} />
-        <Cell label="Interrupções" value={String(flow.interrupts?.length ?? 0)} />
-        <Cell label="Vars requeridas" value={String(flow.required_variables?.length ?? 0)} />
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg text-white">Identidade do flow</h2>
+        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          Nome, nicho e objetivo. O Builder edita os detalhes finos depois.
+        </p>
       </div>
-      <div
-        className="flex flex-col gap-2 rounded-xl p-4 text-sm"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
-      >
-        <span className="text-xs text-[color:var(--color-text-muted)]">Roteiro</span>
-        <ol className="ml-5 list-decimal text-white">
-          {flow.stages.map((s) => (
-            <li key={s.id}>
-              <span className="text-white">{s.id}</span>
-              {s.terminal && <span className="ml-2 text-[#35a670]">(terminal)</span>}
-              <span className="ml-2 text-[color:var(--color-text-muted)]">— {s.goal}</span>
-            </li>
-          ))}
-        </ol>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-[color:var(--color-text-muted)]">Nome do flow *</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Odonto SDR v2" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-[color:var(--color-text-muted)]">Nicho</Label>
+        <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="ex: Odontologia" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-[color:var(--color-text-muted)]">Objetivo do flow</Label>
+        <Textarea
+          value={objective}
+          onChange={(e) => setObjective(e.target.value)}
+          rows={3}
+          placeholder="O que o SDR deve conseguir com esse flow?"
+        />
       </div>
     </div>
   );
 }
 
-function Cell({ label, value }: { label: string; value: string }) {
+// ── Step 2: estágios ────────────────────────────────────────────────────────
+
+type DraftStage = { id: string; goal: string; instruction: string };
+
+function Step2({
+  stages,
+  setStages,
+}: {
+  stages: DraftStage[];
+  setStages: (s: DraftStage[]) => void;
+}) {
+  const add = () =>
+    setStages([...stages, { id: `estagio_${stages.length + 1}`, goal: "", instruction: "" }]);
+  const remove = (i: number) => setStages(stages.filter((_, idx) => idx !== i));
+  const patch = (i: number, p: Partial<DraftStage>) =>
+    setStages(stages.map((s, idx) => (idx === i ? { ...s, ...p } : s)));
+
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
-        {label}
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg text-white">Estágios do flow</h2>
+          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+            Cada estágio é um objetivo de conversa. Adicione o suficiente para cobrir o fluxo.
+          </p>
+        </div>
+        <TotumButton variant="outline" size="sm" onClick={add}>
+          <Plus className="size-3.5" /> Adicionar
+        </TotumButton>
       </div>
-      <div className="text-white">{value}</div>
+      {stages.length === 0 && (
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Nenhum estágio ainda. Clique em "Adicionar" para começar.
+        </p>
+      )}
+      <div className="flex flex-col gap-3">
+        {stages.map((s, i) => (
+          <div
+            key={i}
+            className="flex flex-col gap-3 rounded-xl p-4"
+            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[color:var(--color-text-muted)] w-5">{i + 1}</span>
+              <Input
+                value={s.id}
+                onChange={(e) => patch(i, { id: e.target.value })}
+                placeholder="ID do estágio"
+                className="flex-1"
+              />
+              <button
+                onClick={() => remove(i)}
+                className="text-[color:var(--color-text-muted)] hover:text-white"
+                title="Remover"
+                disabled={stages.length <= 1}
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5 pl-7">
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">Objetivo</Label>
+              <Input
+                value={s.goal}
+                onChange={(e) => patch(i, { goal: e.target.value })}
+                placeholder="O que o bot deve alcançar neste estágio?"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 pl-7">
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">Instrução (como conduzir)</Label>
+              <Textarea
+                value={s.instruction}
+                onChange={(e) => patch(i, { instruction: e.target.value })}
+                rows={2}
+                placeholder="Como o SDR deve se comportar neste estágio?"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Step 3: revisão ─────────────────────────────────────────────────────────
+
+function Step3({
+  name,
+  niche,
+  objective,
+  stages,
+}: {
+  name: string;
+  niche: string;
+  objective: string;
+  stages: DraftStage[];
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg text-white">Revisão</h2>
+        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          Confirme e crie o flow. Você pode editar tudo no Builder depois.
+        </p>
+      </div>
+      <div
+        className="flex flex-col gap-3 rounded-2xl p-5"
+        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+      >
+        <div>
+          <p className="text-xs text-[color:var(--color-text-muted)]">Nome</p>
+          <p className="text-sm text-white">{name || "—"}</p>
+        </div>
+        {niche && (
+          <div>
+            <p className="text-xs text-[color:var(--color-text-muted)]">Nicho</p>
+            <p className="text-sm text-white">{niche}</p>
+          </div>
+        )}
+        {objective && (
+          <div>
+            <p className="text-xs text-[color:var(--color-text-muted)]">Objetivo</p>
+            <p className="text-sm text-white">{objective}</p>
+          </div>
+        )}
+        <div>
+          <p className="text-xs text-[color:var(--color-text-muted)]">Estágios ({stages.length})</p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {stages.map((s, i) => (
+              <li key={i} className="flex items-baseline gap-2 text-sm">
+                <span className="text-[10px] text-[color:var(--color-text-muted)]">{i + 1}.</span>
+                <span className="text-white">{s.id}</span>
+                {s.goal && (
+                  <span className="text-[11px] text-[color:var(--color-text-muted)] truncate">
+                    — {s.goal}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Root ────────────────────────────────────────────────────────────────────
+
+export function WizardMode() {
+  const setFlow = useFlowV2Store((s) => s.setFlow);
+
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [niche, setNiche] = useState("");
+  const [objective, setObjective] = useState("");
+  const [stages, setStages] = useState<DraftStage[]>([
+    { id: "abertura", goal: "", instruction: "" },
+  ]);
+
+  function applyToStore() {
+    if (!name.trim()) {
+      toast.error("Nome do flow é obrigatório.");
+      return false;
+    }
+    if (stages.length === 0) {
+      toast.error("Adicione pelo menos 1 estágio.");
+      return false;
+    }
+
+    const base = flowV2Default as unknown as FlowV2;
+    const v2Stages: V2Stage[] = stages.map((s, i) => ({
+      id: s.id || `estagio_${i + 1}`,
+      goal: s.goal,
+      instruction: s.instruction,
+      reference_copy: [],
+      next: stages[i + 1]?.id,
+      terminal: i === stages.length - 1 ? true : undefined,
+    }));
+
+    const newFlow: FlowV2 = {
+      ...base,
+      flow_id: name.toLowerCase().replace(/\s+/g, "_"),
+      name,
+      niche: niche || base.niche,
+      objective,
+      entry_stage: v2Stages[0].id,
+      stages: v2Stages,
+      interrupts: base.interrupts ?? [],
+    };
+
+    setFlow(newFlow);
+    toast.success("Flow criado no builder. Agora você pode editar os detalhes.");
+    return true;
+  }
+
+  const canNext =
+    step === 0
+      ? name.trim().length > 0
+      : step === 1
+        ? stages.length > 0 && stages.every((s) => s.id.trim())
+        : true;
+
+  function next() {
+    if (step === STEP_LABELS.length - 1) {
+      applyToStore();
+    } else {
+      setStep((s) => s + 1);
+    }
+  }
+
+  return (
+    <div className="flex flex-col" style={{ background: "#0e0918", minHeight: "calc(100vh - 56px)" }}>
+      <div className="border-b border-[#1f192a] px-6 py-4">
+        <StepIndicator current={step} total={STEP_LABELS.length} />
+        <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+          Passo {step + 1} de {STEP_LABELS.length}: {STEP_LABELS[step]}
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-xl px-6 py-8">
+          {step === 0 && (
+            <Step1
+              name={name}
+              setName={setName}
+              objective={objective}
+              setObjective={setObjective}
+              niche={niche}
+              setNiche={setNiche}
+            />
+          )}
+          {step === 1 && <Step2 stages={stages} setStages={setStages} />}
+          {step === 2 && (
+            <Step3 name={name} niche={niche} objective={objective} stages={stages} />
+          )}
+        </div>
+      </div>
+      <div
+        className="flex items-center justify-between px-6 py-4"
+        style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}
+      >
+        <TotumButton
+          variant="ghost"
+          size="sm"
+          onClick={() => setStep((s) => s - 1)}
+          disabled={step === 0}
+        >
+          <ChevronLeft className="size-3.5" /> Voltar
+        </TotumButton>
+        <TotumButton
+          variant="primary"
+          size="sm"
+          onClick={next}
+          disabled={!canNext}
+        >
+          {step === STEP_LABELS.length - 1 ? (
+            <>
+              <Check className="size-3.5" /> Criar no builder
+            </>
+          ) : (
+            <>
+              Próximo <ChevronRight className="size-3.5" />
+            </>
+          )}
+        </TotumButton>
+      </div>
     </div>
   );
 }

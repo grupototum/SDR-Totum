@@ -5,7 +5,6 @@ import {
   Workflow,
   MessagesSquare,
   BarChart3,
-  Webhook,
   FlaskConical,
 } from "lucide-react";
 import logo from "@/assets/sdr-logo.png";
@@ -31,7 +30,6 @@ const items = [
   { title: "Simulador", url: "/simulator", icon: FlaskConical },
   { title: "Conversas", url: "/conversations", icon: MessagesSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "N8N", url: "/n8n", icon: Webhook },
 ] as const;
 
 export function AppSidebar() {

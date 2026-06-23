@@ -1,20 +1,21 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, ArrowLeft } from "lucide-react";
 import { api } from "@/api";
 import { ResearchWizard } from "@/components/research/ResearchWizard";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/pesquisa/nova")({
   head: () => ({
-    meta: [{ title: "Nova pesquisa — SDR Totum" }],
+    meta: [{ title: "Nova Pesquisa — SDR Totum" }],
   }),
   validateSearch: (search: Record<string, unknown>): { dup?: string } => ({
     dup: typeof search.dup === "string" ? search.dup : undefined,
   }),
-  component: NovaPesquisaPage,
+  component: PesquisaNovaPage,
 });
 
-function NovaPesquisaPage() {
+function PesquisaNovaPage() {
   const { dup } = Route.useSearch();
   const navigate = useNavigate();
 
@@ -36,14 +37,14 @@ function NovaPesquisaPage() {
       >
         <Link
           to="/pesquisa"
-          className="flex items-center gap-1 text-xs text-[color:var(--color-text-muted)] hover:text-white"
+          className="flex items-center gap-1.5 text-sm text-[color:var(--color-text-muted)] hover:text-white transition-colors"
         >
-          <ArrowLeft className="size-3.5" /> Pesquisas
+          <ArrowLeft className="size-3.5" /> Pesquisa
         </Link>
         <h1 className="flex items-center gap-2 text-sm text-white">
-          <Search className="size-4 text-[#da2128]" /> Nova pesquisa
+          <Search className="size-4 text-[#da2128]" /> {dup ? "Duplicar ordem" : "Nova pesquisa"}
         </h1>
-        <span />
+        <div className="w-24" />
       </header>
 
       <section className="px-6 py-10">

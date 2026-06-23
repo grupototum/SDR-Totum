@@ -3,7 +3,6 @@ import { History, Plus } from "lucide-react";
 import { TotumButton } from "@/components/ui/totum-button";
 import { OrderHistory } from "@/components/research/OrderHistory";
 
-/** Alias para compat — mesmo conteúdo da landing /pesquisa. */
 export const Route = createFileRoute("/pesquisa/historico")({
   head: () => ({
     meta: [{ title: "Histórico de Pesquisa — SDR Totum" }],
@@ -31,15 +30,13 @@ function HistoricoPage() {
         </h1>
         <TotumButton asChild variant="primary" size="sm">
           <Link to="/pesquisa/nova">
-            <Plus className="size-3.5" /> Nova
+            <Plus className="size-3.5" /> Nova ordem
           </Link>
         </TotumButton>
       </header>
 
       <section className="px-6 py-10">
-        <OrderHistory
-          onDuplicate={(id) => navigate({ to: "/pesquisa/nova", search: { dup: id } })}
-        />
+        <OrderHistory onDuplicate={(id) => navigate({ to: "/pesquisa/nova", search: { dup: id } })} />
       </section>
     </main>
   );
