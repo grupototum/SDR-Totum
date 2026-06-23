@@ -70,6 +70,7 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["research-orders"],
@@ -81,37 +82,62 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
     if (typeof window !== "undefined") window.localStorage.setItem(VIEW_KEY, m);
   };
 
+  const filteredOrders = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return orders;
+    return orders.filter(
+      (o) =>
+        o.name.toLowerCase().includes(term) ||
+        o.data.niche.toLowerCase().includes(term) ||
+        geoSummary(o).toLowerCase().includes(term),
+    );
+  }, [orders, q]);
+
   const preview = orders.find((o) => o.id === previewId) ?? null;
 
   return (
     <div className="mx-auto max-w-5xl">
       {preview && <PromptModal order={preview} onClose={() => setPreviewId(null)} />}
 
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs text-[color:var(--color-text-muted)]">{orders.length} ordem(ns)</p>
-        <div className="flex gap-1 rounded-full p-1" style={{ background: "#1f192a" }}>
-          <button
-            onClick={() => setMode("list")}
-            className="rounded-full p-1.5"
-            style={{
-              background: view === "list" ? "#da2128" : "transparent",
-              color: view === "list" ? "#fff" : "#9ca3af",
-            }}
-            title="Lista"
-          >
-            <List className="size-3.5" />
-          </button>
-          <button
-            onClick={() => setMode("card")}
-            className="rounded-full p-1.5"
-            style={{
-              background: view === "card" ? "#da2128" : "transparent",
-              color: view === "card" ? "#fff" : "#9ca3af",
-            }}
-            title="Card"
-          >
-            <LayoutGrid className="size-3.5" />
-          </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-[color:var(--color-text-muted)]">
+          {filteredOrders.length} de {orders.length} ordem(ns)
+        </p>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por nome, nicho ou UF…"
+              className="h-9 w-64 rounded-md pl-9 pr-3 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
+              style={{ background: "#1f192a" }}
+            />
+          </div>
+          <div className="flex gap-1 rounded-full p-1" style={{ background: "#1f192a" }}>
+            <button
+              onClick={() => setMode("list")}
+              className="rounded-full p-1.5"
+              style={{
+                background: view === "list" ? "#da2128" : "transparent",
+                color: view === "list" ? "#fff" : "#9ca3af",
+              }}
+              title="Lista"
+            >
+              <List className="size-3.5" />
+            </button>
+            <button
+              onClick={() => setMode("card")}
+              className="rounded-full p-1.5"
+              style={{
+                background: view === "card" ? "#da2128" : "transparent",
+                color: view === "card" ? "#fff" : "#9ca3af",
+              }}
+              title="Card"
+            >
+              <LayoutGrid className="size-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
