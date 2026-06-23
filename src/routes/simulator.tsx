@@ -201,7 +201,10 @@ function SimulatorPage() {
   return (
     <div
       className="grid h-screen w-full overflow-hidden"
-      style={{ gridTemplateColumns: "340px 1fr 360px" }}
+      style={{
+        gridTemplateColumns: analysisCollapsed ? "340px 1fr 44px" : "340px 1fr 360px",
+        transition: "grid-template-columns 200ms ease",
+      }}
     >
       {/* ── Esquerda: flow + persona ── */}
       <aside
