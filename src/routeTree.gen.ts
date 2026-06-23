@@ -17,7 +17,9 @@ import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PesquisaIndexRouteImport } from './routes/pesquisa.index'
 import { Route as BuilderIndexRouteImport } from './routes/builder.index'
+import { Route as PesquisaNovaRouteImport } from './routes/pesquisa.nova'
 import { Route as PesquisaHistoricoRouteImport } from './routes/pesquisa.historico'
 import { Route as BuilderEditRouteImport } from './routes/builder.edit'
 
@@ -61,10 +63,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PesquisaIndexRoute = PesquisaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PesquisaRoute,
+} as any)
 const BuilderIndexRoute = BuilderIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => BuilderRoute,
+} as any)
+const PesquisaNovaRoute = PesquisaNovaRouteImport.update({
+  id: '/nova',
+  path: '/nova',
+  getParentRoute: () => PesquisaRoute,
 } as any)
 const PesquisaHistoricoRoute = PesquisaHistoricoRouteImport.update({
   id: '/historico',
@@ -88,19 +100,22 @@ export interface FileRoutesByFullPath {
   '/simulator': typeof SimulatorRoute
   '/builder/edit': typeof BuilderEditRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa/nova': typeof PesquisaNovaRoute
   '/builder/': typeof BuilderIndexRoute
+  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/n8n': typeof N8nRoute
-  '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
   '/builder/edit': typeof BuilderEditRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa/nova': typeof PesquisaNovaRoute
   '/builder': typeof BuilderIndexRoute
+  '/pesquisa': typeof PesquisaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,7 +129,9 @@ export interface FileRoutesById {
   '/simulator': typeof SimulatorRoute
   '/builder/edit': typeof BuilderEditRoute
   '/pesquisa/historico': typeof PesquisaHistoricoRoute
+  '/pesquisa/nova': typeof PesquisaNovaRoute
   '/builder/': typeof BuilderIndexRoute
+  '/pesquisa/': typeof PesquisaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,19 +146,22 @@ export interface FileRouteTypes {
     | '/simulator'
     | '/builder/edit'
     | '/pesquisa/historico'
+    | '/pesquisa/nova'
     | '/builder/'
+    | '/pesquisa/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/builder-legacy'
     | '/conversations'
     | '/n8n'
-    | '/pesquisa'
     | '/reports'
     | '/simulator'
     | '/builder/edit'
     | '/pesquisa/historico'
+    | '/pesquisa/nova'
     | '/builder'
+    | '/pesquisa'
   id:
     | '__root__'
     | '/'
@@ -154,7 +174,9 @@ export interface FileRouteTypes {
     | '/simulator'
     | '/builder/edit'
     | '/pesquisa/historico'
+    | '/pesquisa/nova'
     | '/builder/'
+    | '/pesquisa/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -226,12 +248,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pesquisa/': {
+      id: '/pesquisa/'
+      path: '/'
+      fullPath: '/pesquisa/'
+      preLoaderRoute: typeof PesquisaIndexRouteImport
+      parentRoute: typeof PesquisaRoute
+    }
     '/builder/': {
       id: '/builder/'
       path: '/'
       fullPath: '/builder/'
       preLoaderRoute: typeof BuilderIndexRouteImport
       parentRoute: typeof BuilderRoute
+    }
+    '/pesquisa/nova': {
+      id: '/pesquisa/nova'
+      path: '/nova'
+      fullPath: '/pesquisa/nova'
+      preLoaderRoute: typeof PesquisaNovaRouteImport
+      parentRoute: typeof PesquisaRoute
     }
     '/pesquisa/historico': {
       id: '/pesquisa/historico'
@@ -265,10 +301,14 @@ const BuilderRouteWithChildren =
 
 interface PesquisaRouteChildren {
   PesquisaHistoricoRoute: typeof PesquisaHistoricoRoute
+  PesquisaNovaRoute: typeof PesquisaNovaRoute
+  PesquisaIndexRoute: typeof PesquisaIndexRoute
 }
 
 const PesquisaRouteChildren: PesquisaRouteChildren = {
   PesquisaHistoricoRoute: PesquisaHistoricoRoute,
+  PesquisaNovaRoute: PesquisaNovaRoute,
+  PesquisaIndexRoute: PesquisaIndexRoute,
 }
 
 const PesquisaRouteWithChildren = PesquisaRoute._addFileChildren(

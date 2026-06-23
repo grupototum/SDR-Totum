@@ -21,7 +21,11 @@ import {
   RefreshCw,
   HeartPulse,
   Rocket,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
+
+const ANALYSIS_KEY = "totum:simulator-analysis-collapsed";
 
 /** Um turno via proxy server-side /api/engine; fallback mock se sem engine. */
 async function simTurnWithFallback(payload: Parameters<typeof api.simTurn>[0]) {
