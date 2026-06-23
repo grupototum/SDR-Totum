@@ -12,7 +12,12 @@ import { toast } from "sonner";
 
 const VIEW_KEY = "totum:flows-list-view";
 
-function FlowCard({ flow, onOpen, onDuplicate, onActivate }: {
+function FlowCard({
+  flow,
+  onOpen,
+  onDuplicate,
+  onActivate,
+}: {
   flow: FlowSummary;
   onOpen: () => void;
   onDuplicate: () => void;
@@ -36,7 +41,9 @@ function FlowCard({ flow, onOpen, onDuplicate, onActivate }: {
         )}
       </div>
       <div className="space-y-1 text-[11px] text-[color:var(--color-text-muted)]">
-        <div>v{flow.version} · {flow.niche || "—"}</div>
+        <div>
+          v{flow.version} · {flow.niche || "—"}
+        </div>
         <div>{new Date(flow.updatedAt).toLocaleDateString("pt-BR")}</div>
         <div className="font-mono text-[10px] opacity-60">{flow.id}</div>
       </div>
@@ -132,7 +139,10 @@ export function FlowsList() {
             className="flex-1 bg-transparent py-2.5 text-sm text-white placeholder:text-[color:var(--color-text-muted)] outline-none"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="text-[color:var(--color-text-muted)] hover:text-white">
+            <button
+              onClick={() => setSearch("")}
+              className="text-[color:var(--color-text-muted)] hover:text-white"
+            >
               <X className="size-3.5" />
             </button>
           )}
@@ -170,7 +180,10 @@ export function FlowsList() {
 
       {/* Lista */}
       {view === "list" && filtered.length > 0 && (
-        <div className="overflow-hidden rounded-2xl" style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}>
+        <div
+          className="overflow-hidden rounded-2xl"
+          style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        >
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
@@ -191,37 +204,52 @@ export function FlowsList() {
                   onClick={() => openFlow(f.id)}
                 >
                   <td className="max-w-[220px] truncate px-4 py-3 text-white">{f.name}</td>
-                  <td className="px-4 py-3 text-[color:var(--color-text-body)]">{f.niche || "—"}</td>
+                  <td className="px-4 py-3 text-[color:var(--color-text-body)]">
+                    {f.niche || "—"}
+                  </td>
                   <td className="px-4 py-3 text-[color:var(--color-text-muted)]">v{f.version}</td>
                   <td className="px-4 py-3 text-[color:var(--color-text-muted)]">
                     {new Date(f.updatedAt).toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-4 py-3">
                     {f.active ? (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]"
-                        style={{ background: "rgba(53,166,112,0.15)", color: "#35a670" }}>
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]"
+                        style={{ background: "rgba(53,166,112,0.15)", color: "#35a670" }}
+                      >
                         <CheckCircle2 className="size-3" /> ativo
                       </span>
                     ) : (
-                      <span className="rounded-full px-2 py-0.5 text-[10px]"
-                        style={{ background: "#272333", color: "#9ca3af" }}>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px]"
+                        style={{ background: "#272333", color: "#9ca3af" }}
+                      >
                         rascunho
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
-                      <button onClick={() => openFlow(f.id)}
-                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white" title="Editar">
+                      <button
+                        onClick={() => openFlow(f.id)}
+                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
+                        title="Editar"
+                      >
                         <Pencil className="size-3.5" />
                       </button>
-                      <button onClick={() => duplicateMut.mutate(f.id)}
-                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white" title="Duplicar">
+                      <button
+                        onClick={() => duplicateMut.mutate(f.id)}
+                        className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
+                        title="Duplicar"
+                      >
                         <Copy className="size-3.5" />
                       </button>
                       {!f.active && (
-                        <button onClick={() => activateMut.mutate(f.id)}
-                          className="rounded-md p-1.5 text-[#e3433e] hover:text-white" title="Ativar">
+                        <button
+                          onClick={() => activateMut.mutate(f.id)}
+                          className="rounded-md p-1.5 text-[#e3433e] hover:text-white"
+                          title="Ativar"
+                        >
                           <Rocket className="size-3.5" />
                         </button>
                       )}

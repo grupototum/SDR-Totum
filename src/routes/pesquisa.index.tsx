@@ -41,13 +41,20 @@ function PromptModal({ order, onClose }: { order: ResearchOrder; onClose: () => 
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base text-white">{order.name}</h2>
-          <button onClick={onClose} className="text-[color:var(--color-text-muted)] hover:text-white">
+          <button
+            onClick={onClose}
+            className="text-[color:var(--color-text-muted)] hover:text-white"
+          >
             <X className="size-4" />
           </button>
         </div>
         <pre
           className="flex-1 overflow-auto rounded-xl p-4 text-[12px] leading-relaxed text-[color:var(--color-text-body)] whitespace-pre-wrap"
-          style={{ background: "#0e0918", boxShadow: "inset 0 0 0 1px #1f192a", fontFamily: "ui-monospace, monospace" }}
+          style={{
+            background: "#0e0918",
+            boxShadow: "inset 0 0 0 1px #1f192a",
+            fontFamily: "ui-monospace, monospace",
+          }}
         >
           {prompt}
         </pre>
@@ -114,11 +121,7 @@ function PesquisaIndexPage() {
           <Search className="size-4 text-[#da2128]" />
           <span className="text-sm text-white">Pesquisa</span>
         </div>
-        <TotumButton
-          variant="primary"
-          size="sm"
-          onClick={() => navigate({ to: "/pesquisa/nova" })}
-        >
+        <TotumButton variant="primary" size="sm" onClick={() => navigate({ to: "/pesquisa/nova" })}>
           <Plus className="size-3.5" /> Nova pesquisa
         </TotumButton>
       </header>
@@ -139,7 +142,10 @@ function PesquisaIndexPage() {
                 className="flex-1 bg-transparent py-2.5 text-sm text-white placeholder:text-[color:var(--color-text-muted)] outline-none"
               />
               {search && (
-                <button onClick={() => setSearch("")} className="text-[color:var(--color-text-muted)] hover:text-white">
+                <button
+                  onClick={() => setSearch("")}
+                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                >
                   <X className="size-3.5" />
                 </button>
               )}
@@ -156,7 +162,11 @@ function PesquisaIndexPage() {
                   }}
                   title={m === "list" ? "Lista" : "Cards"}
                 >
-                  {m === "list" ? <List className="size-3.5" /> : <LayoutGrid className="size-3.5" />}
+                  {m === "list" ? (
+                    <List className="size-3.5" />
+                  ) : (
+                    <LayoutGrid className="size-3.5" />
+                  )}
                 </button>
               ))}
             </div>
@@ -171,7 +181,9 @@ function PesquisaIndexPage() {
               className="rounded-2xl p-10 text-center text-sm text-[color:var(--color-text-muted)]"
               style={{ background: "#1b1728" }}
             >
-              {search ? "Nenhuma ordem encontrada." : (
+              {search ? (
+                "Nenhuma ordem encontrada."
+              ) : (
                 <>
                   Nenhuma ordem ainda.{" "}
                   <Link to="/pesquisa/nova" className="text-[#da2128] hover:underline">
@@ -184,7 +196,10 @@ function PesquisaIndexPage() {
 
           {/* Lista */}
           {view === "list" && filtered.length > 0 && (
-            <div className="overflow-hidden rounded-2xl" style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}>
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            >
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
@@ -200,30 +215,46 @@ function PesquisaIndexPage() {
                   {filtered.map((o) => (
                     <tr key={o.id} style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
                       <td className="max-w-[200px] truncate px-4 py-3 text-white">{o.name}</td>
-                      <td className="px-4 py-3 text-[color:var(--color-text-body)]">{o.data.niche}</td>
-                      <td className="px-4 py-3 text-[color:var(--color-text-muted)]">{geoSummary(o)}</td>
+                      <td className="px-4 py-3 text-[color:var(--color-text-body)]">
+                        {o.data.niche}
+                      </td>
+                      <td className="px-4 py-3 text-[color:var(--color-text-muted)]">
+                        {geoSummary(o)}
+                      </td>
                       <td className="px-4 py-3 text-[color:var(--color-text-muted)]">
                         {new Date(o.createdAt).toLocaleDateString("pt-BR")}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full px-2 py-0.5 text-[10px]"
-                          style={{ background: "#1f192a", color: "#a06ff6" }}>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px]"
+                          style={{ background: "#1f192a", color: "#a06ff6" }}
+                        >
                           {STATUS_LABEL[o.status]}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
-                          <button onClick={() => setPreviewId(o.id)}
-                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white" title="Ver prompt">
+                          <button
+                            onClick={() => setPreviewId(o.id)}
+                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
+                            title="Ver prompt"
+                          >
                             <FileText className="size-3.5" />
                           </button>
                           <button
-                            onClick={() => navigate({ to: "/pesquisa/nova", search: { dup: o.id } })}
-                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white" title="Duplicar">
+                            onClick={() =>
+                              navigate({ to: "/pesquisa/nova", search: { dup: o.id } })
+                            }
+                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-white"
+                            title="Duplicar"
+                          >
                             <Copy className="size-3.5" />
                           </button>
-                          <button onClick={() => usarNoBuilder(o)}
-                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-[#e3433e]" title="Usar no Builder">
+                          <button
+                            onClick={() => usarNoBuilder(o)}
+                            className="rounded-md p-1.5 text-[color:var(--color-text-muted)] hover:text-[#e3433e]"
+                            title="Usar no Builder"
+                          >
                             <Workflow className="size-3.5" />
                           </button>
                         </div>
@@ -246,8 +277,10 @@ function PesquisaIndexPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-sm text-white">{o.name}</h3>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px]"
-                      style={{ background: "#1f192a", color: "#a06ff6" }}>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px]"
+                      style={{ background: "#1f192a", color: "#a06ff6" }}
+                    >
                       {STATUS_LABEL[o.status]}
                     </span>
                   </div>
@@ -257,7 +290,12 @@ function PesquisaIndexPage() {
                     <div>{new Date(o.createdAt).toLocaleDateString("pt-BR")}</div>
                   </div>
                   <div className="mt-auto flex gap-2">
-                    <TotumButton variant="ghost" size="sm" onClick={() => setPreviewId(o.id)} className="flex-1">
+                    <TotumButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPreviewId(o.id)}
+                      className="flex-1"
+                    >
                       <FileText className="size-3.5" /> Prompt
                     </TotumButton>
                     <TotumButton

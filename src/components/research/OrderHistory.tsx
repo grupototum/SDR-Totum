@@ -254,11 +254,7 @@ export function OrderHistory({ onDuplicate }: { onDuplicate: (id: string) => voi
                 >
                   <FileText className="size-3.5" /> Prompt
                 </TotumButton>
-                <TotumButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDuplicate(o.id)}
-                >
+                <TotumButton variant="outline" size="sm" onClick={() => onDuplicate(o.id)}>
                   <Copy className="size-3.5" />
                 </TotumButton>
                 <TotumButton asChild variant="outline" size="sm" title="Usar no fluxo">

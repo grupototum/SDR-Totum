@@ -36,7 +36,9 @@ function HistoricoPage() {
       </header>
 
       <section className="px-6 py-10">
-        <OrderHistory onDuplicate={(id) => navigate({ to: "/pesquisa/nova", search: { dup: id } })} />
+        <OrderHistory
+          onDuplicate={(id) => navigate({ to: "/pesquisa/nova", search: { dup: id } })}
+        />
       </section>
     </main>
   );
