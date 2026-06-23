@@ -277,13 +277,11 @@ function V2Toolbar({
         <TotumButton variant="ghost" size="sm" onClick={handleExport}>
           <Download className="size-3.5" /> Exportar
         </TotumButton>
-        <Link
-          to="/builder-legacy"
-          className="text-[10px] text-[color:var(--color-text-muted)] underline-offset-2 hover:text-white hover:underline"
-          title="Builder legado v1 (deprecated)"
-        >
-          Legado v1
-        </Link>
+        <TotumButton variant="ghost" size="sm" asChild>
+          <Link to="/builder-legacy">
+            <Layers className="size-3.5" /> Flow Builder
+          </Link>
+        </TotumButton>
       </div>
 
       <div className="flex items-center gap-2">
