@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,9 @@ import {
   Layers,
   ShieldAlert,
   SlidersHorizontal,
+  Wand2,
+  Workflow,
+  ArrowLeft,
 } from "lucide-react";
 
 import { api } from "@/api";
@@ -31,19 +34,46 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { FlowV2 } from "@/lib/flow-v2";
+import { WizardMode } from "./WizardMode";
 
 type View = "stage" | "interrupts" | "globals";
+type Mode = "wizard" | "builder";
 
-export function V2Builder() {
+const MODE_KEY = "totum:builder-mode";
+
+export function V2Builder({ flowId }: { flowId?: string } = {}) {
   const flow = useFlowV2Store((s) => s.flow);
   const setFlow = useFlowV2Store((s) => s.setFlow);
+  const setCurrentFlow = useFlowV2Store((s) => s.setCurrentFlow);
+  const currentFlowId = useFlowV2Store((s) => s.currentFlowId);
   const [view, setView] = useState<View>("stage");
   const [legacy, setLegacy] = useState<V1LegacySummary | null>(null);
+  const [mode, setMode] = useState<Mode>(() => {
+    if (typeof window === "undefined") return "builder";
+    return (window.localStorage.getItem(MODE_KEY) as Mode) || "builder";
+  });
 
-  // Carrega o flow v2 padrão (formato primário) no mount.
+  // Carrega flow por id quando vier da URL. Sem id → mantém o draft do store,
+  // ou carrega o flow v2 padrão como rascunho inicial.
+  const remoteQuery = useQuery({
+    queryKey: ["flow", flowId],
+    queryFn: () => api.getFlow(flowId!),
+    enabled: !!flowId && flowId !== currentFlowId,
+  });
+
   useEffect(() => {
-    if (!flow) setFlow(flowV2Default as unknown as FlowV2);
-  }, [flow, setFlow]);
+    if (flowId && remoteQuery.data) {
+      setFlow(remoteQuery.data as unknown as FlowV2);
+      setCurrentFlow(flowId);
+    } else if (!flowId && !flow) {
+      setFlow(flowV2Default as unknown as FlowV2);
+    }
+  }, [flowId, remoteQuery.data, flow, setFlow, setCurrentFlow]);
+
+  const setModeAndStore = (m: Mode) => {
+    setMode(m);
+    if (typeof window !== "undefined") window.localStorage.setItem(MODE_KEY, m);
+  };
 
   if (!flow) {
     return <div className="p-6 text-sm text-[color:var(--color-text-muted)]">Carregando…</div>;
@@ -54,15 +84,19 @@ export function V2Builder() {
       className="flex h-screen w-full flex-col overflow-hidden"
       style={{ background: "#0e0918" }}
     >
-      <V2Toolbar onLegacy={setLegacy} />
-      <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr" }}>
-        <StageRail view={view} setView={setView} />
-        <div className="overflow-y-auto">
-          {view === "stage" && <StageEditor />}
-          {view === "interrupts" && <InterruptsEditor />}
-          {view === "globals" && <GlobalsPanel />}
+      <V2Toolbar onLegacy={setLegacy} mode={mode} setMode={setModeAndStore} />
+      {mode === "wizard" ? (
+        <WizardMode />
+      ) : (
+        <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr" }}>
+          <StageRail view={view} setView={setView} />
+          <div className="overflow-y-auto">
+            {view === "stage" && <StageEditor />}
+            {view === "interrupts" && <InterruptsEditor />}
+            {view === "globals" && <GlobalsPanel />}
+          </div>
         </div>
-      </div>
+      )}
       {legacy && <LegacyOverlay summary={legacy} onClose={() => setLegacy(null)} />}
     </div>
   );
