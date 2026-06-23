@@ -104,7 +104,15 @@ export function V2Builder({ flowId }: { flowId?: string } = {}) {
 
 // ─── Toolbar ─────────────────────────────────────────────────────────────────
 
-function V2Toolbar({ onLegacy }: { onLegacy: (s: V1LegacySummary) => void }) {
+function V2Toolbar({
+  onLegacy,
+  mode,
+  setMode,
+}: {
+  onLegacy: (s: V1LegacySummary) => void;
+  mode: Mode;
+  setMode: (m: Mode) => void;
+}) {
   const flow = useFlowV2Store((s) => s.flow)!;
   const patchMeta = useFlowV2Store((s) => s.patchMeta);
   const exportToJSON = useFlowV2Store((s) => s.exportToJSON);
