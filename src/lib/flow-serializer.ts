@@ -188,7 +188,8 @@ function layoutNodes(
   }
 
   // Any disconnected nodes (not reachable from entry) get appended at bottom
-  let orphanY = (Array.from(colCount.values()).reduce((a, b) => Math.max(a, b), 0) + 1) * ROW_GAP + 80;
+  let orphanY =
+    (Array.from(colCount.values()).reduce((a, b) => Math.max(a, b), 0) + 1) * ROW_GAP + 80;
   for (const n of specNodes) {
     const id = n.id as string;
     if (!positions.has(id)) {

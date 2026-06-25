@@ -43,7 +43,10 @@ async function proxyEngine(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const rawPath = url.pathname.replace(/^\/api\/engine\/?/, "");
   if (decodeURIComponent(rawPath).includes("..")) {
-    return new Response(JSON.stringify({ error: "invalid path" }), { status: 400, headers: jsonHeaders });
+    return new Response(JSON.stringify({ error: "invalid path" }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
   }
   const path = rawPath;
   const target = `${ENGINE_URL.replace(/\/$/, "")}/${path}${url.search}`;
@@ -100,7 +103,10 @@ async function proxyN8n(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const rawPath = url.pathname.replace(/^\/api\/n8n\/?/, "");
   if (decodeURIComponent(rawPath).includes("..")) {
-    return new Response(JSON.stringify({ error: "invalid path" }), { status: 400, headers: jsonHeaders });
+    return new Response(JSON.stringify({ error: "invalid path" }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
   }
   const path = rawPath;
   const target = `${N8N_API_URL.replace(/\/$/, "")}/${path}${url.search}`;

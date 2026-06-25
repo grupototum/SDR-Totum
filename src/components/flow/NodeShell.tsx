@@ -38,10 +38,7 @@ export function NodeShell({
   );
 
   return (
-    <div
-      className="relative w-[240px] rounded-2xl p-4 transition-all"
-      style={nodeStyle}
-    >
+    <div className="relative w-[240px] rounded-2xl p-4 transition-all" style={nodeStyle}>
       {hasError && (
         <div
           className="absolute -right-1 -top-1 rounded-full p-1 text-white"
