@@ -142,7 +142,11 @@ function N8nDetail({ id }: { id: string }) {
         </div>
         <pre
           className="max-h-[50vh] overflow-auto rounded-xl p-4 text-xs leading-relaxed text-[#d1cece]"
-          style={{ background: "#0e0918", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)", fontFamily: "ui-monospace, Menlo, monospace" }}
+          style={{
+            background: "#0e0918",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)",
+            fontFamily: "ui-monospace, Menlo, monospace",
+          }}
         >
           {JSON.stringify(wf, null, 2)}
         </pre>
@@ -154,7 +158,12 @@ function N8nDetail({ id }: { id: string }) {
 function AutomacoesPanel() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: list = [], isLoading, isError, error } = useQuery({
+  const {
+    data: list = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["n8n-workflows"],
     queryFn: () => api.listN8nWorkflows(),
   });
@@ -189,7 +198,9 @@ function AutomacoesPanel() {
             </p>
           )}
           {!isLoading && !isError && list.length === 0 && (
-            <p className="px-4 py-4 text-sm text-[color:var(--color-text-muted)]">Nenhum workflow.</p>
+            <p className="px-4 py-4 text-sm text-[color:var(--color-text-muted)]">
+              Nenhum workflow.
+            </p>
           )}
           {list.map((w) => {
             const selected = w.id === selectedId;
@@ -205,7 +216,9 @@ function AutomacoesPanel() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm text-white">{w.name}</p>
-                  <p className="truncate text-[10px] text-[color:var(--color-text-muted)]">{w.id}</p>
+                  <p className="truncate text-[10px] text-[color:var(--color-text-muted)]">
+                    {w.id}
+                  </p>
                 </div>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-[10px]"
@@ -293,10 +306,7 @@ function BuilderEditPage() {
           >
             <ChevronLeft className="size-3.5" />
           </button>
-          <div
-            className="flex gap-0.5 rounded-full p-0.5"
-            style={{ background: "#1f192a" }}
-          >
+          <div className="flex gap-0.5 rounded-full p-0.5" style={{ background: "#1f192a" }}>
             {MODE_TABS.map((tab) => (
               <button
                 key={tab.id}

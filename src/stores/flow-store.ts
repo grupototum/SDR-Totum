@@ -260,8 +260,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   loadFlow: (jsonStr, meta) => {
     try {
       const result = importFlow(jsonStr);
-      const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
-      const name = (parsed.flow_id as string) ?? "Flow importado";
+      const name = result.envelope.flow_id ?? "Flow importado";
       set({
         nodes: result.nodes as FlowNode[],
         edges: result.edges,

@@ -92,29 +92,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "SDR Totum | Flow Builder" },
-      { name: "description", content: "Build visual flows for WhatsApp conversation automation." },
-      {
-        property: "og:description",
-        content: "Build visual flows for WhatsApp conversation automation.",
-      },
-      {
-        name: "twitter:description",
-        content: "Build visual flows for WhatsApp conversation automation.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f300d38b-0102-4421-ae66-2c5680b4f417/id-preview-2f7935b2--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1781987730109.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f300d38b-0102-4421-ae66-2c5680b4f417/id-preview-2f7935b2--d1addaef-0e7f-4422-896f-8758325064f6.lovable.app-1781987730109.png",
-      },
-      {
-        property: "og:description",
-        content: "Build visual flows for WhatsApp conversation automation.",
-      },
       {
         name: "twitter:description",
         content: "Build visual flows for WhatsApp conversation automation.",

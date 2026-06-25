@@ -199,13 +199,15 @@ function SimulatorPage() {
     }
   }
 
-  const cols = [leftOpen ? "340px" : "0px", "1fr", rightOpen ? "360px" : "0px"].join(" ");
-
   return (
     <div
       className="grid h-screen w-full overflow-hidden"
       style={{
-        gridTemplateColumns: [leftOpen ? "340px" : "0px", "1fr", rightOpen ? (analysisCollapsed ? "44px" : "360px") : "0px"].join(" "),
+        gridTemplateColumns: [
+          leftOpen ? "340px" : "0px",
+          "1fr",
+          rightOpen ? (analysisCollapsed ? "44px" : "360px") : "0px",
+        ].join(" "),
         transition: "grid-template-columns 200ms ease",
       }}
     >
@@ -346,9 +348,8 @@ function SimulatorPage() {
                                 : "#da2128",
                         }}
                       >
-                        Bateria local: {Math.round(battery.healthRate * 100)}% (
-                        {battery.healthy}/{battery.total})
-                        {battery.mock && " · mock"}
+                        Bateria local: {Math.round(battery.healthRate * 100)}% ({battery.healthy}/
+                        {battery.total}){battery.mock && " · mock"}
                       </span>
                     )}
                     {report && (
@@ -363,8 +364,7 @@ function SimulatorPage() {
                                 : "#da2128",
                         }}
                       >
-                        Motor: {Math.round(report.healthRate * 100)}%
-                        {report.mock && " · mock"}
+                        Motor: {Math.round(report.healthRate * 100)}%{report.mock && " · mock"}
                       </span>
                     )}
                   </div>
@@ -415,14 +415,22 @@ function SimulatorPage() {
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
           >
-            {leftOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+            {leftOpen ? (
+              <PanelLeftClose className="size-4" />
+            ) : (
+              <PanelLeftOpen className="size-4" />
+            )}
           </button>
           <button
             onClick={() => setRightOpen((v) => !v)}
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
           >
-            {rightOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+            {rightOpen ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <PanelRightOpen className="size-4" />
+            )}
           </button>
         </div>
         {/* Report do motor (GET /api/engine/api/sim/report) — saúde da bateria / fonte de GO */}
@@ -646,9 +654,7 @@ function SimulatorPage() {
           className="flex items-center justify-between gap-2 px-3 py-3 text-sm text-white"
           style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
         >
-          {!analysisCollapsed && (
-            <span className="px-2">Análise por turno ({turns.length})</span>
-          )}
+          {!analysisCollapsed && <span className="px-2">Análise por turno ({turns.length})</span>}
           <button
             onClick={toggleAnalysis}
             className="ml-auto flex size-8 items-center justify-center rounded-full text-[color:var(--color-text-muted)] hover:bg-[#1f192a] hover:text-white"

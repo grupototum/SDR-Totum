@@ -81,19 +81,12 @@
 
   --shadow-inset-border: inset 0 0 0 1px hsla(0, 0%, 100%, 0.1);
   --shadow-inset-top: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
-  --shadow-card:
-    inset 0 0 0 1px hsla(0, 0%, 100%, 0.1),
-    inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
+  --shadow-card: inset 0 0 0 1px hsla(0, 0%, 100%, 0.1), inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
   --shadow-brand-card:
-    inset 0 0 0 1px hsla(0, 0%, 100%, 0.1),
-    inset 0 1px 0 0 rgba(218, 33, 40, 0.3);
-  --shadow-btn-primary:
-    inset 0 1px 1px hsla(0, 0%, 100%, 0.2),
-    0 1px 2px rgba(8, 8, 8, 0.2);
+    inset 0 0 0 1px hsla(0, 0%, 100%, 0.1), inset 0 1px 0 0 rgba(218, 33, 40, 0.3);
+  --shadow-btn-primary: inset 0 1px 1px hsla(0, 0%, 100%, 0.2), 0 1px 2px rgba(8, 8, 8, 0.2);
   --shadow-halo-red:
-    inset 0 1px 1px hsla(0, 0%, 100%, 0.2),
-    0 1px 2px rgba(8, 8, 8, 0.2),
-    0 7px 80px -12px #da2128;
+    inset 0 1px 1px hsla(0, 0%, 100%, 0.2), 0 1px 2px rgba(8, 8, 8, 0.2), 0 7px 80px -12px #da2128;
   --shadow-node-selected: inset 0 0 0 2px #da2128;
   --shadow-node-error: inset 0 0 0 2px #d91616;
 }
@@ -124,13 +117,19 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-weight: 300;
     letter-spacing: -0.02em;
     color: #ffffff;
   }
 
-  strong, b {
+  strong,
+  b {
     font-weight: 400;
   }
 
@@ -145,10 +144,20 @@
   }
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-surface); }
-  ::-webkit-scrollbar-thumb { background: var(--color-elevated); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-hover-surface); }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-elevated);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-hover-surface);
+  }
 }
 
 /* React Flow overrides */
@@ -183,7 +192,7 @@
 .react-flow__controls button {
   background: #1b1728;
   color: #fff;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .react-flow__controls button:hover {
   background: #272333;
@@ -193,4 +202,6 @@
   box-shadow: var(--shadow-card);
   border-radius: 12px;
 }
-.react-flow__attribution { display: none; }
+.react-flow__attribution {
+  display: none;
+}

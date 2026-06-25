@@ -31,10 +31,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             {i < current ? <Check className="size-3" /> : i + 1}
           </div>
           {i < total - 1 && (
-            <div
-              className="h-px w-8"
-              style={{ background: i < current ? "#35a670" : "#272333" }}
-            />
+            <div className="h-px w-8" style={{ background: i < current ? "#35a670" : "#272333" }} />
           )}
         </div>
       ))}
@@ -69,11 +66,19 @@ function Step1({
       </div>
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs text-[color:var(--color-text-muted)]">Nome do flow *</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Odonto SDR v2" />
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="ex: Odonto SDR v2"
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs text-[color:var(--color-text-muted)]">Nicho</Label>
-        <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="ex: Odontologia" />
+        <Input
+          value={niche}
+          onChange={(e) => setNiche(e.target.value)}
+          placeholder="ex: Odontologia"
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs text-[color:var(--color-text-muted)]">Objetivo do flow</Label>
@@ -156,7 +161,9 @@ function Step2({
               />
             </div>
             <div className="flex flex-col gap-1.5 pl-7">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">Instrução (como conduzir)</Label>
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
+                Instrução (como conduzir)
+              </Label>
               <Textarea
                 value={s.instruction}
                 onChange={(e) => patch(i, { instruction: e.target.value })}
@@ -298,7 +305,10 @@ export function WizardMode() {
   }
 
   return (
-    <div className="flex flex-col" style={{ background: "#0e0918", minHeight: "calc(100vh - 56px)" }}>
+    <div
+      className="flex flex-col"
+      style={{ background: "#0e0918", minHeight: "calc(100vh - 56px)" }}
+    >
       <div className="border-b border-[#1f192a] px-6 py-4">
         <StepIndicator current={step} total={STEP_LABELS.length} />
         <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
@@ -318,9 +328,7 @@ export function WizardMode() {
             />
           )}
           {step === 1 && <Step2 stages={stages} setStages={setStages} />}
-          {step === 2 && (
-            <Step3 name={name} niche={niche} objective={objective} stages={stages} />
-          )}
+          {step === 2 && <Step3 name={name} niche={niche} objective={objective} stages={stages} />}
         </div>
       </div>
       <div
@@ -335,12 +343,7 @@ export function WizardMode() {
         >
           <ChevronLeft className="size-3.5" /> Voltar
         </TotumButton>
-        <TotumButton
-          variant="primary"
-          size="sm"
-          onClick={next}
-          disabled={!canNext}
-        >
+        <TotumButton variant="primary" size="sm" onClick={next} disabled={!canNext}>
           {step === STEP_LABELS.length - 1 ? (
             <>
               <Check className="size-3.5" /> Criar no builder

@@ -1,6 +1,6 @@
 # PROMPT — Claude Code: Página "Pesquisa" (wizard de ordem + histórico) no SDR Totum
 
-> Cole no Claude Code dentro do repo grupototum/SDR-Totum, DEPOIS de colar o componente base `multistep-form` em /components/ui e instalar deps (clsx, tailwind-merge, @radix-ui/*, class-variance-authority, lucide-react, framer-motion, sonner).
+> Cole no Claude Code dentro do repo grupototum/SDR-Totum, DEPOIS de colar o componente base `multistep-form` em /components/ui e instalar deps (clsx, tailwind-merge, @radix-ui/\*, class-variance-authority, lucide-react, framer-motion, sonner).
 > FONTE DA VERDADE DO CONTEÚDO: /docs/MESTRE_DE_PESQUISA_v2.md. Mudança nova e isolada — não quebrar Flow Builder, Console nem Relatórios.
 
 ```

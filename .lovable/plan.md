@@ -90,7 +90,7 @@ Layout: `grid-cols-[280px_1fr_320px]`, altura `100vh`, sem scroll global.
   - Máx mensagens consecutivas: Input numérico default 3.
   - Horário de envio: 2 time inputs (início/fim), default 08:00 / 22:00.
   - Timezone: Select (America/Sao_Paulo default, UTC, etc).
-  **(B) Interrupções Globais** — gatilhos que pausam o fluxo, vão a um bloco e **voltam ao ponto de origem** (não são edges; o motor cuida do retorno). Lista editável de interrupções:
+    **(B) Interrupções Globais** — gatilhos que pausam o fluxo, vão a um bloco e **voltam ao ponto de origem** (não são edges; o motor cuida do retorno). Lista editável de interrupções:
   - Cada item: Nome (ex: "Objeção precoce"), Gatilho (texto livre, ex: "lead objeta interesse, agência ou preço"), Ir para (select de um node/bloco do flow), Ao resolver (radio: "voltar ao ponto de origem" | "ir para nó fixo").
   - Botão "+ Nova Interrupção". Uma interrupção pré-criada de exemplo: "Objeção precoce → bloco de objeções → voltar ao ponto de origem".
 - **Quando node selecionado**: renderiza o form correspondente ao tipo (seção 5).
@@ -108,7 +108,6 @@ Wrapper base `<NodeShell />`:
 
 Implementar **10 tipos** de nó — cada um em arquivo próprio:
 
-
 | #   | Arquivo               | Badge                                       | Handles                                         |
 | --- | --------------------- | ------------------------------------------- | ----------------------------------------------- |
 | 1   | `StartNode.tsx`       | gradiente azul→roxo, PlayCircle             | só saída                                        |
@@ -120,7 +119,6 @@ Implementar **10 tipos** de nó — cada um em arquivo próprio:
 | 7   | `ActionNode.tsx`      | `#077ac7` "Ação", Zap                       | in + 2 out (ok / falha)                         |
 | 8   | `EndNode.tsx`         | gradiente brand card, Flag                  | só entrada                                      |
 | 9   | `LogNode.tsx`         | borda `#35a670` "Relatório", ClipboardList  | in + out                                        |
-
 
 Cada node renderiza um preview compacto dos campos principais; edição completa no Properties Panel.
 

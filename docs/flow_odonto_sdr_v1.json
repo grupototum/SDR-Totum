@@ -37,10 +37,7 @@
       "reading_speed_wpm": 225,
       "read_gap_formula": "(word_count/225)*60 + random(1,3)",
       "max_consecutive_messages": 3,
-      "quiet_hours": [
-        "22:00",
-        "08:00"
-      ],
+      "quiet_hours": ["22:00", "08:00"],
       "timezone": "America/Sao_Paulo"
     },
     "interrupts": [
@@ -49,10 +46,7 @@
         "trigger": "lead levanta objeção real (não interesse | já tem agência | preço) ANTES de g09/g12",
         "goto": "ob_route",
         "return": "{PONTO_RETORNO}",
-        "applies_before": [
-          "g09",
-          "g12"
-        ],
+        "applies_before": ["g09", "g12"],
         "note": "regra 16 — marca o nó atual como PONTO_RETORNO, resolve em ob_route, retorna pra cá. Objeção TARDIA (em g09/g12) retorna pra prévia, não pra cá."
       }
     ],
@@ -269,12 +263,7 @@
       "block": "rk01_site_sim",
       "action": "site_audit",
       "detail": "Análise visual, copy, SEO, percepção 10s, comparação com {{CONCORRENTE_1}},{{CONCORRENTE_2}},{{CONCORRENTE_3}}. Pausa o fluxo até concluir.",
-      "outputs": [
-        "CAUSA",
-        "CONSEQUENCIA",
-        "NOTA_SEO",
-        "CATEGORIA_PRINCIPAL"
-      ],
+      "outputs": ["CAUSA", "CONSEQUENCIA", "NOTA_SEO", "CATEGORIA_PRINCIPAL"],
       "next": "msg12",
       "on_fail": "msg12"
     },
@@ -712,9 +701,7 @@
       "block": "previa",
       "text": "Perfeito! Te mando até às {{HORA_CALCULADA}}. Fique de olho aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:AGUARDANDO_ENVIO_PREVIA"
-      ],
+      "effects": ["crm:AGUARDANDO_ENVIO_PREVIA"],
       "next": "act_previa"
     },
     {
@@ -724,9 +711,7 @@
       "block": "previa",
       "text": "Combinado! Te mando até amanhã. Não consigo ir além de 24 horas sem comprometer o que vou te mostrar.",
       "delay": "auto",
-      "effects": [
-        "crm:AGUARDANDO_ENVIO_PREVIA"
-      ],
+      "effects": ["crm:AGUARDANDO_ENVIO_PREVIA"],
       "next": "act_previa"
     },
     {
@@ -736,9 +721,7 @@
       "block": "previa",
       "text": "Depende da sua prioridade. Se precisar ainda hoje, consigo em até 4 horas. Se puder esperar, entrego em até 24 horas. Estou trabalhando com mais empresas da região ao mesmo tempo, então não consigo garantir além disso.",
       "delay": "auto",
-      "effects": [
-        "crm:AGUARDANDO_ENVIO_PREVIA"
-      ],
+      "effects": ["crm:AGUARDANDO_ENVIO_PREVIA"],
       "next": "act_previa"
     },
     {
@@ -1507,9 +1490,7 @@
       "block": "pos_audio",
       "text": "Ótimo! Vou preparar aqui. Precisa pra essa semana ou pode ser nas próximas 24 horas?",
       "delay": "auto",
-      "effects": [
-        "crm:AGUARDANDO_ENVIO_PREVIA"
-      ],
+      "effects": ["crm:AGUARDANDO_ENVIO_PREVIA"],
       "next": "g10",
       "note": "G-30 reutiliza lógica de G-10."
     },
@@ -1569,10 +1550,7 @@
       "block": "objecoes",
       "text": "Quando tiver 5 minutos, você me fala. Fico guardado por aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ],
+      "effects": ["crm:FRIO", "notify_human"],
       "next": "g31_route"
     },
     {
@@ -1633,10 +1611,7 @@
       "block": "objecoes",
       "text": "Sem problema! Se mudar de ideia, pode me chamar aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:ENCERRADO",
-        "notify_human"
-      ],
+      "effects": ["crm:ENCERRADO", "notify_human"],
       "next": "g31_route"
     },
     {
@@ -1700,9 +1675,7 @@
       "block": "objecoes",
       "text": "Entendo a dúvida. O valor depende do que eu identifiquei aí na clínica de vocês — por isso vou te mandar uma página com tudo organizado pra você ver com calma. Posso te mostrar antes?",
       "delay": "auto",
-      "effects": [
-        "notify_human"
-      ],
+      "effects": ["notify_human"],
       "next": "g31_route",
       "note": "Decisão Rael (2026-06-20): SDR não revela preço; redireciona para a landing page que será enviada. Variável PRECO_MINIMO removida."
     },
@@ -1794,10 +1767,7 @@
       "block": "avaliacao_site",
       "text": "Se um dia fizer sentido conversar, é só me chamar aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ],
+      "effects": ["crm:FRIO", "notify_human"],
       "next": "end_frio"
     },
     {
@@ -1870,10 +1840,7 @@
       "block": "projecao_perdas",
       "text": "Se um dia quiser conversar, estou por aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ],
+      "effects": ["crm:FRIO", "notify_human"],
       "next": "end_frio"
     },
     {
@@ -1883,10 +1850,7 @@
       "block": "avaliacao",
       "text": "Tudo bem! Pode guardar meu contato. Se um dia tiver curiosidade, é só me chamar.",
       "delay": "auto",
-      "effects": [
-        "crm:ENCERRADO",
-        "notify_human"
-      ],
+      "effects": ["crm:ENCERRADO", "notify_human"],
       "next": "end_encerrado"
     },
     {
@@ -2006,10 +1970,7 @@
       "block": "agendamento",
       "text": "Sem problema. Se quiser marcar depois, é só me chamar aqui.",
       "delay": "auto",
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ],
+      "effects": ["crm:FRIO", "notify_human"],
       "next": "g38"
     },
     {
@@ -2055,10 +2016,7 @@
         "temperatura": "frio",
         "onde_travou": "não retornou após áudio"
       },
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ]
+      "effects": ["crm:FRIO", "notify_human"]
     },
     {
       "id": "end_encerrado",
@@ -2070,10 +2028,7 @@
         "resultado": "rejeitado",
         "temperatura": "frio"
       },
-      "effects": [
-        "crm:ENCERRADO",
-        "notify_human"
-      ]
+      "effects": ["crm:ENCERRADO", "notify_human"]
     },
     {
       "id": "end_encerrado_atendente",
@@ -2085,10 +2040,7 @@
         "resultado": "rejeitado",
         "onde_travou": "atendente recusou"
       },
-      "effects": [
-        "crm:ENCERRADO",
-        "notify_human"
-      ]
+      "effects": ["crm:ENCERRADO", "notify_human"]
     },
     {
       "id": "end_encerrado_nao_encaminhou",
@@ -2100,10 +2052,7 @@
         "resultado": "rejeitado",
         "onde_travou": "não encaminhou"
       },
-      "effects": [
-        "crm:ENCERRADO",
-        "notify_human"
-      ]
+      "effects": ["crm:ENCERRADO", "notify_human"]
     },
     {
       "id": "end_contato_humano",
@@ -2115,9 +2064,7 @@
         "resultado": "followup",
         "proxima_acao": "abordagem direta ao decisor"
       },
-      "effects": [
-        "notify_human"
-      ]
+      "effects": ["notify_human"]
     },
     {
       "id": "impl_check",
@@ -2181,10 +2128,7 @@
       "block": "objecoes",
       "text": "Sem problema! Não quero insistir. Fico por aqui e, se fizer sentido pra você mais pra frente, é só me chamar.",
       "delay": "auto",
-      "effects": [
-        "crm:FRIO",
-        "notify_human"
-      ],
+      "effects": ["crm:FRIO", "notify_human"],
       "next": "end_encerrado",
       "note": "Atingiu o teto de 2 iterações de objeção (loop_guards.objection_block). Encerra frio."
     },

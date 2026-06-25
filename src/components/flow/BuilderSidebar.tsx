@@ -57,7 +57,7 @@ export function BuilderSidebar() {
 
       <Section title="Pesquisas" icon={Search}>
         <Link
-          to="/pesquisa/historico"
+          to="/pesquisa"
           className="rounded-lg px-3 py-2 text-left text-sm text-[color:var(--color-text-body)] transition-colors hover:bg-[#272333]"
         >
           Ver histórico de pesquisas
