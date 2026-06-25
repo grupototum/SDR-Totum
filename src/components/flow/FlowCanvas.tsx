@@ -7,11 +7,13 @@ import {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
-  type ReactFlowInstance,
+  type Node,
 } from "@xyflow/react";
 import { useFlowStore, type NodeKind } from "@/stores/flow-store";
 import { nodeTypeComponents } from "./nodes";
 import { NodeTray } from "./NodeTray";
+
+const CANVAS_STYLE: React.CSSProperties = { background: "#0e0918" };
 
 function FlowCanvasInner() {
   const nodes = useFlowStore((s) => s.nodes);
@@ -23,7 +25,6 @@ function FlowCanvasInner() {
   const setSelected = useFlowStore((s) => s.setSelected);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const rfRef = useRef<ReactFlowInstance | null>(null);
   const { screenToFlowPosition } = useReactFlow();
 
   const onDrop = useCallback(
@@ -42,6 +43,12 @@ function FlowCanvasInner() {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, n: Node) => setSelected(n.id),
+    [setSelected],
+  );
+  const handlePaneClick = useCallback(() => setSelected(null), [setSelected]);
+
   return (
     <div
       ref={wrapperRef}
@@ -56,13 +63,12 @@ function FlowCanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onInit={(i) => (rfRef.current = i)}
-        onNodeClick={(_, n) => setSelected(n.id)}
-        onPaneClick={() => setSelected(null)}
+        onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
         fitView
         defaultEdgeOptions={{ animated: true }}
         proOptions={{ hideAttribution: true }}
-        style={{ background: "#0e0918" }}
+        style={CANVAS_STYLE}
       >
         <Background variant={BackgroundVariant.Dots} gap={32} size={1.5} color="#272333" />
         <Controls position="bottom-right" />

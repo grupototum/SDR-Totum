@@ -85,7 +85,7 @@ const SidebarProvider = React.forwardRef<
 
     const setWidth = React.useCallback((value: string) => {
       _setWidth(value);
-      document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Strict; Secure`;
     }, []);
 
     // Restaura a largura salva no mount (evita mismatch de hidratação).
@@ -110,7 +110,7 @@ const SidebarProvider = React.forwardRef<
         }
 
         // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Strict; Secure`;
       },
       [setOpenProp, open],
     );

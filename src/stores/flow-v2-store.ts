@@ -39,10 +39,10 @@ interface FlowV2Store {
   removeInterrupt: (id: string) => void;
 }
 
-function uniqueStageId(stages: V2Stage[], base = "novo_estagio"): string {
+function uniqueId(items: { id: string }[], base = "novo_estagio"): string {
   let id = base;
   let n = 2;
-  const ids = new Set(stages.map((s) => s.id));
+  const ids = new Set(items.map((s) => s.id));
   while (ids.has(id)) id = `${base}_${n++}`;
   return id;
 }
@@ -92,7 +92,7 @@ export const useFlowV2Store = create<FlowV2Store>((set, get) => ({
   addStage: () =>
     set((s) => {
       if (!s.flow) return s;
-      const id = uniqueStageId(s.flow.stages);
+      const id = uniqueId(s.flow.stages);
       const stage: V2Stage = { id, goal: "", instruction: "", reference_copy: [] };
       return { flow: { ...s.flow, stages: [...s.flow.stages, stage] }, selectedStageId: id };
     }),
@@ -131,7 +131,7 @@ export const useFlowV2Store = create<FlowV2Store>((set, get) => ({
       if (!s.flow) return s;
       const existing = s.flow.interrupts ?? [];
       const it: V2Interrupt = {
-        id: uniqueStageId(existing as unknown as V2Stage[], "interrupcao"),
+        id: uniqueId(existing, "interrupcao"),
         trigger: "",
         handler_instruction: "",
         categories: [],

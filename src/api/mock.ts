@@ -105,7 +105,7 @@ const mockConversations: ConversationDetail[] = [
     lead: {
       empresa: "Sorriso Perfeito",
       numero: "5545999990001",
-      nomeDono: "Dr. Carlos Mendes",
+      nomeDono: "Dr. Fictício 1",
       variaveis: {
         ESPECIALIDADE: "Odontologia",
         CIDADE: "Foz do Iguaçu",
@@ -124,7 +124,7 @@ const mockConversations: ConversationDetail[] = [
     lead: {
       empresa: "OdontoVita Foz",
       numero: "5545999990002",
-      nomeDono: "Dra. Ana Lima",
+      nomeDono: "Dra. Fictícia 2",
       variaveis: {
         ESPECIALIDADE: "Odontologia",
         CIDADE: "Foz do Iguaçu",
@@ -172,7 +172,7 @@ const mockConversations: ConversationDetail[] = [
     lead: {
       empresa: "SmilePlus",
       numero: "5545999990003",
-      nomeDono: "Dr. Roberto Dias",
+      nomeDono: "Dr. Fictício 3",
       variaveis: {
         ESPECIALIDADE: "Odontologia",
         CIDADE: "Cascavel",

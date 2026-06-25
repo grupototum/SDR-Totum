@@ -4,7 +4,7 @@
  */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Search, LayoutGrid, List, FileText, Copy, Workflow, X } from "lucide-react";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
@@ -89,11 +89,15 @@ function PesquisaIndexPage() {
     if (typeof window !== "undefined") window.localStorage.setItem(VIEW_KEY, m);
   };
 
-  const filtered = orders.filter(
-    (o) =>
-      !search ||
-      o.name.toLowerCase().includes(search.toLowerCase()) ||
-      o.data.niche.toLowerCase().includes(search.toLowerCase()),
+  const filtered = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          !search ||
+          o.name.toLowerCase().includes(search.toLowerCase()) ||
+          o.data.niche.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [orders, search],
   );
 
   const preview = orders.find((o) => o.id === previewId) ?? null;

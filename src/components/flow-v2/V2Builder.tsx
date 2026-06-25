@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -445,7 +445,15 @@ function StageEditor() {
   const selectedStageId = useFlowV2Store((s) => s.selectedStageId);
   const updateStage = useFlowV2Store((s) => s.updateStage);
   const removeStage = useFlowV2Store((s) => s.removeStage);
-  const stage = flow.stages.find((s) => s.id === selectedStageId);
+  const stage = useMemo(
+    () => flow.stages.find((s) => s.id === selectedStageId),
+    [flow.stages, selectedStageId],
+  );
+
+  const stageIds = useMemo(
+    () => flow.stages.map((s) => s.id).filter((id) => id !== stage?.id),
+    [flow.stages, stage?.id],
+  );
 
   if (!stage) {
     return (
@@ -456,7 +464,6 @@ function StageEditor() {
   }
 
   const patch = (p: Partial<V2Stage>) => updateStage(stage.id, p);
-  const stageIds = flow.stages.map((s) => s.id).filter((id) => id !== stage.id);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
@@ -563,7 +570,7 @@ function InterruptsEditor() {
   const addInterrupt = useFlowV2Store((s) => s.addInterrupt);
   const removeInterrupt = useFlowV2Store((s) => s.removeInterrupt);
   const interrupts = flow.interrupts ?? [];
-  const stageIds = flow.stages.map((s) => s.id);
+  const stageIds = useMemo(() => flow.stages.map((s) => s.id), [flow.stages]);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
@@ -855,7 +862,7 @@ function StringListField({
     <Field label={label}>
       <div className="flex flex-col gap-2">
         {values.map((v, i) => (
-          <div key={i} className="flex gap-2">
+          <div key={`${i}-${v.slice(0, 16)}`} className="flex gap-2">
             {multiline ? (
               <Textarea
                 value={v}

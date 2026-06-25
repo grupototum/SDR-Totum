@@ -69,6 +69,7 @@ function parseTimeout(raw: string | number | undefined): {
   if (!raw) return { value: 24, unit: "hours" };
   const s = String(raw).toLowerCase();
   const n = parseFloat(s);
+  if (isNaN(n)) return { value: 24, unit: "hours" };
   if (s.includes("day")) return { value: n, unit: "days" };
   if (s.includes("hour") || s.includes("h")) return { value: n, unit: "hours" };
   return { value: n, unit: "minutes" };
@@ -187,7 +188,7 @@ function layoutNodes(
   }
 
   // Any disconnected nodes (not reachable from entry) get appended at bottom
-  let orphanY = (Math.max(0, ...[...colCount.values()]) + 1) * ROW_GAP + 80;
+  let orphanY = (Array.from(colCount.values()).reduce((a, b) => Math.max(a, b), 0) + 1) * ROW_GAP + 80;
   for (const n of specNodes) {
     const id = n.id as string;
     if (!positions.has(id)) {
@@ -210,7 +211,12 @@ export interface ImportResult {
 }
 
 export function importFlow(jsonStr: string): ImportResult {
-  const spec = JSON.parse(jsonStr) as Record<string, unknown>;
+  let spec: Record<string, unknown>;
+  try {
+    spec = JSON.parse(jsonStr) as Record<string, unknown>;
+  } catch (e) {
+    throw new Error(`JSON inválido: ${(e as SyntaxError).message}`);
+  }
 
   // Extract known envelope fields; rest → _extra
   const KNOWN_ENVELOPE = new Set([
@@ -265,7 +271,7 @@ export function importFlow(jsonStr: string): ImportResult {
     if (storeType === "send") {
       if (Array.isArray(specNode.variants)) {
         data.variations = (specNode.variants as Record<string, unknown>[]).map((v) => ({
-          id: (v.id as string) ?? String(Math.random()),
+          id: (v.id as string) ?? crypto.randomUUID(),
           text: (v.text as string) ?? "",
           when: (v.when as string) ?? "",
         }));
