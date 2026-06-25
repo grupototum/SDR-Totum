@@ -97,6 +97,7 @@ function SimulatorPage() {
     queryKey: ["flow", source],
     queryFn: () => api.getFlow(source),
     enabled: source !== DRAFT,
+    staleTime: Infinity,
   });
 
   // Report de saúde do motor (GET /api/engine/api/sim/report) — proxy same-origin, fonte de GO.

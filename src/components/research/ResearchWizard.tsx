@@ -331,7 +331,7 @@ function StepTipos({ data, set }: StepProps) {
 }
 
 function StepCampos({ data, set }: StepProps) {
-  const selected = new Set(data.outputFields);
+  const selected = useMemo(() => new Set(data.outputFields), [data.outputFields]);
   const toggle = (key: string) =>
     set({
       outputFields: selected.has(key)

@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useFlowStore, type FlowNode } from "@/stores/flow-store";
 import { nodeMeta } from "./node-types";
 import { AlertCircle } from "lucide-react";
@@ -32,14 +32,15 @@ export function NodeShell({
       ? "var(--shadow-node-selected)"
       : "var(--shadow-card)";
 
+  const nodeStyle = useMemo(
+    () => ({ background: "#1b1728", boxShadow: shadow, borderRadius: 16 }),
+    [shadow],
+  );
+
   return (
     <div
       className="relative w-[240px] rounded-2xl p-4 transition-all"
-      style={{
-        background: "#1b1728",
-        boxShadow: shadow,
-        borderRadius: 16,
-      }}
+      style={nodeStyle}
     >
       {hasError && (
         <div

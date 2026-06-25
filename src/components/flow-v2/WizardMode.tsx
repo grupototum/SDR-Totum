@@ -131,7 +131,7 @@ function Step2({
       <div className="flex flex-col gap-3">
         {stages.map((s, i) => (
           <div
-            key={i}
+            key={s.id}
             className="flex flex-col gap-3 rounded-xl p-4"
             style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
           >
