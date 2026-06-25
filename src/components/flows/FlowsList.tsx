@@ -5,10 +5,76 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, List, Search, Pencil, Copy, Rocket, CheckCircle2, X } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Search,
+  Pencil,
+  Copy,
+  Rocket,
+  CheckCircle2,
+  X,
+  AlertTriangle,
+} from "lucide-react";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { toast } from "sonner";
+
+function ActivateConfirmDialog({
+  flowName,
+  onConfirm,
+  onCancel,
+}: {
+  flowName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(14,9,24,0.85)" }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div
+        className="flex w-full max-w-sm flex-col gap-5 rounded-3xl p-6"
+        style={{ background: "#1b1728", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4 text-[#f59e0b]" />
+            <h2 className="text-base text-white">Ativar flow em produção</h2>
+          </div>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Você está prestes a ativar <span className="text-white">"{flowName}"</span> no ambiente
+            de PRODUÇÃO com <strong className="text-[#f59e0b]">autosend ativado</strong>. Mensagens
+            serão enviadas automaticamente a leads reais.
+          </p>
+        </div>
+        <div
+          className="rounded-xl px-4 py-3 text-xs"
+          style={{ background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}
+        >
+          Antes de ativar, teste o flow no Simulador para garantir que está se comportando
+          corretamente.
+        </div>
+        <div className="flex gap-2">
+          <TotumButton variant="ghost" size="sm" onClick={onCancel} className="flex-1">
+            Cancelar
+          </TotumButton>
+          <TotumButton
+            variant="primary"
+            size="sm"
+            onClick={onConfirm}
+            className="flex-1"
+            style={{ background: "#e3433e" }}
+          >
+            <Rocket className="size-3.5" /> Ativar em PRODUÇÃO
+          </TotumButton>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const VIEW_KEY = "totum:flows-list-view";
 
@@ -78,6 +144,7 @@ export function FlowsList() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
+  const [activateTarget, setActivateTarget] = useState<FlowSummary | null>(null);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows"],
@@ -103,9 +170,13 @@ export function FlowsList() {
     mutationFn: (id: string) => api.publishFlow(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["flows"] });
-      toast.success("Flow ativado");
+      toast.success("Flow ativado em produção");
+      setActivateTarget(null);
     },
-    onError: (e) => toast.error(`Erro ao ativar: ${(e as Error).message}`),
+    onError: (e) => {
+      toast.error(`Erro ao ativar: ${(e as Error).message}`);
+      setActivateTarget(null);
+    },
   });
 
   const setMode = (m: "list" | "card") => {
@@ -125,6 +196,13 @@ export function FlowsList() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      {activateTarget && (
+        <ActivateConfirmDialog
+          flowName={activateTarget.name}
+          onConfirm={() => activateMut.mutate(activateTarget.id)}
+          onCancel={() => setActivateTarget(null)}
+        />
+      )}
       {/* Toolbar */}
       <div className="mb-5 flex items-center gap-3">
         <div
@@ -246,7 +324,7 @@ export function FlowsList() {
                       </button>
                       {!f.active && (
                         <button
-                          onClick={() => activateMut.mutate(f.id)}
+                          onClick={() => setActivateTarget(f)}
                           className="rounded-md p-1.5 text-[#e3433e] hover:text-white"
                           title="Ativar"
                         >
@@ -271,7 +349,7 @@ export function FlowsList() {
               flow={f}
               onOpen={() => openFlow(f.id)}
               onDuplicate={() => duplicateMut.mutate(f.id)}
-              onActivate={() => activateMut.mutate(f.id)}
+              onActivate={() => setActivateTarget(f)}
             />
           ))}
         </div>

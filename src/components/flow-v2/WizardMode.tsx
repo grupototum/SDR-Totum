@@ -11,10 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { toast } from "sonner";
-import type { FlowV2, V2Stage } from "@/lib/flow-v2";
+import type { FlowV2, V2Stage, V2Interrupt } from "@/lib/flow-v2";
 import flowV2Default from "../../../docs/flow_odonto_stages_v2.json";
 
-const STEP_LABELS = ["Identidade", "Estágios", "Revisão"];
+const STEP_LABELS = ["Identidade", "Estágios", "Conteúdo", "Interrupções", "Revisão"];
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -95,7 +95,7 @@ function Step1({
 
 // ── Step 2: estágios ────────────────────────────────────────────────────────
 
-type DraftStage = { id: string; goal: string; instruction: string };
+type DraftStage = { id: string; goal: string; instruction: string; reference_copy?: string };
 
 function Step2({
   stages,
@@ -178,18 +178,153 @@ function Step2({
   );
 }
 
-// ── Step 3: revisão ─────────────────────────────────────────────────────────
+// ── Step 3: conteúdo (reference_copy por estágio) ───────────────────────────
 
 function Step3({
+  stages,
+  setStages,
+}: {
+  stages: DraftStage[];
+  setStages: (s: DraftStage[]) => void;
+}) {
+  const patchCopy = (i: number, val: string) =>
+    setStages(stages.map((s, idx) => (idx === i ? { ...s, reference_copy: val } : s)));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg text-white">Conteúdo de referência</h2>
+        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          Exemplos de mensagem / copy para cada estágio. Opcional — pode preencher depois no
+          Builder.
+        </p>
+      </div>
+      <div className="flex flex-col gap-4">
+        {stages.map((s, i) => (
+          <div
+            key={s.id}
+            className="flex flex-col gap-2 rounded-xl p-4"
+            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+          >
+            <Label className="text-xs text-[color:var(--color-text-muted)]">
+              {i + 1}. {s.id}
+              {s.goal && <span className="ml-1 opacity-60">— {s.goal}</span>}
+            </Label>
+            <Textarea
+              value={s.reference_copy ?? ""}
+              onChange={(e) => patchCopy(i, e.target.value)}
+              rows={2}
+              placeholder="Exemplos de mensagens que o SDR pode enviar neste estágio…"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Step 4: interrupções ─────────────────────────────────────────────────────
+
+type DraftInterrupt = { id: string; trigger: string; handler_instruction: string };
+
+function Step4({
+  interrupts,
+  setInterrupts,
+}: {
+  interrupts: DraftInterrupt[];
+  setInterrupts: (v: DraftInterrupt[]) => void;
+}) {
+  const add = () =>
+    setInterrupts([
+      ...interrupts,
+      { id: `interrupcao_${interrupts.length + 1}`, trigger: "", handler_instruction: "" },
+    ]);
+  const remove = (i: number) => setInterrupts(interrupts.filter((_, idx) => idx !== i));
+  const patch = (i: number, p: Partial<DraftInterrupt>) =>
+    setInterrupts(interrupts.map((v, idx) => (idx === i ? { ...v, ...p } : v)));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg text-white">Interrupções</h2>
+          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+            Situações que desviam do fluxo normal (ex: objeção de preço, "já tenho dentista").
+            Opcional.
+          </p>
+        </div>
+        <TotumButton variant="outline" size="sm" onClick={add}>
+          <Plus className="size-3.5" /> Adicionar
+        </TotumButton>
+      </div>
+      {interrupts.length === 0 && (
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Nenhuma interrupção. Você pode adicionar depois no Builder.
+        </p>
+      )}
+      <div className="flex flex-col gap-3">
+        {interrupts.map((v, i) => (
+          <div
+            key={i}
+            className="flex flex-col gap-3 rounded-xl p-4"
+            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Input
+                value={v.id}
+                onChange={(e) => patch(i, { id: e.target.value })}
+                placeholder="ID da interrupção"
+                className="flex-1"
+              />
+              <button
+                onClick={() => remove(i)}
+                className="text-[color:var(--color-text-muted)] hover:text-white"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
+                Gatilho (quando ativar)
+              </Label>
+              <Input
+                value={v.trigger}
+                onChange={(e) => patch(i, { trigger: e.target.value })}
+                placeholder="ex: lead menciona preço ou concorrente"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
+                Instrução de tratamento
+              </Label>
+              <Textarea
+                value={v.handler_instruction}
+                onChange={(e) => patch(i, { handler_instruction: e.target.value })}
+                rows={2}
+                placeholder="Como o SDR deve responder quando isso acontecer?"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Step 5: revisão ─────────────────────────────────────────────────────────
+
+function Step5({
   name,
   niche,
   objective,
   stages,
+  interrupts,
 }: {
   name: string;
   niche: string;
   objective: string;
   stages: DraftStage[];
+  interrupts: DraftInterrupt[];
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -235,6 +370,26 @@ function Step3({
             ))}
           </ul>
         </div>
+        {interrupts.length > 0 && (
+          <div>
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              Interrupções ({interrupts.length})
+            </p>
+            <ul className="mt-1 flex flex-col gap-1">
+              {interrupts.map((v, i) => (
+                <li key={i} className="flex items-baseline gap-2 text-sm">
+                  <span className="text-[10px] text-[color:var(--color-text-muted)]">{i + 1}.</span>
+                  <span className="text-white">{v.id}</span>
+                  {v.trigger && (
+                    <span className="text-[11px] text-[color:var(--color-text-muted)] truncate">
+                      — {v.trigger}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -252,6 +407,7 @@ export function WizardMode() {
   const [stages, setStages] = useState<DraftStage[]>([
     { id: "abertura", goal: "", instruction: "" },
   ]);
+  const [interrupts, setInterrupts] = useState<DraftInterrupt[]>([]);
 
   function applyToStore() {
     if (!name.trim()) {
@@ -268,9 +424,20 @@ export function WizardMode() {
       id: s.id || `estagio_${i + 1}`,
       goal: s.goal,
       instruction: s.instruction,
-      reference_copy: [],
+      reference_copy: s.reference_copy
+        ? s.reference_copy
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean)
+        : [],
       next: stages[i + 1]?.id,
       terminal: i === stages.length - 1 ? true : undefined,
+    }));
+
+    const v2Interrupts: V2Interrupt[] = interrupts.map((v) => ({
+      id: v.id || `interrupcao`,
+      trigger: v.trigger,
+      handler_instruction: v.handler_instruction,
     }));
 
     const newFlow: FlowV2 = {
@@ -281,7 +448,7 @@ export function WizardMode() {
       objective,
       entry_stage: v2Stages[0].id,
       stages: v2Stages,
-      interrupts: base.interrupts ?? [],
+      interrupts: v2Interrupts.length > 0 ? v2Interrupts : (base.interrupts ?? []),
     };
 
     setFlow(newFlow);
@@ -328,7 +495,17 @@ export function WizardMode() {
             />
           )}
           {step === 1 && <Step2 stages={stages} setStages={setStages} />}
-          {step === 2 && <Step3 name={name} niche={niche} objective={objective} stages={stages} />}
+          {step === 2 && <Step3 stages={stages} setStages={setStages} />}
+          {step === 3 && <Step4 interrupts={interrupts} setInterrupts={setInterrupts} />}
+          {step === 4 && (
+            <Step5
+              name={name}
+              niche={niche}
+              objective={objective}
+              stages={stages}
+              interrupts={interrupts}
+            />
+          )}
         </div>
       </div>
       <div
