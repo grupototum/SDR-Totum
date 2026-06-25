@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   X,
   AlertTriangle,
+  FlaskConical,
 } from "lucide-react";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
@@ -24,10 +25,12 @@ function ActivateConfirmDialog({
   flowName,
   onConfirm,
   onCancel,
+  onGoToSim,
 }: {
   flowName: string;
   onConfirm: () => void;
   onCancel: () => void;
+  onGoToSim: () => void;
 }) {
   return (
     <div
@@ -45,17 +48,22 @@ function ActivateConfirmDialog({
             <h2 className="text-base text-white">Ativar flow em produção</h2>
           </div>
           <p className="text-sm text-[color:var(--color-text-muted)]">
-            Você está prestes a ativar <span className="text-white">"{flowName}"</span> no ambiente
-            de PRODUÇÃO com <strong className="text-[#f59e0b]">autosend ativado</strong>. Mensagens
-            serão enviadas automaticamente a leads reais.
+            Você está prestes a ativar <span className="text-white font-medium">"{flowName}"</span>{" "}
+            no ambiente de <strong className="text-[#f59e0b]">PRODUÇÃO com autosend</strong>.
+            Mensagens serão enviadas automaticamente a leads reais.
           </p>
         </div>
         <div
-          className="rounded-xl px-4 py-3 text-xs"
+          className="flex flex-col gap-3 rounded-xl px-4 py-3 text-xs"
           style={{ background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}
         >
-          Antes de ativar, teste o flow no Simulador para garantir que está se comportando
-          corretamente.
+          <p>Recomendado: verifique a saúde do flow no Simulador antes de ativar.</p>
+          <button
+            onClick={onGoToSim}
+            className="flex items-center gap-1.5 font-medium hover:underline self-start"
+          >
+            <FlaskConical className="size-3.5" /> Abrir Simulador com este flow
+          </button>
         </div>
         <div className="flex gap-2">
           <TotumButton variant="ghost" size="sm" onClick={onCancel} className="flex-1">
@@ -201,6 +209,10 @@ export function FlowsList() {
           flowName={activateTarget.name}
           onConfirm={() => activateMut.mutate(activateTarget.id)}
           onCancel={() => setActivateTarget(null)}
+          onGoToSim={() => {
+            setActivateTarget(null);
+            navigate({ to: "/simulator" });
+          }}
         />
       )}
       {/* Toolbar */}
