@@ -1,0 +1,12 @@
+=== PÓS-FIX · MODELO: meta/llama-3.3-70b-instruct · runs/persona=8 ===
+>>> booked_clean: 38%   ·   chega-agendamento: 40%   ·   latência média/turno: 8214ms <<<
+
+--------------------------------------------------------------------------------------------------------------------
+persona        modal         chegaAg%  booked%  bk_clean%  lat/turno  dist
+--------------------------------------------------------------------------------------------------------------------
+ideal          encerrado     100%      100%     100%       7889ms     encerrado:8
+apressado      encerrado     75%       75%      75%        8255ms     encerrado:6 implicacao:2
+cetico_preco   implicacao    25%       13%      13%        8942ms     implicacao:6 agendamento:1 encerrado:1
+enrolao        encerrado     0%        0%       0%         5878ms     encerrado:7 abertura:1
+lead_frio      encerrado     0%        0%       0%         10108ms    encerrado:8
+--------------------------------------------------------------------------------------------------------------------

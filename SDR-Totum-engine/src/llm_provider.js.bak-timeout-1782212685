@@ -1,0 +1,88 @@
+/* llm_provider.js — camada agnóstica com CADEIA de fallback (groq | nvidia | anthropic | gemini).
+ * kind: 'prod' | 'sim'. Cadeia por env (lista de providers, em ordem):
+ *   LLM_CHAIN_PROD (default "groq,nvidia,anthropic")   LLM_CHAIN_SIM (default "groq")
+ * Cada provider lê chave/modelo próprios; sufixo _SIM isola a cota do sim.
+ *   GROQ_API_KEY[_SIM]   GROQ_BASE_URL(=api.groq.com/openai/v1)   GROQ_MODEL[_SIM](=llama-3.3-70b-versatile)
+ *   NVIDIA_API_KEY[_SIM] NVIDIA_BASE_URL(=integrate.api.nvidia.com/v1) NVIDIA_MODEL[_SIM](=meta/llama-4-maverick-17b-128e-instruct)
+ *   ANTHROPIC_API_KEY[_SIM] ANTHROPIC_MODEL[_SIM](=claude-3-5-haiku-20241022)
+ *   GEMINI_API_KEY[_SIM] (fallback p/ /home/totum/.pepper/.env) GEMINI_MODEL(=gemini-2.0-flash)
+ * generate() tenta cada step na ordem; pula provider sem chave; em erro/empty vai pro próximo.
+ */
+const fs = require('node:fs');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const PEPPER = '/home/totum/.pepper/.env';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function readEnvValue(file, key) {
+  try {
+    const line = fs.readFileSync(file, 'utf8').split(/\r?\n/).find((i) => i.match(new RegExp(`^${key}\\s*=`)));
+    return line ? line.slice(line.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '') : '';
+  } catch { return ''; }
+}
+function pick(name, kind) { return (kind === 'sim' ? process.env[`${name}_SIM`] : process.env[name]) || ''; }
+function model(name, kind, def) { return (kind === 'sim' ? process.env[`${name}_SIM`] : process.env[name]) || process.env[name] || def; }
+
+function providerCfg(provider, kind) {
+  switch (provider) {
+    case 'groq': return { provider: 'openai', apiKey: pick('GROQ_API_KEY', kind), baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1', model: model('GROQ_MODEL', kind, 'llama-3.3-70b-versatile') };
+    case 'nvidia': return { provider: 'openai', apiKey: pick('NVIDIA_API_KEY', kind), baseUrl: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1', model: model('NVIDIA_MODEL', kind, 'meta/llama-4-maverick-17b-128e-instruct') };
+    case 'anthropic': return { provider: 'anthropic', apiKey: pick('ANTHROPIC_API_KEY', kind), model: model('ANTHROPIC_MODEL', kind, 'claude-3-5-haiku-20241022') };
+    case 'gemini': default: {
+      const key = pick('GEMINI_API_KEY', kind) || (kind === 'prod' ? (process.env.GEMINI_API_KEY || readEnvValue(PEPPER, 'GEMINI_API_KEY')) : '');
+      return { provider: 'gemini', apiKey: key, model: process.env.GEMINI_MODEL || 'gemini-2.0-flash', fallbackModel: process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash' };
+    }
+  }
+}
+function chainFor(kind) {
+  const raw = (kind === 'sim' ? process.env.LLM_CHAIN_SIM : process.env.LLM_CHAIN_PROD) || (kind === 'sim' ? 'groq' : 'groq,nvidia,anthropic');
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+async function genGemini(prompt, c) {
+  const g = new GoogleGenerativeAI(c.apiKey);
+  try { return (await g.getGenerativeModel({ model: c.model }).generateContent(prompt)).response.text().trim(); }
+  catch (e) { if (!String(e?.message || '').includes('404') || c.fallbackModel === c.model) throw e; return (await g.getGenerativeModel({ model: c.fallbackModel }).generateContent(prompt)).response.text().trim(); }
+}
+async function genOpenAI(prompt, c) {
+  const url = c.baseUrl.replace(/\/$/, '') + '/chat/completions';
+  const body = JSON.stringify({ model: c.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 700 });
+  const MAX = c._retry != null ? c._retry : Number(process.env.LLM_RETRY_429 || 3);
+  for (let a = 0; ; a++) {
+    const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${c.apiKey}`, 'Content-Type': 'application/json' }, body });
+    if (res.ok) { const j = await res.json(); return String(j.choices?.[0]?.message?.content || '').trim(); }
+    const t = await res.text().catch(() => '');
+    if (res.status === 429 && a < MAX) { const m = t.match(/try again in ([\d.]+)s/i); await sleep(Math.min(20000, Math.round(((Number(res.headers.get('retry-after')) || (m ? parseFloat(m[1]) : 0) || 5) + 0.5) * 1000))); continue; }
+    const e = new Error(`${c._name || 'openai'} ${res.status} ${t.slice(0, 140)}`); e.status = res.status; throw e;
+  }
+}
+async function genAnthropic(prompt, c) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': c.apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: c.model, max_tokens: 700, messages: [{ role: 'user', content: prompt }] }),
+  });
+  if (!res.ok) { const t = await res.text().catch(() => ''); const e = new Error(`anthropic ${res.status} ${t.slice(0, 140)}`); e.status = res.status; throw e; }
+  const j = await res.json();
+  return String(j.content?.map((b) => b.text || '').join('') || '').trim();
+}
+
+async function generate(prompt, kind = 'prod') {
+  const chain = chainFor(kind);
+  let lastErr = null;
+  for (let idx = 0; idx < chain.length; idx++) {
+    const name = chain[idx];
+    const c = providerCfg(name, kind); c._name = name;
+    // failover RÁPIDO: só faz retry-429 no ÚLTIMO elo (sem fallback adiante); antes disso, cai na hora pro próximo provider
+    c._retry = (idx === chain.length - 1) ? Number(process.env.LLM_RETRY_429 || 3) : 0;
+    if (!c.apiKey) { lastErr = new Error(`${name}: sem chave`); continue; }
+    const t0 = Date.now();
+    try {
+      const out = c.provider === 'gemini' ? await genGemini(prompt, c) : c.provider === 'anthropic' ? await genAnthropic(prompt, c) : await genOpenAI(prompt, c);
+      if (out && out.trim()) { console.log(`[llm] ${kind} ${name}/${c.model} ${Date.now() - t0}ms`); return out; }
+      lastErr = new Error(`${name}: resposta vazia`);
+      console.warn(`[llm] ${name} resposta vazia ${Date.now() - t0}ms; tentando próximo`);
+    } catch (e) { lastErr = e; console.warn(`[llm] ${name} falhou (${e.message}) ${Date.now() - t0}ms; tentando próximo`); }
+  }
+  throw lastErr || new Error('nenhum provider na cadeia respondeu');
+}
+module.exports = { generate, cfg: providerCfg, chainFor };

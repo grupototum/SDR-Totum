@@ -1,0 +1,74 @@
+{
+  "id": "sdr-odonto",
+  "name": "SDR Clinicas Odontologicas",
+  "entryNode": "start",
+  "nodes": {
+    "start": {
+      "type": "message",
+      "text": "Oi {{lead_name}}! Tudo bem? Aqui e da Totum. A gente ajuda clinicas odontologicas a atrair e qualificar pacientes pelo WhatsApp. Posso te mostrar em 2 minutos?",
+      "next": "wait_reply_1"
+    },
+    "wait_reply_1": {
+      "type": "wait_input",
+      "transitions": [
+        { "pattern": "sim|claro|pode|quero|interesse|ok|yes", "next": "qualify_1" },
+        { "pattern": "parar|remover|nao quero|não quero|nao me chama|não me chama|pare|stop", "next": "optout" },
+        { "default": true, "next": "followup_1" }
+      ]
+    },
+    "followup_1": {
+      "type": "message",
+      "text": "Sem problema. A ideia e simples: transformar conversas do WhatsApp em pacientes qualificados, sem depender de atendimento manual o dia inteiro. Faz sentido pra {{clinic_name}}?",
+      "next": "wait_reply_1"
+    },
+    "qualify_1": {
+      "type": "message",
+      "text": "Boa. Pra eu entender o cenario: quantos pacientes novos voces costumam atender por mes na {{clinic_name}}?",
+      "next": "wait_reply_2"
+    },
+    "wait_reply_2": {
+      "type": "wait_input",
+      "scoreHint": 0.3,
+      "transitions": [
+        { "pattern": "\\d+", "next": "pitch_1" },
+        { "default": true, "next": "pitch_1" }
+      ]
+    },
+    "pitch_1": {
+      "type": "message",
+      "text": "Entendi. A Totum monta um fluxo que filtra interessados, identifica urgencia e entrega oportunidades melhores pro time comercial. Quer que eu agende uma demo rapida esta semana?",
+      "next": "wait_reply_3"
+    },
+    "wait_reply_3": {
+      "type": "wait_input",
+      "scoreHint": 0.4,
+      "transitions": [
+        { "pattern": "sim|pode|quero|agenda|segunda|terca|terça|quarta|quinta|sexta", "next": "schedule_1" },
+        { "pattern": "parar|remover|nao quero|não quero|pare|stop", "next": "optout" },
+        { "default": true, "next": "handoff" }
+      ]
+    },
+    "schedule_1": {
+      "type": "message",
+      "text": "Perfeito. Vou te mandar para um especialista da Totum alinhar o melhor horario.",
+      "next": "done",
+      "temperature": "hot"
+    },
+    "handoff": {
+      "type": "message",
+      "text": "Justo. Vou deixar um especialista da Totum seguir daqui e te responder com mais contexto.",
+      "next": "done",
+      "temperature": "warm"
+    },
+    "optout": {
+      "type": "message",
+      "text": "Combinado. Nao vou te chamar novamente por aqui.",
+      "next": "done",
+      "temperature": "cold",
+      "optOut": true
+    },
+    "done": {
+      "type": "end"
+    }
+  }
+}

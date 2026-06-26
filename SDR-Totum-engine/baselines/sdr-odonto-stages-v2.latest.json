@@ -1,0 +1,71 @@
+{
+  "flowId": "sdr-odonto-stages-v2",
+  "ts": "2026-06-22T18:19:55.209Z",
+  "runs": 8,
+  "health": 0,
+  "personas": [
+    {
+      "id": "ideal",
+      "label": "Lead ideal (decisor cooperativo, fornece cada sinal)",
+      "runs": 8,
+      "stage_modal": "agendamento",
+      "stage_dist": {
+        "agendamento": 7,
+        "encerrado": 1
+      },
+      "booked_rate": 0,
+      "bookedClean_rate": 0,
+      "violations": []
+    },
+    {
+      "id": "apressado",
+      "label": "Decisor cooperativo mas impaciente",
+      "runs": 8,
+      "stage_modal": "encerrado",
+      "stage_dist": {
+        "encerrado": 8
+      },
+      "booked_rate": 0,
+      "bookedClean_rate": 0,
+      "violations": []
+    },
+    {
+      "id": "cetico_preco",
+      "label": "Decisor que objeta preco 2x, depois coopera",
+      "runs": 8,
+      "stage_modal": "agendamento",
+      "stage_dist": {
+        "agendamento": 7,
+        "implicacao": 1
+      },
+      "booked_rate": 0,
+      "bookedClean_rate": 0,
+      "violations": []
+    },
+    {
+      "id": "enrolao",
+      "label": "Vago/nao-comprometido (NAO crava os sinais — deve travar)",
+      "runs": 8,
+      "stage_modal": "implicacao",
+      "stage_dist": {
+        "implicacao": 6,
+        "abertura": 2
+      },
+      "booked_rate": 0,
+      "bookedClean_rate": 0,
+      "violations": []
+    },
+    {
+      "id": "lead_frio",
+      "label": "Confirma decisor mas nega a dor (drop-off realista)",
+      "runs": 8,
+      "stage_modal": "implicacao",
+      "stage_dist": {
+        "implicacao": 8
+      },
+      "booked_rate": 0,
+      "bookedClean_rate": 0,
+      "violations": []
+    }
+  ]
+}

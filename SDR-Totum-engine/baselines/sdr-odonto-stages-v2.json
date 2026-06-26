@@ -1,0 +1,77 @@
+{
+  "flowId": "sdr-odonto-stages-v2",
+  "ts": "2026-06-22T15:44:25.125Z",
+  "health": 0,
+  "personas": [
+    {
+      "id": "lead_frio",
+      "label": "Lead frio (desconfiado, curto)",
+      "stage_inicial": "abertura",
+      "stage_final": "abertura",
+      "temperatura": "morno",
+      "score": 1,
+      "objecao_count": 1,
+      "send_preview": false,
+      "booked": false,
+      "turns": 4,
+      "guardrail_violado": false,
+      "violations": []
+    },
+    {
+      "id": "cetico_preco",
+      "label": "Cetico de preco (objecao recorrente)",
+      "stage_inicial": "abertura",
+      "stage_final": "encerrado",
+      "temperatura": "frio",
+      "score": 1,
+      "objecao_count": 3,
+      "send_preview": false,
+      "booked": false,
+      "turns": 3,
+      "guardrail_violado": false,
+      "violations": []
+    },
+    {
+      "id": "apressado",
+      "label": "Apressado (quer ir direto ao ponto)",
+      "stage_inicial": "abertura",
+      "stage_final": "abertura",
+      "temperatura": "quente",
+      "score": 1,
+      "objecao_count": 0,
+      "send_preview": false,
+      "booked": false,
+      "turns": 4,
+      "guardrail_violado": false,
+      "violations": []
+    },
+    {
+      "id": "enrolao",
+      "label": "Enrolao (vago, nao se compromete)",
+      "stage_inicial": "abertura",
+      "stage_final": "abertura",
+      "temperatura": "frio",
+      "score": 1,
+      "objecao_count": 2,
+      "send_preview": false,
+      "booked": false,
+      "turns": 4,
+      "guardrail_violado": false,
+      "violations": []
+    },
+    {
+      "id": "ideal",
+      "label": "Lead ideal (caminho feliz ate o agendamento)",
+      "stage_inicial": "abertura",
+      "stage_final": "implicacao",
+      "temperatura": "quente",
+      "score": 1,
+      "objecao_count": 0,
+      "send_preview": false,
+      "booked": false,
+      "turns": 7,
+      "guardrail_violado": false,
+      "violations": []
+    }
+  ]
+}
