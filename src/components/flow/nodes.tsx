@@ -203,6 +203,59 @@ export function LogNode(p: NodeProps<FlowNode>) {
   );
 }
 
+export function JumpNode(p: NodeProps<FlowNode>) {
+  return (
+    <NodeShell node={p} outHandle={p.data.jumpReturn ? false : true}>
+      <div className="space-y-1 text-xs">
+        {p.data.jumpReturn ? (
+          <div className="text-[#f59e0b]">↩ volta ao ponto de retorno</div>
+        ) : (
+          <div>
+            <span className="text-[color:var(--color-text-muted)]">ir para:</span>{" "}
+            <span className="text-white">{p.data.jumpTargetId || "—"}</span>
+          </div>
+        )}
+      </div>
+    </NodeShell>
+  );
+}
+
+export function SubflowNode(p: NodeProps<FlowNode>) {
+  return (
+    <NodeShell node={p}>
+      <div className="space-y-1 text-xs">
+        <span className="text-[color:var(--color-text-muted)]">flow:</span>{" "}
+        <span className="text-white">{p.data.subflowId || "selecione um sub-flow"}</span>
+      </div>
+    </NodeShell>
+  );
+}
+
+export function ValidationNode(p: NodeProps<FlowNode>) {
+  return (
+    <NodeShell
+      node={p}
+      handles={
+        <>
+          <Handle type="target" position={Position.Left} />
+          <Handle id="ok" type="source" position={Position.Right} style={{ top: "35%" }} />
+          <Handle id="fail" type="source" position={Position.Right} style={{ top: "75%" }} />
+        </>
+      }
+    >
+      <div className="space-y-2 text-xs">
+        <div className="truncate font-mono text-[10px] text-[color:var(--color-text-body)]">
+          /{p.data.validationRegex || "regex"}/
+        </div>
+        <div className="flex flex-col gap-1 text-[10px]">
+          <span style={{ color: "#35a670" }}>→ válido</span>
+          <span style={{ color: "#d91616" }}>→ inválido</span>
+        </div>
+      </div>
+    </NodeShell>
+  );
+}
+
 export const nodeTypeComponents = {
   start: StartNode,
   send: SendMessageNode,
@@ -213,4 +266,7 @@ export const nodeTypeComponents = {
   action: ActionNode,
   end: EndNode,
   log: LogNode,
+  jump: JumpNode,
+  subflow: SubflowNode,
+  validation: ValidationNode,
 };

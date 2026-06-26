@@ -26,6 +26,9 @@ const SPEC_TO_STORE: Record<string, NodeKind> = {
   end: "end",
   log: "log",
   start: "start",
+  jump: "jump",
+  subflow: "subflow",
+  validation: "validation",
 };
 
 const STORE_TO_SPEC: Record<NodeKind, string> = {
@@ -38,7 +41,26 @@ const STORE_TO_SPEC: Record<NodeKind, string> = {
   end: "end",
   log: "log",
   start: "start",
+  jump: "jump",
+  subflow: "subflow",
+  validation: "validation",
 };
+
+/** Rótulo derivado de uma transição a partir do handle estrutural (display-only). */
+function edgeLabelFor(handle?: string): { label: string; condition: string } {
+  switch (handle) {
+    case "reply":
+      return { label: "sim", condition: "sim" };
+    case "timeout":
+      return { label: "sem resposta", condition: "timeout" };
+    case "fail":
+      return { label: "falha", condition: "nao" };
+    case "default":
+      return { label: "default", condition: "sempre" };
+    default:
+      return { label: "", condition: "sempre" };
+  }
+}
 
 // ─── Envelope type ───────────────────────────────────────────────────────────
 
@@ -250,12 +272,22 @@ export function importFlow(jsonStr: string): ImportResult {
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
 
-  function addEdge(source: string, target: string, sourceHandle?: string) {
+  function addEdge(source: string, target: string, sourceHandle?: string, labelOverride?: string) {
     if (!target) return;
     const id = `e-${source}-${target}${sourceHandle ? `-${sourceHandle}` : ""}`;
     if (edgeSet.has(id)) return;
     edgeSet.add(id);
-    edges.push({ id, source, target, sourceHandle: sourceHandle ?? undefined, animated: true });
+    const derived = edgeLabelFor(sourceHandle);
+    const label = labelOverride ?? derived.label;
+    edges.push({
+      id,
+      source,
+      target,
+      sourceHandle: sourceHandle ?? undefined,
+      animated: true,
+      label: label || undefined,
+      data: { condition: derived.condition, label },
+    });
   }
 
   for (const specNode of specNodes) {
@@ -281,6 +313,12 @@ export function importFlow(jsonStr: string): ImportResult {
       } else {
         data.variations = [];
       }
+      const media = specNode.media as Record<string, unknown> | undefined;
+      if (media) {
+        data.mediaType = (media.type as NodeData["mediaType"]) ?? "none";
+        data.mediaUrl = (media.url as string) ?? "";
+      }
+      if (specNode.split_messages) data.splitMessages = true;
     }
 
     if (storeType === "ai") {
@@ -288,12 +326,19 @@ export function importFlow(jsonStr: string): ImportResult {
       data.mode = (specNode.mode as "strict" | "flexible") ?? "strict";
       data.instruction = (specNode.instruction as string) ?? "";
       data.limits = (specNode.limits as string) ?? "";
+      if (specNode.classify) data.aiClassify = true;
     }
 
     if (storeType === "wait") {
       const to = parseTimeout(specNode.timeout as string | number | undefined);
       data.timeoutValue = to.value;
       data.timeoutUnit = to.unit;
+      if (specNode.typing) data.waitTyping = true;
+      if (specNode.wait_until) {
+        data.waitMode = "until";
+        data.waitUntil = specNode.wait_until as string;
+      }
+      if (specNode.respect_quiet_hours) data.respectQuietHours = true;
     }
 
     if (storeType === "conditional") {
@@ -310,6 +355,10 @@ export function importFlow(jsonStr: string): ImportResult {
       const keys = Object.keys(setObj);
       data.varKey = keys[0] ?? "";
       data.varValue = keys[0] ? String(setObj[keys[0]]) : "";
+      if (specNode.capture) {
+        data.capture = specNode.capture as NodeData["capture"];
+        if (specNode.capture_entity) data.captureEntity = specNode.capture_entity as string;
+      }
     }
 
     if (storeType === "action") {
@@ -317,9 +366,32 @@ export function importFlow(jsonStr: string): ImportResult {
         site_audit: "audit_site",
         calendar: "calendar",
         webhook: "webhook",
+        send_preview: "send_preview",
+        book: "book",
+        handoff: "handoff",
+        crm_tag: "crm_tag",
+        crm_status: "crm_status",
       };
       data.actionType = (actionMap[specNode.action as string] ??
         "audit_site") as NodeData["actionType"];
+      if (specNode.handoff_target) data.handoffTarget = specNode.handoff_target as string;
+      if (specNode.crm_tag) data.crmTag = specNode.crm_tag as string;
+      if (specNode.crm_status) data.crmStatus = specNode.crm_status as string;
+    }
+
+    if (storeType === "jump") {
+      const target = (specNode.target as string) ?? "";
+      data.jumpReturn = target.includes("PONTO_RETORNO");
+      data.jumpTargetId = data.jumpReturn ? "" : target;
+    }
+
+    if (storeType === "subflow") {
+      data.subflowId = (specNode.subflow as string) ?? "";
+    }
+
+    if (storeType === "validation") {
+      data.validationRegex = (specNode.regex as string) ?? "";
+      data.validationVar = (specNode.var as string) ?? "";
     }
 
     if (storeType === "end") {
@@ -342,6 +414,9 @@ export function importFlow(jsonStr: string): ImportResult {
 
     // --- Create edges from routing fields ---
     if (specNode.next) addEdge(id, specNode.next as string);
+    if (specNode.target && !String(specNode.target).includes("PONTO_RETORNO")) {
+      addEdge(id, specNode.target as string);
+    }
     if (specNode.on_reply) addEdge(id, specNode.on_reply as string, "reply");
     if (specNode.on_timeout) addEdge(id, specNode.on_timeout as string, "timeout");
     if (specNode.on_fail) addEdge(id, specNode.on_fail as string, "fail");
@@ -349,7 +424,7 @@ export function importFlow(jsonStr: string): ImportResult {
     if (Array.isArray(specNode.branches)) {
       const branches = specNode.branches as Record<string, unknown>[];
       branches.forEach((b, i) => {
-        if (b.goto) addEdge(id, b.goto as string, `b${i}`);
+        if (b.goto) addEdge(id, b.goto as string, `b${i}`, (b.when as string) ?? undefined);
       });
     }
     if (specNode.default) addEdge(id, specNode.default as string, "default");
@@ -420,6 +495,12 @@ export function exportFlow(params: {
         out.variants = vars.map((v) => ({ id: v.id, when: v.when, text: v.text }));
         delete out.text;
       }
+      // Mídia (áudio .ogg / imagem / PDF) — só persiste se configurada.
+      if (node.data.mediaType && node.data.mediaType !== "none") {
+        out.media = { type: node.data.mediaType, url: node.data.mediaUrl ?? "" };
+      } else delete out.media;
+      if (node.data.splitMessages) out.split_messages = true;
+      else delete out.split_messages;
       // Routing
       const next = getNext(node.id) ?? (raw.next as string | undefined);
       if (next) out.next = next;
@@ -432,6 +513,8 @@ export function exportFlow(params: {
       out.proactive = true;
       if (node.data.instruction) out.instruction = node.data.instruction;
       if (node.data.limits) out.limits = node.data.limits;
+      if (node.data.aiClassify) out.classify = true;
+      else delete out.classify;
       const next = getNext(node.id) ?? (raw.next as string | undefined);
       if (next) out.next = next;
       else delete out.next;
@@ -448,6 +531,13 @@ export function exportFlow(params: {
       else delete out.on_reply;
       if (onTimeout) out.on_timeout = onTimeout;
       else delete out.on_timeout;
+      if (node.data.waitTyping) out.typing = true;
+      else delete out.typing;
+      if (node.data.waitMode === "until" && node.data.waitUntil) {
+        out.wait_until = node.data.waitUntil;
+      } else delete out.wait_until;
+      if (node.data.respectQuietHours) out.respect_quiet_hours = true;
+      else delete out.respect_quiet_hours;
       delete out.next;
     }
 
@@ -483,6 +573,15 @@ export function exportFlow(params: {
       const key = node.data.varKey ?? "";
       const val = node.data.varValue ?? "";
       if (key) out.set = { [key]: val };
+      if (node.data.capture && node.data.capture !== "none") {
+        out.capture = node.data.capture;
+        if (node.data.capture === "entity" && node.data.captureEntity) {
+          out.capture_entity = node.data.captureEntity;
+        } else delete out.capture_entity;
+      } else {
+        delete out.capture;
+        delete out.capture_entity;
+      }
       const next = getNext(node.id) ?? (raw.next as string | undefined);
       if (next) out.next = next;
       else delete out.next;
@@ -493,11 +592,25 @@ export function exportFlow(params: {
         audit_site: "site_audit",
         calendar: "calendar",
         webhook: "webhook",
+        send_preview: "send_preview",
+        book: "book",
+        handoff: "handoff",
+        crm_tag: "crm_tag",
+        crm_status: "crm_status",
       };
       // Prefer raw.action to preserve non-standard action types (e.g. enviar_previa)
       const rawAction = raw.action as string | undefined;
       out.action =
         rawAction ?? actionMap[node.data.actionType ?? "audit_site"] ?? node.data.actionType;
+      // Parâmetros específicos (só persistem se configurados).
+      if (node.data.actionType === "handoff" && node.data.handoffTarget) {
+        out.handoff_target = node.data.handoffTarget;
+      } else delete out.handoff_target;
+      if (node.data.actionType === "crm_tag" && node.data.crmTag) out.crm_tag = node.data.crmTag;
+      else delete out.crm_tag;
+      if (node.data.actionType === "crm_status" && node.data.crmStatus) {
+        out.crm_status = node.data.crmStatus;
+      } else delete out.crm_status;
       const next = getNext(node.id) ?? (raw.next as string | undefined);
       if (next) out.next = next;
       else delete out.next;
@@ -515,6 +628,32 @@ export function exportFlow(params: {
       const setObj = (raw.set as Record<string, unknown>) ?? {};
       out.set = { ...setObj, resultado: resultMap[node.data.result ?? "meeting"] };
       if (node.data.note) out.note = node.data.note;
+    }
+
+    if (node.type === "jump") {
+      // jump/go-to: volta ao ponto de retorno pós-objeção, ou a um nó fixo.
+      out.target = node.data.jumpReturn
+        ? "{PONTO_RETORNO}"
+        : (getNext(node.id) ?? node.data.jumpTargetId ?? (raw.target as string) ?? "");
+      delete out.next;
+    }
+
+    if (node.type === "subflow") {
+      out.subflow = node.data.subflowId ?? (raw.subflow as string) ?? "";
+      const next = getNext(node.id) ?? (raw.next as string | undefined);
+      if (next) out.next = next;
+      else delete out.next;
+    }
+
+    if (node.type === "validation") {
+      if (node.data.validationRegex) out.regex = node.data.validationRegex;
+      if (node.data.validationVar) out.var = node.data.validationVar;
+      const next = getNext(node.id) ?? (raw.next as string | undefined);
+      if (next) out.next = next;
+      else delete out.next;
+      const fail = getHandleTarget(node.id, "fail") ?? (raw.on_fail as string | undefined);
+      if (fail) out.on_fail = fail;
+      else delete out.on_fail;
     }
 
     return out;

@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useFlowStore } from "@/stores/flow-store";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
-import { Search, Workflow, Plus } from "lucide-react";
+import { Search, Workflow, Plus, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export function BuilderSidebar() {
@@ -12,6 +12,7 @@ export function BuilderSidebar() {
   const loadFlow = useFlowStore((s) => s.loadFlow);
   const resetFlow = useFlowStore((s) => s.resetFlow);
   const currentFlowId = useFlowStore((s) => s.currentFlowId);
+  const qc = useQueryClient();
 
   const {
     data: flows = [],
@@ -21,6 +22,20 @@ export function BuilderSidebar() {
   } = useQuery({
     queryKey: ["flows"],
     queryFn: () => api.listFlows(),
+  });
+
+  const duplicateMut = useMutation({
+    mutationFn: async (id: string) => {
+      const src = await api.getFlow(id);
+      const copy = { ...src, name: `${String(src.name ?? id)} (cópia)`, active: false };
+      const { id: newId } = await api.createFlow(copy);
+      return newId;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["flows"] });
+      toast.success("Flow duplicado");
+    },
+    onError: (e) => toast.error(`Erro ao duplicar: ${(e as Error).message}`),
   });
 
   // Erro = toast, nunca tela branca (a aside renderiza estado vazio).
@@ -76,22 +91,32 @@ export function BuilderSidebar() {
           </span>
         )}
         {flows.map((f) => (
-          <button
+          <div
             key={f.id}
-            onClick={() => openFlow(f)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors"
-            style={{
-              background: currentFlowId === f.id ? "#272333" : "transparent",
-              color: currentFlowId === f.id ? "#fff" : "#d1cece",
-            }}
-            title={f.active ? "Publicado (roteiro do motor)" : "Rascunho"}
+            className="group flex items-center gap-1 rounded-lg pr-1 transition-colors"
+            style={{ background: currentFlowId === f.id ? "#272333" : "transparent" }}
           >
-            <span
-              className="size-1.5 shrink-0 rounded-full"
-              style={{ background: f.active ? "#35a670" : "#3a3447" }}
-            />
-            <span className="truncate">{f.name}</span>
-          </button>
+            <button
+              onClick={() => openFlow(f)}
+              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm"
+              style={{ color: currentFlowId === f.id ? "#fff" : "#d1cece" }}
+              title={f.active ? "Publicado (roteiro do motor)" : "Rascunho"}
+            >
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ background: f.active ? "#35a670" : "#3a3447" }}
+              />
+              <span className="truncate">{f.name}</span>
+            </button>
+            <button
+              onClick={() => duplicateMut.mutate(f.id)}
+              disabled={duplicateMut.isPending}
+              className="shrink-0 rounded-md p-1.5 text-[color:var(--color-text-muted)] opacity-0 transition-opacity hover:bg-[#1f192a] hover:text-white group-hover:opacity-100 disabled:opacity-50"
+              title="Duplicar flow"
+            >
+              <Copy className="size-3.5" />
+            </button>
+          </div>
         ))}
       </Section>
 

@@ -20,7 +20,10 @@ export type NodeKind =
   | "variable"
   | "action"
   | "end"
-  | "log";
+  | "log"
+  | "jump"
+  | "subflow"
+  | "validation";
 
 export interface BranchOption {
   id: string;
@@ -33,6 +36,27 @@ export interface MessageVariation {
   when: string;
 }
 
+/** Condição que governa o "advance" de uma transição (aresta). */
+export type EdgeConditionKind = "sim" | "nao" | "gatilho" | "timeout" | "objecao" | "sempre";
+
+export interface EdgeData extends Record<string, unknown> {
+  /** Tipo da condição que dispara esta transição. */
+  condition?: EdgeConditionKind;
+  /** Rótulo visível no canvas. */
+  label?: string;
+}
+
+/** Variável declarada do flow (painel dedicado, separado do start). */
+export type FlowVarScope = "required" | "runtime";
+export interface FlowVariable {
+  id: string;
+  key: string;
+  scope: FlowVarScope;
+  /** captura tipada opcional (telefone/email/data/entidade-LLM). */
+  capture?: "none" | "phone" | "email" | "date" | "entity";
+  note?: string;
+}
+
 export interface NodeData extends Record<string, unknown> {
   label?: string;
   _raw?: Record<string, unknown>;
@@ -43,26 +67,64 @@ export interface NodeData extends Record<string, unknown> {
   requiredVars?: string[];
   // send
   variations?: MessageVariation[];
+  /** mídia anexada: áudio .ogg, imagem, PDF/documento. */
+  mediaType?: "none" | "audio" | "image" | "pdf";
+  mediaUrl?: string;
+  /** divide a fala em 1-3 mensagens com "digitando…" entre elas. */
+  splitMessages?: boolean;
   // ai
   model?: string;
   mode?: "strict" | "flexible";
   instruction?: string;
   limits?: string;
   fallbackModel?: string;
+  /** além de gerar resposta, classifica intenção/objeção e ramifica. */
+  aiClassify?: boolean;
   // wait
   timeoutValue?: number;
   timeoutUnit?: "minutes" | "hours" | "days";
   onTimeout?: "followup" | "end" | "node";
+  /** delay com indicador "digitando" durante a espera. */
+  waitTyping?: boolean;
+  /** modo da espera: aguardar resposta, ou até um horário/data (wait-until). */
+  waitMode?: "reply" | "until";
+  waitUntil?: string;
+  /** comportamento fora da janela de envio. */
+  respectQuietHours?: boolean;
   // conditional
   classifierModel?: string;
   branches?: BranchOption[];
   // variable
   varKey?: string;
   varValue?: string;
+  /** captura tipada: telefone/email/data, ou entidade via LLM. */
+  capture?: "none" | "phone" | "email" | "date" | "entity";
+  captureEntity?: string;
   // action
-  actionType?: "audit_site" | "calendar" | "webhook";
+  actionType?:
+    | "audit_site"
+    | "calendar"
+    | "webhook"
+    | "send_preview"
+    | "book"
+    | "handoff"
+    | "crm_tag"
+    | "crm_status";
   actionUrl?: string;
   calendarLink?: string;
+  /** handoff: para quem notificar; crm: tag/status a aplicar. */
+  handoffTarget?: string;
+  crmTag?: string;
+  crmStatus?: string;
+  // jump / go-to
+  jumpTargetId?: string;
+  /** restaura o ponto de retorno pós-objeção em vez de um nó fixo. */
+  jumpReturn?: boolean;
+  // subflow
+  subflowId?: string;
+  // validation
+  validationRegex?: string;
+  validationVar?: string;
   // end
   result?: "meeting" | "rejected" | "followup";
   note?: string;
@@ -101,6 +163,12 @@ interface FlowStore {
   nodes: FlowNode[];
   edges: Edge[];
   selectedNodeId: string | null;
+  /** aresta selecionada (para editar condição da transição). */
+  selectedEdgeId: string | null;
+  /** id do nó marcado como entrada do flow. */
+  entryNodeId: string | null;
+  /** variáveis declaradas do flow (painel dedicado). */
+  variables: FlowVariable[];
   humanization: HumanizationConfig;
   interrupts: InterruptConfig[];
   envelope: FlowEnvelope;
@@ -115,8 +183,15 @@ interface FlowStore {
   onConnect: (conn: Connection) => void;
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
+  duplicateNode: (id: string) => void;
   deleteNode: (id: string) => void;
   setSelected: (id: string | null) => void;
+  setSelectedEdge: (id: string | null) => void;
+  updateEdgeData: (id: string, patch: Partial<EdgeData>) => void;
+  setEntryNode: (id: string) => void;
+  addVariable: () => void;
+  updateVariable: (id: string, patch: Partial<FlowVariable>) => void;
+  removeVariable: (id: string) => void;
   updateHumanization: (patch: Partial<HumanizationConfig>) => void;
   addInterrupt: () => void;
   updateInterrupt: (id: string, patch: Partial<InterruptConfig>) => void;
@@ -164,6 +239,12 @@ const defaultDataFor = (kind: NodeKind): NodeData => {
       return { result: "meeting", note: "" };
     case "log":
       return { sheetsEnabled: false, spreadsheetId: "", sheetTab: "Leads" };
+    case "jump":
+      return { jumpTargetId: "", jumpReturn: true };
+    case "subflow":
+      return { subflowId: "" };
+    case "validation":
+      return { validationRegex: "", validationVar: "" };
   }
 };
 
@@ -192,6 +273,40 @@ const defaultInterrupts: InterruptConfig[] = [
   },
 ];
 
+/** Deriva as variáveis declaradas a partir do envelope (required + runtime). */
+function variablesFromEnvelope(env: FlowEnvelope): FlowVariable[] {
+  const out: FlowVariable[] = [];
+  for (const k of env.required_variables ?? []) out.push({ id: uid(), key: k, scope: "required" });
+  for (const k of env.runtime_variables ?? []) out.push({ id: uid(), key: k, scope: "runtime" });
+  return out;
+}
+
+/** Rótulo padrão de uma transição quando não há condição explícita. */
+const CONDITION_LABEL: Record<EdgeConditionKind, string> = {
+  sim: "sim",
+  nao: "não",
+  gatilho: "gatilho",
+  timeout: "sem resposta",
+  objecao: "objeção",
+  sempre: "",
+};
+
+/** Deriva condição+label de uma aresta a partir do handle estrutural (lossless). */
+function deriveEdgeCondition(handle?: string | null): EdgeData {
+  switch (handle) {
+    case "reply":
+      return { condition: "sim", label: CONDITION_LABEL.sim };
+    case "timeout":
+      return { condition: "timeout", label: CONDITION_LABEL.timeout };
+    case "fail":
+      return { condition: "nao", label: "falha" };
+    case "default":
+      return { condition: "sempre", label: "default" };
+    default:
+      return { condition: "sempre", label: "" };
+  }
+}
+
 export const useFlowStore = create<FlowStore>((set, get) => ({
   flowName: "Flow sem título",
   nodes: [
@@ -204,6 +319,9 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   ],
   edges: [],
   selectedNodeId: null,
+  selectedEdgeId: null,
+  entryNodeId: "start-1",
+  variables: [],
   humanization: defaultHumanization,
   interrupts: defaultInterrupts,
   envelope: defaultEnvelope,
@@ -214,7 +332,16 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   onNodesChange: (changes) =>
     set((s) => ({ nodes: applyNodeChanges(changes, s.nodes) as FlowNode[] })),
   onEdgesChange: (changes) => set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
-  onConnect: (conn) => set((s) => ({ edges: addEdge({ ...conn, animated: true }, s.edges) })),
+  onConnect: (conn) =>
+    set((s) => {
+      const cond = deriveEdgeCondition(conn.sourceHandle);
+      return {
+        edges: addEdge(
+          { ...conn, animated: true, label: cond.label || undefined, data: cond },
+          s.edges,
+        ),
+      };
+    }),
 
   addNode: (kind, position) => {
     const id = `${kind}-${uid()}`;
@@ -227,14 +354,49 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)),
     })),
 
+  duplicateNode: (id) =>
+    set((s) => {
+      const src = s.nodes.find((n) => n.id === id);
+      if (!src) return {};
+      const newId = `${src.type}-${uid()}`;
+      const clone: FlowNode = {
+        ...src,
+        id: newId,
+        position: { x: src.position.x + 40, y: src.position.y + 40 },
+        data: { ...structuredClone(src.data), _raw: undefined },
+        selected: false,
+      };
+      return { nodes: [...s.nodes, clone], selectedNodeId: newId, selectedEdgeId: null };
+    }),
+
   deleteNode: (id) =>
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
       selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      entryNodeId: s.entryNodeId === id ? null : s.entryNodeId,
     })),
 
-  setSelected: (id) => set({ selectedNodeId: id }),
+  setSelected: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
+  setSelectedEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
+  updateEdgeData: (id, patch) =>
+    set((s) => ({
+      edges: s.edges.map((e) => {
+        if (e.id !== id) return e;
+        const data = { ...(e.data as EdgeData), ...patch } as EdgeData;
+        return { ...e, data, label: data.label || undefined };
+      }),
+    })),
+  setEntryNode: (id) => set({ entryNodeId: id }),
+  addVariable: () =>
+    set((s) => ({
+      variables: [...s.variables, { id: uid(), key: "nova_variavel", scope: "runtime" }],
+    })),
+  updateVariable: (id, patch) =>
+    set((s) => ({
+      variables: s.variables.map((v) => (v.id === id ? { ...v, ...patch } : v)),
+    })),
+  removeVariable: (id) => set((s) => ({ variables: s.variables.filter((v) => v.id !== id) })),
 
   updateHumanization: (patch) => set((s) => ({ humanization: { ...s.humanization, ...patch } })),
 
@@ -267,7 +429,10 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         envelope: result.envelope,
         humanization: { ...defaultHumanization, ...result.humanization },
         interrupts: result.interrupts.length > 0 ? result.interrupts : defaultInterrupts,
+        variables: variablesFromEnvelope(result.envelope),
+        entryNodeId: result.envelope.entry ?? result.nodes[0]?.id ?? null,
         selectedNodeId: null,
+        selectedEdgeId: null,
         flowName: name,
         currentFlowId: meta?.id ?? null,
         published: meta?.active ?? false,
@@ -279,10 +444,19 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
 
   exportToJSON: () => {
     const s = get();
+    // Variáveis do painel dedicado têm precedência sobre o envelope antigo.
+    const required = s.variables.filter((v) => v.scope === "required").map((v) => v.key);
+    const runtime = s.variables.filter((v) => v.scope === "runtime").map((v) => v.key);
+    const envelope: FlowEnvelope = {
+      ...s.envelope,
+      entry: s.entryNodeId ?? s.envelope.entry ?? s.nodes[0]?.id ?? "",
+      required_variables: required.length ? required : s.envelope.required_variables,
+      runtime_variables: runtime.length ? runtime : s.envelope.runtime_variables,
+    };
     return exportFlow({
       nodes: s.nodes,
       edges: s.edges,
-      envelope: s.envelope,
+      envelope,
       humanization: s.humanization,
       interrupts: s.interrupts,
     });
@@ -305,6 +479,9 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       ],
       edges: [],
       selectedNodeId: null,
+      selectedEdgeId: null,
+      entryNodeId: "start-1",
+      variables: [],
       humanization: defaultHumanization,
       interrupts: defaultInterrupts,
       envelope: defaultEnvelope,
