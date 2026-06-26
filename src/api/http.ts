@@ -123,4 +123,11 @@ export const httpApi: ApiClient = {
     }),
   // Report de GO — via proxy (não via BASE). Métrica oficial de decisão.
   getSimReport: () => call<SimReport>("/api/engine/api/sim/report"),
+
+  // Script↔Flow — via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
+  importScript: (scriptMd) =>
+    call<{ flow: Record<string, unknown> }>("/api/engine/api/script/import", {
+      method: "POST",
+      body: JSON.stringify({ script_md: scriptMd }),
+    }),
 };

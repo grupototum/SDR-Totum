@@ -521,6 +521,10 @@ export const mockApi: ApiClient = {
     return mockSimTurn(payload);
   },
 
+  async importScript() {
+    throw new Error("importScript disponível apenas com engine real — configure VITE_API_BASE_URL");
+  },
+
   async getSimReport() {
     await delay();
     // Sem engine real: computa a MESMA métrica localmente e marca mock=true

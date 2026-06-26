@@ -242,4 +242,10 @@ export interface ApiClient {
   simTurn(payload: SimTurnRequest): Promise<SimTurnResponse>;
   /** Report de saúde da bateria (GET /api/sim/report) — fonte da métrica de GO. */
   getSimReport(): Promise<SimReport>;
+
+  /**
+   * Traduz um roteiro Markdown para flow node-graph (POST /api/script/import via proxy).
+   * A SDR_API_KEY é injetada no servidor — nunca exposta ao bundle.
+   */
+  importScript(scriptMd: string): Promise<{ flow: Record<string, unknown> }>;
 }

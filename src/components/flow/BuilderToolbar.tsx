@@ -17,9 +17,6 @@ import { toast } from "sonner";
 import { ActivateConfirmDialog, type HealthCheck } from "./ActivateConfirmDialog";
 import { InlineTestChat } from "./InlineTestChat";
 
-/** Endpoint da skill Script↔Flow (a ser provido pelo VPS), configurável por env. */
-const SCRIPT_IMPORT_URL = import.meta.env.VITE_SCRIPT_IMPORT_URL as string | undefined;
-
 export function BuilderToolbar() {
   const flowName = useFlowStore((s) => s.flowName);
   const setFlowName = useFlowStore((s) => s.setFlowName);
@@ -108,31 +105,17 @@ export function BuilderToolbar() {
     e.target.value = "";
   }
 
-  // Importa um roteiro em Markdown chamando a skill Script↔Flow (endpoint do VPS).
+  // Importa um roteiro em Markdown via proxy same-origin → /api/engine/api/script/import.
+  // A SDR_API_KEY é injetada no servidor (server.ts) — nunca exposta ao bundle.
   async function handleImportMd(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!SCRIPT_IMPORT_URL) {
-      toast.error(
-        "Importação de Script (MD) não configurada. Defina VITE_SCRIPT_IMPORT_URL para o endpoint da skill.",
-      );
-      return;
-    }
     setImportingMd(true);
     try {
       const markdown = await file.text();
-      const resp = await fetch(SCRIPT_IMPORT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markdown, filename: file.name }),
-      });
-      if (!resp.ok) {
-        const detail = await resp.text().catch(() => "");
-        throw new Error(`HTTP ${resp.status}${detail ? ` — ${detail.slice(0, 200)}` : ""}`);
-      }
-      const flowJson = await resp.text();
-      loadFlow(flowJson);
+      const result = await api.importScript(markdown);
+      loadFlow(JSON.stringify(result.flow));
       toast.success("Script (MD) importado como flow!");
     } catch (err) {
       toast.error(`Falha ao importar Script (MD): ${(err as Error).message}`);

@@ -9,7 +9,7 @@ import {
   type Node,
   type NodeChange,
 } from "@xyflow/react";
-import { importFlow, exportFlow, type FlowEnvelope } from "@/lib/flow-serializer";
+import { importFlow, exportFlow, EDGE_LABEL_STYLE, type FlowEnvelope } from "@/lib/flow-serializer";
 
 export type NodeKind =
   | "start"
@@ -337,7 +337,13 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const cond = deriveEdgeCondition(conn.sourceHandle);
       return {
         edges: addEdge(
-          { ...conn, animated: true, label: cond.label || undefined, data: cond },
+          {
+            ...conn,
+            animated: true,
+            label: cond.label || undefined,
+            data: cond,
+            ...(cond.label ? EDGE_LABEL_STYLE : {}),
+          },
           s.edges,
         ),
       };
@@ -384,7 +390,12 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       edges: s.edges.map((e) => {
         if (e.id !== id) return e;
         const data = { ...(e.data as EdgeData), ...patch } as EdgeData;
-        return { ...e, data, label: data.label || undefined };
+        return {
+          ...e,
+          data,
+          label: data.label || undefined,
+          ...(data.label ? EDGE_LABEL_STYLE : {}),
+        };
       }),
     })),
   setEntryNode: (id) => set({ entryNodeId: id }),

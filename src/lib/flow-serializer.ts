@@ -81,6 +81,14 @@ export interface FlowEnvelope {
   _extra?: Record<string, unknown>; // passthrough: changelog, opening_variations, etc.
 }
 
+/** Estilo de rótulo de aresta para o canvas escuro. */
+export const EDGE_LABEL_STYLE = {
+  labelStyle: { fill: "#9ca3af", fontSize: 10, fontFamily: "monospace" },
+  labelBgStyle: { fill: "#1b1728", fillOpacity: 0.95 },
+  labelBgPadding: [4, 4] as [number, number],
+  labelBgBorderRadius: 4,
+} as const;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseTimeout(raw: string | number | undefined): {
@@ -287,6 +295,7 @@ export function importFlow(jsonStr: string): ImportResult {
       animated: true,
       label: label || undefined,
       data: { condition: derived.condition, label },
+      ...(label ? EDGE_LABEL_STYLE : {}),
     });
   }
 
