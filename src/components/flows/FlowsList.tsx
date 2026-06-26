@@ -287,6 +287,40 @@ export function FlowsList() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!pendingActivate} onOpenChange={(o) => !o && setPendingActivate(null)}>
+        <AlertDialogContent
+          className="border-0"
+          style={{ background: "#1b1728", color: "#fff", boxShadow: "var(--shadow-card)" }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Ativar este flow?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[color:var(--color-text-muted)]">
+              {pendingActivate ? (
+                <>
+                  Você está prestes a <strong className="text-white">publicar</strong>{" "}
+                  <span className="text-white">{pendingActivate.name}</span> (v{pendingActivate.version}).
+                  Conversas em produção passarão a usar esta versão imediatamente.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)] border-0">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#da2128] text-white hover:bg-[#e3433e]"
+              onClick={() => {
+                if (pendingActivate) activateMut.mutate(pendingActivate.id);
+                setPendingActivate(null);
+              }}
+            >
+              Sim, ativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
