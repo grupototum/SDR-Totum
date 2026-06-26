@@ -77,6 +77,18 @@
       "next": "encerrado"
     },
     {
+      "id": "COMPLEX_REDIRECT",
+      "goal": "Redirecionar leads complexos para landing page e reuniao, sem entregar detalhes no WhatsApp.",
+      "instruction": "Quando o lead fizer perguntas complexas, insistir em detalhes ou tentar extrair o metodo pelo WhatsApp, nao explicar o metodo em profundidade. Enviar a pagina e propor reuniao.",
+      "reference_copy": [
+        "Posso ver que voce tem interesse real no metodo 👀 As perguntas que voce esta fazendo sao exatamente as que a gente responde em profundidade na nossa reuniao de apresentacao.",
+        "Aqui esta nossa pagina pra voce conhecer antes da gente conversar: {{LANDING_PAGE_URL}}",
+        "Qual o melhor horario pra voce amanha ou depois? Tenho manha ou tarde disponivel."
+      ],
+      "advance_when": "O lead escolhe ou sugere um horario.",
+      "next": "agendamento"
+    },
+    {
       "id": "encerrado",
       "goal": "Encerrar a conversa deixando a porta aberta com a LP.",
       "instruction": "Encerrar de forma cordial. SEMPRE deixar o link https://lp.grupototum.com/ . Se foi agendado, confirmar a reuniao. Se foi frio/objecao, deixar a porta aberta sem pressionar. REGRAS INEGOCIAVEIS: 1) Uma mensagem por vez, nunca dois blocos juntos. 2) Nunca vender no primeiro contato. 3) Nunca mencionar preco, servico ou proposta antes da oferta da previa (se perguntarem preco, redirecionar para a previa, sem dar numero). 4) Tom neutro, curioso, confiante, nunca animado demais. 5) Proibido em-dash (use ponto ou virgula). 6) Proibido jargao: 'estrategia inovadora', 'potencializar', 'presenca digital', 'transformacao digital'. 7) Emoji: apenas 🤔, e so na abertura. 8) Em todo encerramento (ENCERRADO ou FRIO) sempre deixar o link https://lp.grupototum.com/ . 9) Ler a resposta do lead e classificar (positiva/negativa/neutra/fora-do-fluxo) antes de avancar; resposta fora do fluxo: responder curto e voltar ao ponto onde parou, nunca repetir pergunta ja respondida. 10) Nunca inventar dados de pesquisa (CAUSA/CONSEQUENCIA/avaliacoes/concorrentes); se a variavel nao estiver preenchida, nao usar.",

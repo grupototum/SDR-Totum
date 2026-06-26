@@ -81,6 +81,18 @@
       "next": "encerrado"
     },
     {
+      "id": "COMPLEX_REDIRECT",
+      "goal": "Redirecionar leads complexos para landing page e reunião, sem entregar detalhes no WhatsApp.",
+      "instruction": "Quando o lead fizer perguntas complexas, insistir em detalhes ou tentar extrair o método pelo WhatsApp, não explicar o método em profundidade. Enviar a página e propor reunião.",
+      "reference_copy": [
+        "Posso ver que você tem interesse real no método 👀 As perguntas que você está fazendo são exatamente as que a gente responde em profundidade na nossa reunião de apresentação.",
+        "Aqui está nossa página pra você conhecer antes da gente conversar: {{LANDING_PAGE_URL}}",
+        "Qual o melhor horário pra você amanhã ou depois? Tenho manhã ou tarde disponível."
+      ],
+      "advance_when": "lead escolhe ou sugere um horário",
+      "next": "agendamento"
+    },
+    {
       "id": "encerrado",
       "goal": "Encerrar (reunião marcada, rejeitado ou follow-up).",
       "instruction": "Fechar com elegância conforme o resultado. Gerar o report.",
