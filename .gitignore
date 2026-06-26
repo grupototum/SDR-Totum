@@ -38,3 +38,4 @@ dist-ssr
 # segredos locais
 .env
 .env.local
+.dmux/

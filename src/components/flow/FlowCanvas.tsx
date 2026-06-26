@@ -7,6 +7,7 @@ import {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
+  type Edge,
   type Node,
 } from "@xyflow/react";
 import { useFlowStore, type NodeKind } from "@/stores/flow-store";
@@ -23,6 +24,7 @@ function FlowCanvasInner() {
   const onConnect = useFlowStore((s) => s.onConnect);
   const addNode = useFlowStore((s) => s.addNode);
   const setSelected = useFlowStore((s) => s.setSelected);
+  const setSelectedEdge = useFlowStore((s) => s.setSelectedEdge);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -47,6 +49,10 @@ function FlowCanvasInner() {
     (_: React.MouseEvent, n: Node) => setSelected(n.id),
     [setSelected],
   );
+  const handleEdgeClick = useCallback(
+    (_: React.MouseEvent, e: Edge) => setSelectedEdge(e.id),
+    [setSelectedEdge],
+  );
   const handlePaneClick = useCallback(() => setSelected(null), [setSelected]);
 
   return (
@@ -64,6 +70,7 @@ function FlowCanvasInner() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
         fitView
         defaultEdgeOptions={{ animated: true }}

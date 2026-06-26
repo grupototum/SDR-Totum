@@ -2,7 +2,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useMemo, type ReactNode } from "react";
 import { useFlowStore, type FlowNode } from "@/stores/flow-store";
 import { nodeMeta } from "./node-types";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, LogIn } from "lucide-react";
 
 interface NodeShellProps {
   node: NodeProps<FlowNode>;
@@ -25,12 +25,15 @@ export function NodeShell({
   const selected = node.selected;
   const status = node.data.status;
   const hasError = status === "error";
+  const isEntry = useFlowStore((s) => s.entryNodeId === node.id);
 
   const shadow = hasError
     ? "var(--shadow-node-error)"
     : selected
       ? "var(--shadow-node-selected)"
-      : "var(--shadow-card)";
+      : isEntry
+        ? "0 0 0 2px #35a670, var(--shadow-card)"
+        : "var(--shadow-card)";
 
   const nodeStyle = useMemo(
     () => ({ background: "#1b1728", boxShadow: shadow, borderRadius: 16 }),
@@ -38,10 +41,16 @@ export function NodeShell({
   );
 
   return (
-    <div
-      className="relative w-[240px] rounded-2xl p-4 transition-all"
-      style={nodeStyle}
-    >
+    <div className="relative w-[240px] rounded-2xl p-4 transition-all" style={nodeStyle}>
+      {isEntry && (
+        <div
+          className="absolute -left-1 -top-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider text-white"
+          style={{ background: "#35a670" }}
+          title="Nó de entrada do flow"
+        >
+          <LogIn className="size-2.5" /> entrada
+        </div>
+      )}
       {hasError && (
         <div
           className="absolute -right-1 -top-1 rounded-full p-1 text-white"

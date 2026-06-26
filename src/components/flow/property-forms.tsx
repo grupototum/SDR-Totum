@@ -145,6 +145,39 @@ export function SendForm({ node }: { node: FlowNode }) {
           Recalcular
         </button>
       </div>
+
+      <Field label="Mídia anexa" hint="Áudio .ogg, imagem ou PDF/documento enviado junto.">
+        <TSelect
+          value={node.data.mediaType ?? "none"}
+          onChange={(e) => upd({ mediaType: e.target.value as never })}
+        >
+          <option value="none">Nenhuma (só texto)</option>
+          <option value="audio">Áudio (.ogg)</option>
+          <option value="image">Imagem</option>
+          <option value="pdf">PDF / documento</option>
+        </TSelect>
+      </Field>
+      {node.data.mediaType && node.data.mediaType !== "none" && (
+        <Field label="URL da mídia">
+          <TInput
+            value={node.data.mediaUrl ?? ""}
+            onChange={(e) => upd({ mediaUrl: e.target.value })}
+            placeholder="https://… (.ogg, .png, .pdf)"
+          />
+        </Field>
+      )}
+      <label
+        className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+        style={{ background: "#1f192a", color: "#d1cece" }}
+      >
+        <span>Quebrar em 1-3 mensagens (com "digitando…")</span>
+        <input
+          type="checkbox"
+          checked={!!node.data.splitMessages}
+          onChange={(e) => upd({ splitMessages: e.target.checked })}
+          className="accent-[#da2128]"
+        />
+      </label>
     </>
   );
 }
@@ -206,6 +239,18 @@ export function AiForm({ node }: { node: FlowNode }) {
           <option value="gpt-4o-mini">GPT-4o mini</option>
         </TSelect>
       </Field>
+      <label
+        className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+        style={{ background: "#1f192a", color: "#d1cece" }}
+      >
+        <span>Classificar intenção/objeção (ramifica)</span>
+        <input
+          type="checkbox"
+          checked={!!node.data.aiClassify}
+          onChange={(e) => upd({ aiClassify: e.target.checked })}
+          className="accent-[#da2128]"
+        />
+      </label>
     </>
   );
 }
@@ -233,7 +278,28 @@ export function WaitForm({ node }: { node: FlowNode }) {
           </TSelect>
         </div>
       </Field>
-      <Field label="Ação no timeout">
+      <Field label="Modo de espera">
+        <TSelect
+          value={node.data.waitMode ?? "reply"}
+          onChange={(e) => upd({ waitMode: e.target.value as never })}
+        >
+          <option value="reply">Aguardar resposta</option>
+          <option value="until">Aguardar até data/hora (wait-until)</option>
+        </TSelect>
+      </Field>
+      {node.data.waitMode === "until" && (
+        <Field
+          label="Aguardar até"
+          hint="ISO ou expressão (ex: 2026-07-01T09:00 ou {HORA_CALCULADA})."
+        >
+          <TInput
+            value={node.data.waitUntil ?? ""}
+            onChange={(e) => upd({ waitUntil: e.target.value })}
+            placeholder="2026-07-01T09:00"
+          />
+        </Field>
+      )}
+      <Field label="Ação no timeout (ramo 'sem resposta')">
         <TSelect
           value={node.data.onTimeout ?? "followup"}
           onChange={(e) => upd({ onTimeout: e.target.value as never })}
@@ -243,6 +309,30 @@ export function WaitForm({ node }: { node: FlowNode }) {
           <option value="node">Ir para nó</option>
         </TSelect>
       </Field>
+      <label
+        className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+        style={{ background: "#1f192a", color: "#d1cece" }}
+      >
+        <span>Indicador "digitando" durante a espera</span>
+        <input
+          type="checkbox"
+          checked={!!node.data.waitTyping}
+          onChange={(e) => upd({ waitTyping: e.target.checked })}
+          className="accent-[#da2128]"
+        />
+      </label>
+      <label
+        className="flex items-center justify-between rounded-xl px-3 py-2 text-xs"
+        style={{ background: "#1f192a", color: "#d1cece" }}
+      >
+        <span>Respeitar janela de envio (fora do horário)</span>
+        <input
+          type="checkbox"
+          checked={!!node.data.respectQuietHours}
+          onChange={(e) => upd({ respectQuietHours: e.target.checked })}
+          className="accent-[#da2128]"
+        />
+      </label>
     </>
   );
 }
@@ -298,6 +388,7 @@ export function ConditionalForm({ node }: { node: FlowNode }) {
 
 export function VariableForm({ node }: { node: FlowNode }) {
   const upd = useUpdate(node.id);
+  const capture = node.data.capture ?? "none";
   return (
     <>
       <Field label="Key">
@@ -309,6 +400,27 @@ export function VariableForm({ node }: { node: FlowNode }) {
           onChange={(e) => upd({ varValue: e.target.value })}
         />
       </Field>
+      <Field
+        label="Captura da resposta"
+        hint="Extrai e valida o valor a partir da última fala do lead."
+      >
+        <TSelect value={capture} onChange={(e) => upd({ capture: e.target.value as never })}>
+          <option value="none">Nenhuma (valor fixo acima)</option>
+          <option value="phone">Telefone</option>
+          <option value="email">E-mail</option>
+          <option value="date">Data</option>
+          <option value="entity">Entidade por LLM</option>
+        </TSelect>
+      </Field>
+      {capture === "entity" && (
+        <Field label="Entidade a extrair" hint="Ex: nome do decisor, especialidade, cidade.">
+          <TInput
+            value={node.data.captureEntity ?? ""}
+            onChange={(e) => upd({ captureEntity: e.target.value })}
+            placeholder="nome do decisor"
+          />
+        </Field>
+      )}
     </>
   );
 }
@@ -321,16 +433,48 @@ export function ActionForm({ node }: { node: FlowNode }) {
       <Field label="Tipo de ação">
         <TSelect value={t} onChange={(e) => upd({ actionType: e.target.value as never })}>
           <option value="audit_site">Auditar site</option>
+          <option value="send_preview">Enviar prévia</option>
           <option value="calendar">Oferecer horário (calendário)</option>
+          <option value="book">Agendar reunião (book)</option>
+          <option value="handoff">Notificar humano (handoff)</option>
+          <option value="crm_tag">CRM — definir tag</option>
+          <option value="crm_status">CRM — definir status</option>
           <option value="webhook">Webhook externo</option>
         </TSelect>
       </Field>
-      {t === "calendar" && (
+      {(t === "calendar" || t === "book") && (
         <Field label="Link da agenda">
           <TInput
             value={node.data.calendarLink ?? ""}
             onChange={(e) => upd({ calendarLink: e.target.value })}
             placeholder="https://cal.com/…"
+          />
+        </Field>
+      )}
+      {t === "handoff" && (
+        <Field label="Notificar quem" hint="Quem recebe o handoff (e-mail, canal, telefone).">
+          <TInput
+            value={node.data.handoffTarget ?? ""}
+            onChange={(e) => upd({ handoffTarget: e.target.value })}
+            placeholder="comercial@totum… / #vendas"
+          />
+        </Field>
+      )}
+      {t === "crm_tag" && (
+        <Field label="Tag do CRM">
+          <TInput
+            value={node.data.crmTag ?? ""}
+            onChange={(e) => upd({ crmTag: e.target.value })}
+            placeholder="lead-quente"
+          />
+        </Field>
+      )}
+      {t === "crm_status" && (
+        <Field label="Status do CRM">
+          <TInput
+            value={node.data.crmStatus ?? ""}
+            onChange={(e) => upd({ crmStatus: e.target.value })}
+            placeholder="reuniao_marcada"
           />
         </Field>
       )}
@@ -438,6 +582,93 @@ export function LogForm({ node }: { node: FlowNode }) {
             </span>
           ))}
         </div>
+      </Field>
+    </>
+  );
+}
+
+export function JumpForm({ node }: { node: FlowNode }) {
+  const upd = useUpdate(node.id);
+  const nodes = useFlowStore((s) => s.nodes);
+  const ret = node.data.jumpReturn ?? true;
+  return (
+    <>
+      <Field
+        label="Destino do salto"
+        hint="'Ponto de retorno' restaura o nó marcado antes de uma objeção."
+      >
+        <div className="flex gap-2 text-[11px]">
+          <label className="flex items-center gap-1 text-[color:var(--color-text-body)]">
+            <input
+              type="radio"
+              checked={ret}
+              onChange={() => upd({ jumpReturn: true })}
+              className="accent-[#da2128]"
+            />
+            ponto de retorno
+          </label>
+          <label className="flex items-center gap-1 text-[color:var(--color-text-body)]">
+            <input
+              type="radio"
+              checked={!ret}
+              onChange={() => upd({ jumpReturn: false })}
+              className="accent-[#da2128]"
+            />
+            nó fixo
+          </label>
+        </div>
+      </Field>
+      {!ret && (
+        <Field label="Ir para o nó">
+          <TSelect
+            value={node.data.jumpTargetId ?? ""}
+            onChange={(e) => upd({ jumpTargetId: e.target.value })}
+          >
+            <option value="">Selecione…</option>
+            {nodes
+              .filter((n) => n.id !== node.id)
+              .map((n) => (
+                <option key={n.id} value={n.id}>
+                  {String(n.data.label ?? n.type)} · {n.id}
+                </option>
+              ))}
+          </TSelect>
+        </Field>
+      )}
+    </>
+  );
+}
+
+export function SubflowForm({ node }: { node: FlowNode }) {
+  const upd = useUpdate(node.id);
+  return (
+    <Field label="ID do sub-flow" hint="Outro flow salvo, executado de forma modular.">
+      <TInput
+        value={node.data.subflowId ?? ""}
+        onChange={(e) => upd({ subflowId: e.target.value })}
+        placeholder="flow_id do módulo"
+      />
+    </Field>
+  );
+}
+
+export function ValidationForm({ node }: { node: FlowNode }) {
+  const upd = useUpdate(node.id);
+  return (
+    <>
+      <Field label="Variável a validar">
+        <TInput
+          value={node.data.validationVar ?? ""}
+          onChange={(e) => upd({ validationVar: e.target.value })}
+          placeholder="email / telefone / cnpj"
+        />
+      </Field>
+      <Field label="Regex" hint="Ramo 'válido' segue; 'inválido' vai pelo handle de falha.">
+        <TInput
+          value={node.data.validationRegex ?? ""}
+          onChange={(e) => upd({ validationRegex: e.target.value })}
+          placeholder="^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$"
+        />
       </Field>
     </>
   );

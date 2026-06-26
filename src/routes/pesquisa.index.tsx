@@ -5,7 +5,17 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Search, LayoutGrid, List, FileText, Copy, Workflow, X, ArrowUpDown } from "lucide-react";
+import {
+  Plus,
+  Search,
+  LayoutGrid,
+  List,
+  FileText,
+  Copy,
+  Workflow,
+  X,
+  ArrowUpDown,
+} from "lucide-react";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { generateResearchPrompt } from "@/lib/research-prompt";
@@ -179,7 +189,9 @@ function PesquisaIndexPage() {
             >
               <option value="">Todas UF</option>
               {ufOptions.map((uf) => (
-                <option key={uf} value={uf}>{uf}</option>
+                <option key={uf} value={uf}>
+                  {uf}
+                </option>
               ))}
             </select>
             <select

@@ -9,6 +9,9 @@ import {
   Zap,
   Flag,
   ClipboardList,
+  CornerUpLeft,
+  Boxes,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -93,6 +96,30 @@ export const NODE_TYPES: NodeTypeMeta[] = [
     icon: ClipboardList,
     badgeLabel: "Relatório",
     badgeStyle: { background: "#1b1728", color: "#35a670", boxShadow: "inset 0 0 0 1px #35a670" },
+  },
+  {
+    kind: "jump",
+    label: "Saltar (go-to)",
+    description: "Volta ao ponto de retorno ou a um nó fixo",
+    icon: CornerUpLeft,
+    badgeLabel: "Saltar",
+    badgeStyle: { background: "#1f192a", color: "#f59e0b", boxShadow: "inset 0 0 0 1px #f59e0b" },
+  },
+  {
+    kind: "subflow",
+    label: "Sub-flow",
+    description: "Executa um flow modular e retorna",
+    icon: Boxes,
+    badgeLabel: "Sub-flow",
+    badgeStyle: { background: "#1f192a", color: "#a06ff6", boxShadow: "inset 0 0 0 1px #6b21ef" },
+  },
+  {
+    kind: "validation",
+    label: "Validação",
+    description: "Valida entrada por regex antes de seguir",
+    icon: ShieldCheck,
+    badgeLabel: "Validação",
+    badgeStyle: { background: "#1f192a", color: "#077ac7", boxShadow: "inset 0 0 0 1px #077ac7" },
   },
 ];
 

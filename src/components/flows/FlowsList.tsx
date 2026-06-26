@@ -5,7 +5,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, List, Search, Pencil, Copy, Rocket, CheckCircle2, X } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Search,
+  Pencil,
+  Copy,
+  Rocket,
+  CheckCircle2,
+  X,
+  FlaskConical,
+} from "lucide-react";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { toast } from "sonner";
@@ -299,12 +309,22 @@ export function FlowsList() {
               {pendingActivate ? (
                 <>
                   Você está prestes a <strong className="text-white">publicar</strong>{" "}
-                  <span className="text-white">{pendingActivate.name}</span> (v{pendingActivate.version}).
-                  Conversas em produção passarão a usar esta versão imediatamente.
+                  <span className="text-white">{pendingActivate.name}</span> (v
+                  {pendingActivate.version}). Conversas em produção passarão a usar esta versão
+                  imediatamente.
                 </>
               ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <button
+            onClick={() => {
+              setPendingActivate(null);
+              navigate({ to: "/simulator" });
+            }}
+            className="flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-xs font-medium text-[#f59e0b] hover:underline"
+          >
+            <FlaskConical className="size-3.5" /> Verificar no Simulador antes de ativar
+          </button>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)] border-0">
               Cancelar

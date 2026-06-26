@@ -26,7 +26,11 @@ function BuilderIndexPage() {
           <Workflow className="size-4 text-[#e3433e]" />
           <span className="text-sm text-white">Flows</span>
         </div>
-        <TotumButton variant="primary" size="sm" onClick={() => navigate({ to: "/builder/edit" })}>
+        <TotumButton
+          variant="primary"
+          size="sm"
+          onClick={() => navigate({ to: "/builder/edit", search: { flow: undefined } })}
+        >
           <Plus className="size-3.5" /> Novo flow
         </TotumButton>
       </header>

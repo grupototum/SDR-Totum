@@ -222,11 +222,17 @@ function SimulatorPage() {
         }}
       >
         <div
-          className="flex items-center gap-2 px-5 py-4"
+          className="flex flex-col gap-0.5 px-5 py-4"
           style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
         >
-          <FlaskConical className="size-4 text-[#e3433e]" />
-          <h1 className="text-sm text-white">Simulador (sem WhatsApp)</h1>
+          <div className="flex items-center gap-2">
+            <FlaskConical className="size-4 text-[#e3433e]" />
+            <h1 className="text-sm text-white">Simulador — laboratório (sem WhatsApp)</h1>
+          </div>
+          <p className="text-[10px] text-[color:var(--color-text-muted)]">
+            Bateria de personas + scorecard de saúde (fonte de GO). Para testar 1 conversa do flow
+            aberto, use "Testar Flow" no builder.
+          </p>
         </div>
 
         <div className="flex flex-col gap-4 p-5">

@@ -1,10 +1,24 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFlowStore } from "@/stores/flow-store";
 import { api } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
-import { ChevronRight, Upload, Download, Save, Rocket, CheckCircle2 } from "lucide-react";
+import {
+  ChevronRight,
+  Upload,
+  Download,
+  Save,
+  Rocket,
+  CheckCircle2,
+  FlaskConical,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
+import { ActivateConfirmDialog, type HealthCheck } from "./ActivateConfirmDialog";
+import { InlineTestChat } from "./InlineTestChat";
+
+/** Endpoint da skill Script↔Flow (a ser provido pelo VPS), configurável por env. */
+const SCRIPT_IMPORT_URL = import.meta.env.VITE_SCRIPT_IMPORT_URL as string | undefined;
 
 export function BuilderToolbar() {
   const flowName = useFlowStore((s) => s.flowName);
@@ -15,8 +29,28 @@ export function BuilderToolbar() {
   const published = useFlowStore((s) => s.published);
   const setCurrentFlow = useFlowStore((s) => s.setCurrentFlow);
   const setPublished = useFlowStore((s) => s.setPublished);
+  const nodes = useFlowStore((s) => s.nodes);
+  const edges = useFlowStore((s) => s.edges);
+  const entryNodeId = useFlowStore((s) => s.entryNodeId);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mdInputRef = useRef<HTMLInputElement>(null);
+  const [showTest, setShowTest] = useState(false);
+  const [confirmActivate, setConfirmActivate] = useState(false);
+  const [importingMd, setImportingMd] = useState(false);
   const qc = useQueryClient();
+
+  // Saúde estática do flow (checklist mostrado antes de ativar).
+  function flowHealth(): HealthCheck[] {
+    return [
+      { label: "Tem nó de entrada definido", ok: Boolean(entryNodeId) },
+      {
+        label: "Tem nó de mensagem (send/IA)",
+        ok: nodes.some((n) => n.type === "send" || n.type === "ai"),
+      },
+      { label: "Tem nó de fim", ok: nodes.some((n) => n.type === "end") },
+      { label: "Nós conectados por transições", ok: edges.length > 0 },
+    ];
+  }
 
   function currentEnvelope(): Record<string, unknown> {
     return JSON.parse(exportToJSON()) as Record<string, unknown>;
@@ -74,6 +108,39 @@ export function BuilderToolbar() {
     e.target.value = "";
   }
 
+  // Importa um roteiro em Markdown chamando a skill Script↔Flow (endpoint do VPS).
+  async function handleImportMd(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!SCRIPT_IMPORT_URL) {
+      toast.error(
+        "Importação de Script (MD) não configurada. Defina VITE_SCRIPT_IMPORT_URL para o endpoint da skill.",
+      );
+      return;
+    }
+    setImportingMd(true);
+    try {
+      const markdown = await file.text();
+      const resp = await fetch(SCRIPT_IMPORT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown, filename: file.name }),
+      });
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => "");
+        throw new Error(`HTTP ${resp.status}${detail ? ` — ${detail.slice(0, 200)}` : ""}`);
+      }
+      const flowJson = await resp.text();
+      loadFlow(flowJson);
+      toast.success("Script (MD) importado como flow!");
+    } catch (err) {
+      toast.error(`Falha ao importar Script (MD): ${(err as Error).message}`);
+    } finally {
+      setImportingMd(false);
+    }
+  }
+
   function handleExport() {
     try {
       const json = exportToJSON();
@@ -91,92 +158,119 @@ export function BuilderToolbar() {
   }
 
   return (
-    <header
-      className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 px-5"
-      style={{
-        background: "rgba(27, 23, 40, 0.85)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        boxShadow: "inset 0 -1px 0 0 #1f192a",
-      }}
-    >
-      {/* Flow name + status */}
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-[color:var(--color-text-muted)]">Flows</span>
-        <ChevronRight className="size-3.5 text-[color:var(--color-text-muted)]" />
-        <input
-          value={flowName}
-          onChange={(e) => setFlowName(e.target.value)}
-          className="bg-transparent text-white outline-none focus:bg-[#1f192a] focus:px-2 focus:py-1 rounded-md"
-          style={{ minWidth: 120 }}
-        />
-        <span
-          className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
-          style={{
-            background: published ? "rgba(53,166,112,0.15)" : "#1f192a",
-            color: published ? "#35a670" : "#9ca3af",
+    <>
+      {confirmActivate && (
+        <ActivateConfirmDialog
+          flowName={flowName}
+          health={flowHealth()}
+          confirming={publishMut.isPending}
+          onCancel={() => setConfirmActivate(false)}
+          onConfirm={() => {
+            setConfirmActivate(false);
+            publishMut.mutate();
           }}
-          title={published ? "Este flow é o roteiro ativo do motor" : "Ainda não publicado"}
-        >
-          {published && <CheckCircle2 className="size-3" />}
-          {published ? "Publicado" : "Rascunho"}
-        </span>
-      </div>
-
-      {/* Center: import/export */}
-      <div className="flex items-center gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={handleImport}
         />
-        <TotumButton
-          variant="ghost"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          title="Importar flow JSON"
-        >
-          <Upload className="size-3.5" /> Importar JSON
-        </TotumButton>
-        <TotumButton variant="ghost" size="sm" onClick={handleExport} title="Exportar flow JSON">
-          <Download className="size-3.5" /> Exportar JSON
-        </TotumButton>
-      </div>
-
-      {/* Right: actions */}
-      <div className="flex items-center gap-2">
-        <TotumButton
-          variant="ghost"
-          size="sm"
-          onClick={() => saveMut.mutate()}
-          disabled={saveMut.isPending || publishMut.isPending}
-        >
-          <Save className="size-3.5" /> {saveMut.isPending ? "Salvando…" : "Salvar"}
-        </TotumButton>
-        <TotumButton
-          variant="secondary"
-          size="sm"
-          onClick={() => toast.info("Iniciando teste do flow…")}
-        >
-          Testar Flow
-        </TotumButton>
-        <TotumButton
-          variant="primary"
-          size="sm"
-          onClick={() => publishMut.mutate()}
-          disabled={publishMut.isPending}
-        >
-          <Rocket className="size-3.5" /> {publishMut.isPending ? "Publicando…" : "Publicar"}
-        </TotumButton>
-        <div
-          className="flex size-8 items-center justify-center rounded-full text-xs text-white"
-          style={{ backgroundImage: "var(--gradient-primary)" }}
-        >
-          T
+      )}
+      {showTest && <InlineTestChat onClose={() => setShowTest(false)} />}
+      <header
+        className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 px-5"
+        style={{
+          background: "rgba(27, 23, 40, 0.85)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          boxShadow: "inset 0 -1px 0 0 #1f192a",
+        }}
+      >
+        {/* Flow name + status */}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-[color:var(--color-text-muted)]">Flows</span>
+          <ChevronRight className="size-3.5 text-[color:var(--color-text-muted)]" />
+          <input
+            value={flowName}
+            onChange={(e) => setFlowName(e.target.value)}
+            className="bg-transparent text-white outline-none focus:bg-[#1f192a] focus:px-2 focus:py-1 rounded-md"
+            style={{ minWidth: 120 }}
+          />
+          <span
+            className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
+            style={{
+              background: published ? "rgba(53,166,112,0.15)" : "#1f192a",
+              color: published ? "#35a670" : "#9ca3af",
+            }}
+            title={published ? "Este flow é o roteiro ativo do motor" : "Ainda não publicado"}
+          >
+            {published && <CheckCircle2 className="size-3" />}
+            {published ? "Publicado" : "Rascunho"}
+          </span>
         </div>
-      </div>
-    </header>
+
+        {/* Center: import/export */}
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <input
+            ref={mdInputRef}
+            type="file"
+            accept=".md,.markdown,text/markdown,text/plain"
+            className="hidden"
+            onChange={handleImportMd}
+          />
+          <TotumButton
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            title="Importar flow JSON"
+          >
+            <Upload className="size-3.5" /> Importar JSON
+          </TotumButton>
+          <TotumButton
+            variant="ghost"
+            size="sm"
+            onClick={() => mdInputRef.current?.click()}
+            disabled={importingMd}
+            title="Importar roteiro em Markdown (skill Script↔Flow)"
+          >
+            <FileText className="size-3.5" /> {importingMd ? "Importando…" : "Importar Script (MD)"}
+          </TotumButton>
+          <TotumButton variant="ghost" size="sm" onClick={handleExport} title="Exportar flow JSON">
+            <Download className="size-3.5" /> Exportar JSON
+          </TotumButton>
+        </div>
+
+        {/* Right: actions */}
+        <div className="flex items-center gap-2">
+          <TotumButton
+            variant="ghost"
+            size="sm"
+            onClick={() => saveMut.mutate()}
+            disabled={saveMut.isPending || publishMut.isPending}
+          >
+            <Save className="size-3.5" /> {saveMut.isPending ? "Salvando…" : "Salvar"}
+          </TotumButton>
+          <TotumButton variant="secondary" size="sm" onClick={() => setShowTest(true)}>
+            <FlaskConical className="size-3.5" /> Testar Flow
+          </TotumButton>
+          <TotumButton
+            variant="primary"
+            size="sm"
+            onClick={() => setConfirmActivate(true)}
+            disabled={publishMut.isPending}
+          >
+            <Rocket className="size-3.5" /> {publishMut.isPending ? "Publicando…" : "Publicar"}
+          </TotumButton>
+          <div
+            className="flex size-8 items-center justify-center rounded-full text-xs text-white"
+            style={{ backgroundImage: "var(--gradient-primary)" }}
+          >
+            T
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
