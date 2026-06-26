@@ -170,6 +170,29 @@ function PesquisaIndexPage() {
                 </button>
               )}
             </div>
+            <select
+              value={ufFilter}
+              onChange={(e) => setUfFilter(e.target.value)}
+              className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
+              title="Filtrar por UF"
+            >
+              <option value="">Todas UF</option>
+              {ufOptions.map((uf) => (
+                <option key={uf} value={uf}>{uf}</option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
+              title="Ordenar"
+            >
+              <option value="date_desc">Mais recentes</option>
+              <option value="date_asc">Mais antigas</option>
+              <option value="name_asc">Nome (A–Z)</option>
+            </select>
             <div className="flex gap-1 rounded-full p-1" style={{ background: "#1b1728" }}>
               {(["list", "card"] as const).map((m) => (
                 <button
