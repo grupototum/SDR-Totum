@@ -257,7 +257,7 @@ export function FlowsList() {
                       </button>
                       {!f.active && (
                         <button
-                          onClick={() => activateMut.mutate(f.id)}
+                          onClick={() => setPendingActivate(f)}
                           className="rounded-md p-1.5 text-[#e3433e] hover:text-white"
                           title="Ativar"
                         >
