@@ -77,6 +77,8 @@ function PesquisaIndexPage() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
+  const [ufFilter, setUfFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc">("date_desc");
   const [previewId, setPreviewId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -89,16 +91,30 @@ function PesquisaIndexPage() {
     if (typeof window !== "undefined") window.localStorage.setItem(VIEW_KEY, m);
   };
 
-  const filtered = useMemo(
-    () =>
-      orders.filter(
-        (o) =>
-          !search ||
-          o.name.toLowerCase().includes(search.toLowerCase()) ||
-          o.data.niche.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [orders, search],
-  );
+  const ufOptions = useMemo(() => {
+    const ufs = new Set<string>();
+    orders.forEach((o) => o.data.geography.forEach((g) => g.uf && ufs.add(g.uf)));
+    return Array.from(ufs).sort();
+  }, [orders]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const matches = (hay: string) => tokens.every((t) => hay.includes(t));
+    const list = orders.filter((o) => {
+      const ufs = o.data.geography.map((g) => g.uf).join(" ");
+      const hay = `${o.name} ${o.data.niche} ${ufs}`.toLowerCase();
+      if (q && !matches(hay)) return false;
+      if (ufFilter && !o.data.geography.some((g) => g.uf === ufFilter)) return false;
+      return true;
+    });
+    return list.sort((a, b) => {
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      const da = new Date(a.createdAt).getTime();
+      const db = new Date(b.createdAt).getTime();
+      return sortBy === "date_asc" ? da - db : db - da;
+    });
+  }, [orders, search, ufFilter, sortBy]);
 
   const preview = orders.find((o) => o.id === previewId) ?? null;
 
