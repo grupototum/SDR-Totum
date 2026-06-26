@@ -5,7 +5,17 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Search, LayoutGrid, List, FileText, Copy, Workflow, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  LayoutGrid,
+  List,
+  FileText,
+  Copy,
+  Workflow,
+  X,
+  ArrowUpDown,
+} from "lucide-react";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { generateResearchPrompt } from "@/lib/research-prompt";
@@ -77,6 +87,8 @@ function PesquisaIndexPage() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
+  const [ufFilter, setUfFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc">("date_desc");
   const [previewId, setPreviewId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -89,16 +101,30 @@ function PesquisaIndexPage() {
     if (typeof window !== "undefined") window.localStorage.setItem(VIEW_KEY, m);
   };
 
-  const filtered = useMemo(
-    () =>
-      orders.filter(
-        (o) =>
-          !search ||
-          o.name.toLowerCase().includes(search.toLowerCase()) ||
-          o.data.niche.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [orders, search],
-  );
+  const ufOptions = useMemo(() => {
+    const ufs = new Set<string>();
+    orders.forEach((o) => o.data.geography.forEach((g) => g.uf && ufs.add(g.uf)));
+    return Array.from(ufs).sort();
+  }, [orders]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const matches = (hay: string) => tokens.every((t) => hay.includes(t));
+    const list = orders.filter((o) => {
+      const ufs = o.data.geography.map((g) => g.uf).join(" ");
+      const hay = `${o.name} ${o.data.niche} ${ufs}`.toLowerCase();
+      if (q && !matches(hay)) return false;
+      if (ufFilter && !o.data.geography.some((g) => g.uf === ufFilter)) return false;
+      return true;
+    });
+    return list.sort((a, b) => {
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      const da = new Date(a.createdAt).getTime();
+      const db = new Date(b.createdAt).getTime();
+      return sortBy === "date_asc" ? da - db : db - da;
+    });
+  }, [orders, search, ufFilter, sortBy]);
 
   const preview = orders.find((o) => o.id === previewId) ?? null;
 
@@ -142,7 +168,7 @@ function PesquisaIndexPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar ordens…"
+                placeholder="Buscar por nome, nicho ou UF…"
                 className="flex-1 bg-transparent py-2.5 text-sm text-white placeholder:text-[color:var(--color-text-muted)] outline-none"
               />
               {search && (
@@ -154,6 +180,31 @@ function PesquisaIndexPage() {
                 </button>
               )}
             </div>
+            <select
+              value={ufFilter}
+              onChange={(e) => setUfFilter(e.target.value)}
+              className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
+              title="Filtrar por UF"
+            >
+              <option value="">Todas UF</option>
+              {ufOptions.map((uf) => (
+                <option key={uf} value={uf}>
+                  {uf}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
+              title="Ordenar"
+            >
+              <option value="date_desc">Mais recentes</option>
+              <option value="date_asc">Mais antigas</option>
+              <option value="name_asc">Nome (A–Z)</option>
+            </select>
             <div className="flex gap-1 rounded-full p-1" style={{ background: "#1b1728" }}>
               {(["list", "card"] as const).map((m) => (
                 <button

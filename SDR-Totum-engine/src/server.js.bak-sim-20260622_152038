@@ -1,0 +1,348 @@
+const http = require('node:http');
+const {
+  addMessage,
+  createConversation,
+  ensureSchema,
+  getConversation,
+  getConversationByPhone,
+  listConversations,
+  touch,
+  listFlows,
+  getFlow,
+  createFlow,
+  updateFlow,
+} = require('./store');
+const { receiveHumanMessage, startConversation } = require('./engine');
+const evolution = require('./evolution');
+
+const port = Number(process.env.PORT || 3001);
+const host = process.env.HOST || '127.0.0.1';
+const apiKey = process.env.SDR_API_KEY || '';
+const maestroKey = process.env.MAESTRO_API_KEY || '';
+const defaultFlowId = process.env.DEFAULT_FLOW_ID || 'sdr-demo';
+
+function now() {
+  return new Date().toISOString();
+}
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(body, null, 2));
+}
+
+async function readJson(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString('utf8');
+  if (!raw) return {};
+  return JSON.parse(raw);
+}
+
+function authRole(req) {
+  const header = req.headers.authorization || '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const provided = bearer || req.headers['x-api-key'] || '';
+  if (!apiKey && !maestroKey) return 'full';
+  if (apiKey && provided === apiKey) return 'full';
+  if (maestroKey && provided === maestroKey) return 'maestro';
+  return null;
+}
+
+function route(req) {
+  const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+  return { pathname: url.pathname, searchParams: url.searchParams };
+}
+
+function publicConversation(conversation) {
+  return conversation;
+}
+
+async function handler(req, res) {
+  try {
+    const { pathname } = route(req);
+
+    if (req.method === 'GET' && pathname === '/health') {
+      return sendJson(res, 200, { status: 'ok', timestamp: now() });
+    }
+
+    const role = authRole(req);
+    if (!role) {
+      return sendJson(res, 401, { error: 'unauthorized' });
+    }
+    if (role === 'maestro' && !(req.method === 'GET' || pathname.startsWith('/api/flows'))) {
+      return sendJson(res, 403, { error: 'forbidden for maestro scope (read + flows only)' });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/conversations/start') {
+      const body = await readJson(req);
+      if (!body.flowId) return sendJson(res, 400, { error: 'flowId is required' });
+      const target = body.target || body.phone || body.number;
+      if (!target) return sendJson(res, 400, { error: 'target or phone is required' });
+
+      const conversation = await createConversation({
+        flowId: body.flowId,
+        target,
+        variables: body.variables || {},
+      });
+
+      const result = await startConversation({
+        conversation,
+        sendText: evolution.sendText,
+      });
+
+      return sendJson(res, 201, {
+        conversationId: conversation.id,
+        status: conversation.status,
+        brain: result.brain,
+        evolution: {
+          readyForRealSend: evolution.canSend(),
+          mode: process.env.BRIDGE_MODE || 'shadow',
+        },
+        outbound: result.outbound,
+      });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/conversations') {
+      return sendJson(res, 200, { conversations: await listConversations() });
+    }
+
+    const sessionByPhoneMatch = pathname.match(/^\/api\/sessions\/([^/]+)$/);
+    if (req.method === 'GET' && sessionByPhoneMatch) {
+      const conversation = await getConversationByPhone(sessionByPhoneMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'session not found' });
+      return sendJson(res, 200, { session: publicConversation(conversation) });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/sessions') {
+      const body = await readJson(req);
+      const phone = body.phone || body.target?.phone || body.target || body.number;
+      if (!phone) return sendJson(res, 400, { error: 'phone is required' });
+
+      const conversation = await createConversation({
+        flowId: body.flowId || defaultFlowId,
+        target: body.target || { phone, name: body.name || body.variables?.lead_name || '' },
+        variables: body.variables || {},
+      });
+
+      return sendJson(res, 201, { session: publicConversation(conversation) });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/messages') {
+      const body = await readJson(req);
+      if (!body.sessionId) return sendJson(res, 400, { error: 'sessionId is required' });
+      const conversation = await getConversation(body.sessionId);
+      if (!conversation) return sendJson(res, 404, { error: 'session not found' });
+
+      const text = String(body.text || body.message || '').trim();
+      if (!text) return sendJson(res, 400, { error: 'text is required' });
+
+      const message = await addMessage(conversation, {
+        direction: body.direction || 'out',
+        sender: body.sender || body.role || body.direction || 'bot',
+        role: body.role || body.sender,
+        text,
+        nodeId: body.nodeId,
+        metadata: body.metadata || {},
+        transport: body.transport || null,
+      });
+
+      return sendJson(res, 201, { message });
+    }
+
+    const sessionUpdateMatch = pathname.match(/^\/api\/sessions\/([^/]+)$/);
+    if (req.method === 'PATCH' && sessionUpdateMatch) {
+      const conversation = await getConversation(sessionUpdateMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'session not found' });
+
+      const body = await readJson(req);
+      if (body.stage !== undefined) conversation.currentNodeId = body.stage;
+      if (body.currentNodeId !== undefined) conversation.currentNodeId = body.currentNodeId;
+      if (body.status !== undefined) conversation.status = body.status;
+      if (body.temperature !== undefined) conversation.temperature = body.temperature;
+      if (body.temperatura !== undefined) conversation.temperature = body.temperatura;
+      if (body.score !== undefined) conversation.score = Number(body.score) || 0;
+      if (body.variables !== undefined) {
+        conversation.variables = { ...conversation.variables, ...body.variables };
+      }
+
+      const updated = await touch(conversation);
+      return sendJson(res, 200, { session: publicConversation(updated) });
+    }
+
+    const conversationMatch = pathname.match(/^\/api\/conversations\/([^/]+)$/);
+    if (req.method === 'GET' && conversationMatch) {
+      const conversation = await getConversation(conversationMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'conversation not found' });
+      return sendJson(res, 200, { conversation: publicConversation(conversation) });
+    }
+
+    const messageMatch = pathname.match(/^\/api\/conversations\/([^/]+)\/messages$/);
+    if (req.method === 'POST' && messageMatch) {
+      const conversation = await getConversation(messageMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'conversation not found' });
+
+      const body = await readJson(req);
+      const text = String(body.text || body.message || '').trim();
+      if (!text) return sendJson(res, 400, { error: 'text is required' });
+
+      const result = await receiveHumanMessage({
+        conversation,
+        text,
+        variables: body.variables || {},
+        sendText: evolution.sendText,
+      });
+
+      return sendJson(res, 200, {
+        conversationId: conversation.id,
+        status: conversation.status,
+        brain: result.brain,
+        outbound: result.outbound,
+      });
+    }
+
+    const reportMatch = pathname.match(/^\/api\/reports\/([^/]+)$/);
+    if (req.method === 'GET' && reportMatch) {
+      const conversation = await getConversation(reportMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'conversation not found' });
+
+      return sendJson(res, 200, {
+        conversationId: conversation.id,
+        flowId: conversation.flowId,
+        target: conversation.target,
+        status: conversation.status,
+        temperature: conversation.temperature,
+        score: conversation.score,
+        variables: conversation.variables,
+        optOut: conversation.optOut,
+        nodeLog: conversation.nodeLog,
+        messages: conversation.messages,
+        errors: conversation.errors,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      });
+    }
+
+    if (req.method === 'POST' && pathname === '/webhooks/evolution/sdr') {
+      const body = await readJson(req);
+
+      // Evolution wraps event in { event, instance, data }
+      const data = body.data || body;
+      const key = data?.key || {};
+
+      // B4 — anti-loop: ignore messages sent by the bot itself
+      if (key.fromMe === true) {
+        return sendJson(res, 200, { ignored: true, reason: 'fromMe' });
+      }
+
+      // Extract phone: remoteJid = "5531XXXXXXXXX@s.whatsapp.net"
+      const remoteJid = key.remoteJid || '';
+      const phone = remoteJid.split('@')[0].replace(/\D/g, '');
+      if (!phone) {
+        return sendJson(res, 400, { error: 'could not extract phone from remoteJid' });
+      }
+
+      // Extract text from known Evolution message shapes
+      const msg = data?.message || {};
+      const text = (
+        msg.conversation ||
+        msg.extendedTextMessage?.text ||
+        msg.buttonsResponseMessage?.selectedDisplayText ||
+        msg.listResponseMessage?.title ||
+        ''
+      ).trim();
+
+      if (!text) {
+        return sendJson(res, 200, { ignored: true, reason: 'no text content' });
+      }
+
+      let conversation = await getConversationByPhone(phone);
+      if (!conversation) {
+        conversation = await createConversation({
+          flowId: defaultFlowId,
+          target: { phone },
+          variables: {},
+        });
+
+        const result = await receiveHumanMessage({
+          conversation,
+          text,
+          variables: {},
+          sendText: evolution.sendText,
+        });
+
+        return sendJson(res, 201, {
+          conversationId: conversation.id,
+          status: result.status,
+          autoStarted: true,
+          flowId: defaultFlowId,
+          brain: result.brain,
+          outbound: result.outbound,
+        });
+      }
+      if (['completed', 'done', 'handed_off'].includes(conversation.status) || conversation.optOut) {
+        return sendJson(res, 200, { ignored: true, reason: `conversation ${conversation.status}` });
+      }
+
+      const result = await receiveHumanMessage({
+        conversation,
+        text,
+        variables: {},
+        sendText: evolution.sendText,
+      });
+
+      return sendJson(res, 200, {
+        conversationId: conversation.id,
+        status: result.status,
+        brain: result.brain,
+        outbound: result.outbound,
+      });
+    }
+
+    if (req.method === "GET" && pathname === "/api/flows") {
+      return sendJson(res, 200, { flows: await listFlows() });
+    }
+
+    const flowMatch = pathname.match(/^\/api\/flows\/([^/]+)$/);
+    if (req.method === "GET" && flowMatch) {
+      const flow = await getFlow(decodeURIComponent(flowMatch[1]));
+      if (!flow) return sendJson(res, 404, { error: "flow not found" });
+      return sendJson(res, 200, { flow });
+    }
+
+    if (req.method === "POST" && pathname === "/api/flows") {
+      const body = await readJson(req);
+      const id = body.id || body.flowId;
+      if (!id) return sendJson(res, 400, { error: "id is required" });
+      const flow = await createFlow({ id, name: body.name || "", niche: body.niche || "", version: body.version || 1, definition: body.definition || body.flow || {}, active: Boolean(body.active) });
+      return sendJson(res, 201, { id: flow.id, flow });
+    }
+
+    if (req.method === "PUT" && flowMatch) {
+      const body = await readJson(req);
+      const flow = await updateFlow(decodeURIComponent(flowMatch[1]), { name: body.name, niche: body.niche, version: body.version, definition: body.definition || body.flow, active: body.active });
+      if (!flow) return sendJson(res, 404, { error: "flow not found" });
+      return sendJson(res, 200, { flow });
+    }
+
+    return sendJson(res, 404, { error: 'not found' });
+  } catch (error) {
+    const status = error.status || 500;
+    return sendJson(res, status, {
+      error: error.message,
+      availableFlows: error.availableFlows,
+    });
+  }
+}
+
+const server = http.createServer(handler);
+
+ensureSchema()
+  .then(() => {
+    server.listen(port, host, () => {
+      console.log(`SDR Totum engine listening on http://${host}:${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Failed to initialize SDR schema:', error);
+    process.exit(1);
+  });

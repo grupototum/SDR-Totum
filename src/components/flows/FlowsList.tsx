@@ -14,75 +14,21 @@ import {
   Rocket,
   CheckCircle2,
   X,
-  AlertTriangle,
   FlaskConical,
 } from "lucide-react";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { toast } from "sonner";
-
-function ActivateConfirmDialog({
-  flowName,
-  onConfirm,
-  onCancel,
-  onGoToSim,
-}: {
-  flowName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  onGoToSim: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(14,9,24,0.85)" }}
-      onClick={(e) => e.target === e.currentTarget && onCancel()}
-    >
-      <div
-        className="flex w-full max-w-sm flex-col gap-5 rounded-3xl p-6"
-        style={{ background: "#1b1728", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
-      >
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="size-4 text-[#f59e0b]" />
-            <h2 className="text-base text-white">Ativar flow em produção</h2>
-          </div>
-          <p className="text-sm text-[color:var(--color-text-muted)]">
-            Você está prestes a ativar <span className="text-white font-medium">"{flowName}"</span>{" "}
-            no ambiente de <strong className="text-[#f59e0b]">PRODUÇÃO com autosend</strong>.
-            Mensagens serão enviadas automaticamente a leads reais.
-          </p>
-        </div>
-        <div
-          className="flex flex-col gap-3 rounded-xl px-4 py-3 text-xs"
-          style={{ background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}
-        >
-          <p>Recomendado: verifique a saúde do flow no Simulador antes de ativar.</p>
-          <button
-            onClick={onGoToSim}
-            className="flex items-center gap-1.5 font-medium hover:underline self-start"
-          >
-            <FlaskConical className="size-3.5" /> Abrir Simulador com este flow
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <TotumButton variant="ghost" size="sm" onClick={onCancel} className="flex-1">
-            Cancelar
-          </TotumButton>
-          <TotumButton
-            variant="primary"
-            size="sm"
-            onClick={onConfirm}
-            className="flex-1"
-            style={{ background: "#e3433e" }}
-          >
-            <Rocket className="size-3.5" /> Ativar em PRODUÇÃO
-          </TotumButton>
-        </div>
-      </div>
-    </div>
-  );
-}
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const VIEW_KEY = "totum:flows-list-view";
 
@@ -152,7 +98,7 @@ export function FlowsList() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
-  const [activateTarget, setActivateTarget] = useState<FlowSummary | null>(null);
+  const [pendingActivate, setPendingActivate] = useState<FlowSummary | null>(null);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows"],
@@ -178,13 +124,9 @@ export function FlowsList() {
     mutationFn: (id: string) => api.publishFlow(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["flows"] });
-      toast.success("Flow ativado em produção");
-      setActivateTarget(null);
+      toast.success("Flow ativado");
     },
-    onError: (e) => {
-      toast.error(`Erro ao ativar: ${(e as Error).message}`);
-      setActivateTarget(null);
-    },
+    onError: (e) => toast.error(`Erro ao ativar: ${(e as Error).message}`),
   });
 
   const setMode = (m: "list" | "card") => {
@@ -204,17 +146,6 @@ export function FlowsList() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      {activateTarget && (
-        <ActivateConfirmDialog
-          flowName={activateTarget.name}
-          onConfirm={() => activateMut.mutate(activateTarget.id)}
-          onCancel={() => setActivateTarget(null)}
-          onGoToSim={() => {
-            setActivateTarget(null);
-            navigate({ to: "/simulator" });
-          }}
-        />
-      )}
       {/* Toolbar */}
       <div className="mb-5 flex items-center gap-3">
         <div
@@ -336,7 +267,7 @@ export function FlowsList() {
                       </button>
                       {!f.active && (
                         <button
-                          onClick={() => setActivateTarget(f)}
+                          onClick={() => setPendingActivate(f)}
                           className="rounded-md p-1.5 text-[#e3433e] hover:text-white"
                           title="Ativar"
                         >
@@ -361,11 +292,55 @@ export function FlowsList() {
               flow={f}
               onOpen={() => openFlow(f.id)}
               onDuplicate={() => duplicateMut.mutate(f.id)}
-              onActivate={() => setActivateTarget(f)}
+              onActivate={() => setPendingActivate(f)}
             />
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!pendingActivate} onOpenChange={(o) => !o && setPendingActivate(null)}>
+        <AlertDialogContent
+          className="border-0"
+          style={{ background: "#1b1728", color: "#fff", boxShadow: "var(--shadow-card)" }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Ativar este flow?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[color:var(--color-text-muted)]">
+              {pendingActivate ? (
+                <>
+                  Você está prestes a <strong className="text-white">publicar</strong>{" "}
+                  <span className="text-white">{pendingActivate.name}</span> (v
+                  {pendingActivate.version}). Conversas em produção passarão a usar esta versão
+                  imediatamente.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <button
+            onClick={() => {
+              setPendingActivate(null);
+              navigate({ to: "/simulator" });
+            }}
+            className="flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-xs font-medium text-[#f59e0b] hover:underline"
+          >
+            <FlaskConical className="size-3.5" /> Verificar no Simulador antes de ativar
+          </button>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)] border-0">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#da2128] text-white hover:bg-[#e3433e]"
+              onClick={() => {
+                if (pendingActivate) activateMut.mutate(pendingActivate.id);
+                setPendingActivate(null);
+              }}
+            >
+              Sim, ativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

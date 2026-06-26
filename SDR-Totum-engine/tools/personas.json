@@ -1,0 +1,60 @@
+[
+  {
+    "id": "lead_frio",
+    "label": "Lead frio (desconfiado, curto)",
+    "opening": "Oi! Aqui é o Rafa da Totum. Vi o perfil de voces de odontologia em Foz. Posso te mostrar como a gente preenche a agenda com avaliacoes?",
+    "turns": [
+      "quem e vc?",
+      "to sem tempo agora",
+      "ah sei... e o que vc faz mesmo?",
+      "hmm ta"
+    ]
+  },
+  {
+    "id": "cetico_preco",
+    "label": "Cetico de preco (objecao recorrente)",
+    "opening": "Oi! Aqui e o Rafa da Totum. Trabalho ajudando clinica de odonto a lotar a agenda de avaliacoes. Posso te explicar?",
+    "turns": [
+      "isso ai deve ser caro demais",
+      "quanto custa? se for caro nem perco meu tempo",
+      "ta mas e o preco? para de enrolar e fala o valor",
+      "se nao falar o preco nao tenho interesse"
+    ]
+  },
+  {
+    "id": "apressado",
+    "label": "Apressado (quer ir direto ao ponto)",
+    "opening": "Oi! Aqui e o Rafa da Totum. Posso te mostrar como a gente preenche a agenda da clinica com avaliacoes?",
+    "turns": [
+      "fala rapido",
+      "vai direto ao ponto, o que vc quer",
+      "ok mas resume, tenho 1 minuto",
+      "to gostando, como funciona na pratica?"
+    ]
+  },
+  {
+    "id": "enrolao",
+    "label": "Enrolao (vago, nao se compromete)",
+    "opening": "Oi! Aqui e o Rafa da Totum. Vi que voces atendem implante e orto. Posso te mostrar uma ideia pra agenda?",
+    "turns": [
+      "pode ser, sei la",
+      "hmm talvez, depende",
+      "ah nao sei, deixa eu ver depois",
+      "vou pensar e te falo"
+    ]
+  },
+  {
+    "id": "ideal",
+    "label": "Lead ideal (caminho feliz ate o agendamento)",
+    "opening": "Oi! Aqui e o Rafa da Totum. Vi que voces atendem implante e orto em Foz. Posso te mostrar como a gente preenche a agenda com avaliacoes?",
+    "turns": [
+      "pode sim, me conta",
+      "faz sentido, a agenda anda meio vazia mesmo",
+      "verdade, perco muito paciente que nao confirma a consulta",
+      "gostei, queria ver isso funcionando na pratica",
+      "manda a previa sim, quero ver",
+      "muito bom, quero agendar uma demo pra ver de perto",
+      "quinta de manha ta otimo pra mim"
+    ]
+  }
+]

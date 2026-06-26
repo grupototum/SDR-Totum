@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDR Simulator — saude do flow</title>
+<style>
+  :root { --bg:#0f1216; --card:#171c23; --ln:#252c36; --tx:#e6edf3; --mut:#8b97a6; --ok:#2ec27e; --warn:#e3b341; --bad:#f25f5c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:22px; }
+  .bar { display:flex; gap:10px; align-items:center; margin-bottom:22px; flex-wrap:wrap; }
+  input,button { font:inherit; }
+  input { background:var(--card); border:1px solid var(--ln); color:var(--tx); padding:8px 10px; border-radius:8px; min-width:260px; }
+  button { background:#2563eb; border:0; color:#fff; padding:9px 16px; border-radius:8px; cursor:pointer; }
+  button:hover { background:#1d4ed8; }
+  .gauge { background:var(--card); border:1px solid var(--ln); border-radius:14px; padding:22px 24px; margin-bottom:22px; display:flex; align-items:center; gap:24px; }
+  .big { font-size:56px; font-weight:800; line-height:1; }
+  .glabel { color:var(--mut); font-size:13px; max-width:420px; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--ln); border-radius:12px; overflow:hidden; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--ln); font-size:13px; }
+  th { color:var(--mut); font-weight:600; background:#12161c; }
+  tr:last-child td { border-bottom:0; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }
+  .err { color:var(--bad); padding:18px; background:var(--card); border:1px solid var(--ln); border-radius:12px; }
+  .ts { color:var(--mut); font-size:12px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SDR Simulator — saúde do flow</h1>
+  <div class="sub">Bateria de personas contra <span class="mono">/api/sim/turn</span> · stateless · sem envio · sem persistência</div>
+
+  <div class="bar">
+    <input id="flowId" value="sdr-odonto-stages-v2" spellcheck="false">
+    <button id="reload">Atualizar</button>
+  </div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+function color(h){ return h >= 70 ? 'var(--ok)' : h >= 40 ? 'var(--warn)' : 'var(--bad)'; }
+
+async function load(){
+  const fid = $('#flowId').value.trim();
+  $('#out').innerHTML = '<div class="sub">carregando…</div>';
+  let rep;
+  try {
+    const r = await fetch('/api/sim/report?flowId=' + encodeURIComponent(fid));
+    rep = await r.json();
+    if (rep.error) throw new Error(rep.error);
+  } catch (e) {
+    $('#out').innerHTML = '<div class="err">Sem relatório para <b>'+fid+'</b>. Rode o harness:<br><span class="mono">node tools/sim_runner.mjs run '+fid+'</span></div>';
+    return;
+  }
+  const rows = rep.personas.map(p => `
+    <tr>
+      <td><b>${p.id}</b><br><span class="mono" style="color:var(--mut)">${p.label||''}</span></td>
+      <td class="mono">${p.stage_inicial} → ${p.stage_final}</td>
+      <td>${p.temperatura}</td>
+      <td>${p.score}</td>
+      <td>${p.objecao_count}</td>
+      <td>${p.send_preview ? 'sim' : '—'}</td>
+      <td>${p.booked ? '<span class="ok">SIM</span>' : '—'}</td>
+      <td>${p.guardrail_violado ? '<span class="bad">VIOLOU: '+(p.violations||[]).join(', ')+'</span>' : '<span class="ok">ok</span>'}</td>
+    </tr>`).join('');
+  $('#out').innerHTML = `
+    <div class="gauge">
+      <div class="big" style="color:${color(rep.health)}">${rep.health}%</div>
+      <div class="glabel">Personas que chegam a <b>agendamento</b> sem violar guard-rail (preço/etapa).<br>
+        Métrica única de GO/no-GO de um flow rascunho.</div>
+    </div>
+    <table>
+      <thead><tr><th>persona</th><th>stage início→fim</th><th>temp</th><th>score</th><th>obj</th><th>prévia</th><th>book</th><th>guard-rail</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="ts">flow: ${rep.flowId} · última bateria: ${rep.ts}</div>`;
+}
+$('#reload').addEventListener('click', load);
+$('#flowId').addEventListener('keydown', (e)=>{ if(e.key==='Enter') load(); });
+load();
+</script>
+</body>
+</html>

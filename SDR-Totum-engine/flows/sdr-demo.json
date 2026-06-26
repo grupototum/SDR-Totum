@@ -1,0 +1,157 @@
+{
+  "id": "sdr-demo",
+  "name": "Demo SDR Odonto — Clínica OdontoSorriso (Tipo A, linear)",
+  "entryNode": "msg01",
+  "nodes": {
+    "msg01": {
+      "type": "message",
+      "text": "Vi vocês aqui nas avaliações de {{ESPECIALIDADE}} na região. {{QTD_AVALIACOES}} avaliações. Aí é a {{NOME_EMPRESA}}, do {{NOME_DONO}}?",
+      "next": "wait01"
+    },
+    "wait01": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "next": "msg02" }
+      ]
+    },
+    "msg02": {
+      "type": "message",
+      "text": "Estava pesquisando clínicas de {{ESPECIALIDADE}} aqui em {{CIDADE}} e a de vocês me chamou atenção.",
+      "next": "msg03"
+    },
+    "msg03": {
+      "type": "message",
+      "text": "Vi um conteúdo recente de vocês sobre {{CONTEUDO_RECENTE}}. Bem diferente do que outras clínicas costumam postar.",
+      "next": "msg04"
+    },
+    "msg04": {
+      "type": "message",
+      "text": "Daí fui pesquisar um pouco mais e encontrei mais de {{QTD_AVALIACOES}} avaliações no Google.",
+      "next": "msg05"
+    },
+    "msg05": {
+      "type": "message",
+      "text": "{{QTD_AVALIACOES}} avaliações e uma nota alta. Isso é reputação construída de verdade. Poucas clínicas chegam nesse nível. Só fiquei com uma dúvida. 🤔",
+      "next": "msg06"
+    },
+    "msg06": {
+      "type": "message",
+      "text": "Vocês têm algum site ou página própria hoje?",
+      "next": "wait02"
+    },
+    "wait02": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "next": "msg07" }
+      ]
+    },
+    "msg07": {
+      "type": "message",
+      "text": "Foi justamente isso que me chamou atenção.",
+      "next": "msg08"
+    },
+    "msg08": {
+      "type": "message",
+      "text": "Vocês já fizeram a parte mais difícil que é construir confiança. As avaliações, os conteúdos e a reputação da clínica mostram isso.",
+      "next": "msg09"
+    },
+    "msg09": {
+      "type": "message",
+      "text": "Só que quem ainda não conhece a clínica nem sempre consegue perceber isso na primeira pesquisa.",
+      "next": "msg10"
+    },
+    "msg10": {
+      "type": "message",
+      "text": "O cliente decide antes de te chamar. E é por isso que a maioria das empresas perde clientes antes da conversa começar.",
+      "next": "msg11"
+    },
+    "msg11": {
+      "type": "message",
+      "text": "Não porque entregam um serviço ruim. Mas porque quem está pesquisando não consegue enxergar rapidamente o que faz aquela empresa ser a escolha certa.",
+      "next": "msg12"
+    },
+    "msg12": {
+      "type": "message",
+      "text": "Foi exatamente essa sensação que tive analisando a clínica de vocês.",
+      "next": "msg13"
+    },
+    "msg13": {
+      "type": "message",
+      "text": "Tem lógica isso que eu falei?",
+      "next": "wait03"
+    },
+    "wait03": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "scoreHint": 1.5, "next": "msg14" }
+      ]
+    },
+    "msg14": {
+      "type": "message",
+      "text": "Foi justamente por isso que resolvi entrar em contato.",
+      "next": "msg15"
+    },
+    "msg15": {
+      "type": "message",
+      "text": "Pensa comigo: quando um paciente pesquisa implante aqui na região e não acha vocês rápido, ele acaba marcando com quem apareceu primeiro — não com quem é melhor. Isso já aconteceu com vocês?",
+      "next": "wait04"
+    },
+    "wait04": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "scoreHint": 2.5, "next": "msg16" }
+      ]
+    },
+    "msg16": {
+      "type": "message",
+      "text": "A gente trabalha com uma empresa por região nesse projeto. Antes de conversar com outras clínicas daqui, queria te mostrar uma oportunidade que enxerguei na de vocês.",
+      "next": "msg17"
+    },
+    "msg17": {
+      "type": "message",
+      "text": "Poucas clínicas que analisei até agora me passaram tanto potencial quanto a de vocês. Tenho interesse real em fazer esse projeto funcionar aqui.",
+      "next": "msg18"
+    },
+    "msg18": {
+      "type": "message",
+      "text": "Posso te mandar uma prévia sem compromisso?",
+      "next": "wait05"
+    },
+    "wait05": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "scoreHint": 2.0, "next": "msg19" }
+      ]
+    },
+    "msg19": {
+      "type": "message",
+      "text": "Perfeito! Já te mando aqui. Fique de olho. 👀",
+      "next": "act_previa"
+    },
+    "act_previa": {
+      "type": "action",
+      "action": "enviar_previa",
+      "next": "msg20"
+    },
+    "msg20": {
+      "type": "message",
+      "text": "Que tal uma conversa rápida de 15 minutos pra eu te explicar o que identifiquei? Pode ser amanhã às 10h ou às 16h — qual fica melhor?",
+      "next": "wait06"
+    },
+    "wait06": {
+      "type": "wait_input",
+      "transitions": [
+        { "default": true, "scoreHint": 2.0, "next": "msg21" }
+      ]
+    },
+    "msg21": {
+      "type": "message",
+      "text": "Fechado! Te mando o link do nosso encontro. Obrigado, {{NOME_DONO}} — falo com você lá. 🙌",
+      "temperature": "hot",
+      "next": "end01"
+    },
+    "end01": {
+      "type": "end"
+    }
+  }
+}
