@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { EventEmitter } = require('node:events');
 const senderState = require('./sender_state');
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -8,6 +9,7 @@ if (!databaseUrl) {
 }
 
 const pool = new Pool({ connectionString: databaseUrl });
+const storeEvents = new EventEmitter();
 let schemaReady;
 
 function now() {
@@ -272,6 +274,17 @@ async function addMessage(conversation, message) {
     nodeId: message.nodeId || conversation.currentNodeId || null,
   });
   await touch(conversation);
+  storeEvents.emit('new_message', {
+    id: item.id,
+    session_id: conversation.id,
+    direction: item.direction,
+    sender: item.role,
+    role: item.role,
+    text: item.text,
+    node_id: message.nodeId || conversation.currentNodeId || null,
+    created_at: item.createdAt,
+    createdAt: item.createdAt,
+  });
   return item;
 }
 
@@ -422,4 +435,5 @@ module.exports = {
   getActiveFlow,
   createFlow,
   updateFlow,
+  storeEvents,
 };

@@ -29,6 +29,7 @@ function providerCfg(provider, kind) {
   switch (provider) {
     case 'groq': return { provider: 'openai', apiKey: pick('GROQ_API_KEY', kind), baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1', model: model('GROQ_MODEL', kind, 'llama-3.3-70b-versatile') };
     case 'nvidia': return { provider: 'openai', apiKey: pick('NVIDIA_API_KEY', kind), baseUrl: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1', model: model('NVIDIA_MODEL', kind, 'meta/llama-4-maverick-17b-128e-instruct') };
+    case 'nvidia_script': return { provider: 'openai', apiKey: process.env.NVIDIA_API_KEY || process.env.NVIDIA_API_KEY_SIM || '', baseUrl: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1', model: process.env.NVIDIA_MODEL || 'meta/llama-4-maverick-17b-128e-instruct', maxTokens: 2000, timeoutMs: 30000 };
     case 'anthropic': return { provider: 'anthropic', apiKey: pick('ANTHROPIC_API_KEY', kind), model: model('ANTHROPIC_MODEL', kind, 'claude-3-5-haiku-20241022') };
     case 'gemini': default: {
       const key = pick('GEMINI_API_KEY', kind) || (kind === 'prod' ? (process.env.GEMINI_API_KEY || readEnvValue(PEPPER, 'GEMINI_API_KEY')) : '');
@@ -37,6 +38,7 @@ function providerCfg(provider, kind) {
   }
 }
 function chainFor(kind) {
+  if (kind === 'script') { const r = process.env.LLM_CHAIN_SCRIPT || 'nvidia_script,anthropic'; return r.split(',').map(s=>s.trim()).filter(Boolean); }
   const raw = (kind === 'sim' ? process.env.LLM_CHAIN_SIM : process.env.LLM_CHAIN_PROD) || (kind === 'sim' ? 'groq' : 'groq,nvidia,anthropic');
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
@@ -48,9 +50,9 @@ async function genGemini(prompt, c) {
 }
 async function genOpenAI(prompt, c) {
   const url = c.baseUrl.replace(/\/$/, '') + '/chat/completions';
-  const body = JSON.stringify({ model: c.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 700 });
+  const body = JSON.stringify({ model: c.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: c.maxTokens || 700 });
   const MAX = c._retry != null ? c._retry : Number(process.env.LLM_RETRY_429 || 3);
-  const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 8000);
+  const TIMEOUT_MS = c.timeoutMs || Number(process.env.LLM_TIMEOUT_MS || 8000);
   for (let a = 0; ; a++) {
     const ctrl = new AbortController();
     const _timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);

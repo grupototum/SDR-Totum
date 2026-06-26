@@ -14,6 +14,7 @@ const {
   getFlow,
   createFlow,
   updateFlow,
+  storeEvents,
 } = require('./store');
 const { receiveHumanMessage, startConversation, defaultDemoVariables, processNoResponseTimeout } = require('./engine');
 const { callBrain } = require('./brain');
@@ -23,12 +24,14 @@ const { enqueue: debounceEnqueue, cancel: debounceCancel, DEBOUNCE_ENABLED, pend
 const llmProvider         = require('./llm_provider');
 const { classifyLlmLogs } = require('./model_alert');
 const alertSink            = require('./alert_sink');
+const { importScript, exportScript, validateFlow } = require('./script_translator');
 
 const port = Number(process.env.PORT || 3001);
 const host = process.env.HOST || '127.0.0.1';
 const apiKey = process.env.SDR_API_KEY || '';
 const maestroKey = process.env.MAESTRO_API_KEY || '';
 const defaultFlowId = process.env.DEFAULT_FLOW_ID || 'sdr-demo';
+const sseClients = [];
 
 function now() {
   return new Date().toISOString();
@@ -38,6 +41,28 @@ function sendJson(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body, null, 2));
 }
+
+function sendHtmlFile(res, filePath, notFoundMessage) {
+  try {
+    const html = fs.readFileSync(filePath, 'utf8');
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end(html);
+  } catch {
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    return res.end(notFoundMessage);
+  }
+}
+
+function sendSse(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+storeEvents.on('new_message', (message) => {
+  for (const client of sseClients) {
+    sendSse(client, 'new_message', message);
+  }
+});
 
 async function readJson(req) {
   const chunks = [];
@@ -50,7 +75,9 @@ async function readJson(req) {
 function authRole(req) {
   const header = req.headers.authorization || '';
   const bearer = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const provided = bearer || req.headers['x-api-key'] || '';
+  const { searchParams } = route(req);
+  const queryKey = searchParams.get('api_key') || searchParams.get('token') || '';
+  const provided = bearer || req.headers['x-api-key'] || queryKey || '';
   if (!apiKey && !maestroKey) return 'full';
   if (apiKey && provided === apiKey) return 'full';
   if (maestroKey && provided === maestroKey) return 'maestro';
@@ -193,6 +220,14 @@ async function handler(req, res) {
       return sendJson(res, 200, { status: 'ok', timestamp: now() });
     }
 
+    if (req.method === 'GET' && pathname === '/conversations') {
+      return sendHtmlFile(
+        res,
+        path.join(__dirname, '..', 'tools', 'conversations.html'),
+        'conversations.html nao encontrado',
+      );
+    }
+
     if (req.method === 'GET' && pathname === '/api/debug/status') {
       return sendJson(res, 200, {
         debounce_enabled: DEBOUNCE_ENABLED,
@@ -209,14 +244,11 @@ async function handler(req, res) {
 
     // --- /simulator: pagina publica read-only (metricas agregadas, sem segredos) ---
     if (req.method === 'GET' && pathname === '/simulator') {
-      try {
-        const html = fs.readFileSync(path.join(__dirname, '..', 'tools', 'simulator.html'), 'utf8');
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        return res.end(html);
-      } catch {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-        return res.end('simulator.html nao encontrado — rode o harness primeiro');
-      }
+      return sendHtmlFile(
+        res,
+        path.join(__dirname, '..', 'tools', 'simulator.html'),
+        'simulator.html nao encontrado — rode o harness primeiro',
+      );
     }
     // --- /api/sim/report: resumo da ultima bateria (publico, sem reply texts) ---
     if (req.method === 'GET' && pathname === '/api/sim/report') {
@@ -233,6 +265,21 @@ async function handler(req, res) {
     }
     if (role === 'maestro' && !(req.method === 'GET' || pathname.startsWith('/api/flows') || pathname.startsWith('/api/sim'))) {
       return sendJson(res, 403, { error: 'forbidden for maestro scope (read + flows only)' });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/events') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      });
+      res.write(': connected\n\n');
+      sseClients.push(res);
+      req.on('close', () => {
+        const index = sseClients.indexOf(res);
+        if (index !== -1) sseClients.splice(index, 1);
+      });
+      return undefined;
     }
 
     if (req.method === 'POST' && pathname === '/api/conversations/start') {
@@ -339,6 +386,12 @@ async function handler(req, res) {
     }
 
     const messageMatch = pathname.match(/^\/api\/conversations\/([^/]+)\/messages$/);
+    if (req.method === 'GET' && messageMatch) {
+      const conversation = await getConversation(messageMatch[1]);
+      if (!conversation) return sendJson(res, 404, { error: 'conversation not found' });
+      return sendJson(res, 200, { messages: conversation.messages || [] });
+    }
+
     if (req.method === 'POST' && messageMatch) {
       const conversation = await getConversation(messageMatch[1]);
       if (!conversation) return sendJson(res, 404, { error: 'conversation not found' });
@@ -346,6 +399,19 @@ async function handler(req, res) {
       const body = await readJson(req);
       const text = String(body.text || body.message || '').trim();
       if (!text) return sendJson(res, 400, { error: 'text is required' });
+
+      if (body.manual === true || body.direction === 'out') {
+        const message = await addMessage(conversation, {
+          direction: 'out',
+          sender: body.sender || body.role || 'operator',
+          role: body.role || body.sender || 'operator',
+          text,
+          nodeId: body.nodeId,
+          metadata: body.metadata || {},
+          transport: body.transport || null,
+        });
+        return sendJson(res, 201, { message });
+      }
 
       const result = await receiveHumanMessage({
         conversation,
@@ -582,6 +648,44 @@ async function handler(req, res) {
         // p/ statelessness multi-turno: reenvie isto em "variables" na proxima chamada
         variables: session.variables,
       });
+    }
+
+
+    // ── POST /api/script/validate (validateFlow sem LLM) ───────────────────────
+    if (req.method === 'POST' && pathname === '/api/script/validate') {
+      const body = await readJson(req);
+      if (!body.flow || typeof body.flow !== 'object')
+        return sendJson(res, 400, { error: 'flow (object) é obrigatório' });
+      const errors = validateFlow(body.flow);
+      return sendJson(res, 200, { valid: errors.length === 0, errors });
+    }
+
+    // ── POST /api/script/import  (MD → node-graph) ───────────────────────────
+    if (req.method === 'POST' && pathname === '/api/script/import') {
+      const body = await readJson(req);
+      if (!body.script_md || typeof body.script_md !== 'string')
+        return sendJson(res, 400, { error: 'script_md (string) é obrigatório' });
+      const flow = await importScript(body.script_md.trim());
+      // auto-save .spec.md — rastreabilidade grátis, sem LLM
+      try {
+        const flowId = body.flow_id || (flow && flow.id) || 'unknown';
+        const specDir = path.join(__dirname, '..', 'flows');
+        fs.mkdirSync(specDir, { recursive: true });
+        fs.writeFileSync(path.join(specDir, `${flowId}.spec.md`), body.script_md.trim(), 'utf8');
+        console.log(`[script/import] spec salvo: flows/${flowId}.spec.md`);
+      } catch (e) {
+        console.warn('[script/import] auto-save spec falhou (non-fatal):', e.message);
+      }
+      return sendJson(res, 200, { flow });
+    }
+
+    // ── POST /api/script/export  (node-graph → MD) ───────────────────────────
+    if (req.method === 'POST' && pathname === '/api/script/export') {
+      const body = await readJson(req);
+      if (!body.flow || typeof body.flow !== 'object')
+        return sendJson(res, 400, { error: 'flow (object) é obrigatório' });
+      const script_md = await exportScript(body.flow);
+      return sendJson(res, 200, { script_md });
     }
 
     return sendJson(res, 404, { error: 'not found' });
