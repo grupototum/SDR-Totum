@@ -88,6 +88,7 @@ export function FlowsList() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
+  const [pendingActivate, setPendingActivate] = useState<FlowSummary | null>(null);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows"],
