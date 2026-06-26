@@ -5,7 +5,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Search, LayoutGrid, List, FileText, Copy, Workflow, X } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, FileText, Copy, Workflow, X, ArrowUpDown } from "lucide-react";
 import { api, type ResearchOrder } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { generateResearchPrompt } from "@/lib/research-prompt";
