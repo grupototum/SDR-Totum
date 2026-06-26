@@ -9,6 +9,16 @@ import { LayoutGrid, List, Search, Pencil, Copy, Rocket, CheckCircle2, X } from 
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const VIEW_KEY = "totum:flows-list-view";
 
@@ -78,6 +88,7 @@ export function FlowsList() {
     return (window.localStorage.getItem(VIEW_KEY) as "list" | "card") || "list";
   });
   const [search, setSearch] = useState("");
+  const [pendingActivate, setPendingActivate] = useState<FlowSummary | null>(null);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows"],
@@ -246,7 +257,7 @@ export function FlowsList() {
                       </button>
                       {!f.active && (
                         <button
-                          onClick={() => activateMut.mutate(f.id)}
+                          onClick={() => setPendingActivate(f)}
                           className="rounded-md p-1.5 text-[#e3433e] hover:text-white"
                           title="Ativar"
                         >
@@ -271,11 +282,45 @@ export function FlowsList() {
               flow={f}
               onOpen={() => openFlow(f.id)}
               onDuplicate={() => duplicateMut.mutate(f.id)}
-              onActivate={() => activateMut.mutate(f.id)}
+              onActivate={() => setPendingActivate(f)}
             />
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!pendingActivate} onOpenChange={(o) => !o && setPendingActivate(null)}>
+        <AlertDialogContent
+          className="border-0"
+          style={{ background: "#1b1728", color: "#fff", boxShadow: "var(--shadow-card)" }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Ativar este flow?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[color:var(--color-text-muted)]">
+              {pendingActivate ? (
+                <>
+                  Você está prestes a <strong className="text-white">publicar</strong>{" "}
+                  <span className="text-white">{pendingActivate.name}</span> (v{pendingActivate.version}).
+                  Conversas em produção passarão a usar esta versão imediatamente.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)] border-0">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#da2128] text-white hover:bg-[#e3433e]"
+              onClick={() => {
+                if (pendingActivate) activateMut.mutate(pendingActivate.id);
+                setPendingActivate(null);
+              }}
+            >
+              Sim, ativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
