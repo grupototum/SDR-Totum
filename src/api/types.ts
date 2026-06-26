@@ -248,4 +248,16 @@ export interface ApiClient {
    * A SDR_API_KEY é injetada no servidor — nunca exposta ao bundle.
    */
   importScript(scriptMd: string): Promise<{ flow: Record<string, unknown> }>;
+
+  /**
+   * Valida o flow JSON contra as regras do motor (POST /api/script/validate via proxy).
+   * Retorna { valid: true } ou { valid: false, errors: string[] }.
+   * A SDR_API_KEY é injetada no servidor — nunca exposta ao bundle.
+   */
+  validateFlow(flow: Record<string, unknown>): Promise<ValidateFlowResult>;
+}
+
+export interface ValidateFlowResult {
+  valid: boolean;
+  errors?: string[];
 }

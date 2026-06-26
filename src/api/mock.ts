@@ -521,6 +521,10 @@ export const mockApi: ApiClient = {
     return mockSimTurn(payload);
   },
 
+  async validateFlow() {
+    throw new Error("validateFlow disponível apenas com engine real — configure VITE_API_BASE_URL");
+  },
+
   async importScript() {
     throw new Error("importScript disponível apenas com engine real — configure VITE_API_BASE_URL");
   },

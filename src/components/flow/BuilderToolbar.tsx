@@ -53,9 +53,20 @@ export function BuilderToolbar() {
     return JSON.parse(exportToJSON()) as Record<string, unknown>;
   }
 
-  // Salva (cria se novo, atualiza se já existe). Retorna o id persistido.
-  async function persist(): Promise<string> {
+  // Valida o flow contra o motor antes de persistir. Lança erro se inválido.
+  async function validateAndPersist(): Promise<string> {
     const env = currentEnvelope();
+    try {
+      const check = await api.validateFlow(env);
+      if (!check.valid) {
+        const msgs = check.errors?.join("\n• ") ?? "Flow inválido";
+        throw new Error(`Flow inválido:\n• ${msgs}`);
+      }
+    } catch (err) {
+      // Se o motor estiver offline (mock ou indisponível), deixa salvar com aviso.
+      if ((err as Error).message.startsWith("Flow inválido")) throw err;
+      toast.warning("Motor indisponível — salvando sem validação");
+    }
     if (currentFlowId) {
       await api.updateFlow(currentFlowId, env);
       return currentFlowId;
@@ -66,7 +77,7 @@ export function BuilderToolbar() {
   }
 
   const saveMut = useMutation({
-    mutationFn: persist,
+    mutationFn: validateAndPersist,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["flows"] });
       toast.success("Flow salvo");
@@ -76,7 +87,7 @@ export function BuilderToolbar() {
 
   const publishMut = useMutation({
     mutationFn: async () => {
-      const id = await persist(); // garante que o publicado reflete as edições atuais
+      const id = await validateAndPersist(); // valida + garante que o publicado reflete as edições
       await api.publishFlow(id);
     },
     onSuccess: () => {

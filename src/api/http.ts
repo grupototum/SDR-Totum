@@ -22,6 +22,7 @@ import type {
   SimTurnRequest,
   SimTurnResponse,
   SimReport,
+  ValidateFlowResult,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -129,5 +130,11 @@ export const httpApi: ApiClient = {
     call<{ flow: Record<string, unknown> }>("/api/engine/api/script/import", {
       method: "POST",
       body: JSON.stringify({ script_md: scriptMd }),
+    }),
+
+  validateFlow: (flow) =>
+    call<ValidateFlowResult>("/api/engine/api/script/validate", {
+      method: "POST",
+      body: JSON.stringify({ flow }),
     }),
 };
