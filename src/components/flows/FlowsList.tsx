@@ -282,7 +282,7 @@ export function FlowsList() {
               flow={f}
               onOpen={() => openFlow(f.id)}
               onDuplicate={() => duplicateMut.mutate(f.id)}
-              onActivate={() => activateMut.mutate(f.id)}
+              onActivate={() => setPendingActivate(f)}
             />
           ))}
         </div>
