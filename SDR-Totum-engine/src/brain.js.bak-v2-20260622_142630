@@ -1,0 +1,188 @@
+const fs = require('node:fs');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getActiveFlow } = require('./store');
+
+function buildRoteiro(definition = {}) {
+  const nodes = (definition && definition.nodes) || {};
+  const out = [];
+  for (const n of Object.values(nodes)) {
+    if (!n) continue;
+    let t = n.text || n.message || n.content || '';
+    if (!t && Array.isArray(n.messages)) t = n.messages.join(' ');
+    if (t && String(t).trim()) out.push(String(t).trim());
+  }
+  return out.slice(0, 40);
+}
+
+function readEnvValue(file, key) {
+  try {
+    const content = fs.readFileSync(file, 'utf8');
+    const line = content.split(/\r?\n/).find((item) => item.match(new RegExp(`^${key}\\s*=`)));
+    if (!line) return '';
+    return line.slice(line.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '');
+  } catch {
+    return '';
+  }
+}
+
+function geminiApiKey() {
+  return process.env.GEMINI_API_KEY || readEnvValue('/home/totum/.pepper/.env', 'GEMINI_API_KEY');
+}
+
+const genAI = new GoogleGenerativeAI(geminiApiKey());
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+
+const SYSTEM_PROMPT = `Você é um SDR consultivo da Totum no WhatsApp. Seu objetivo ÚNICO é conduzir o lead, de forma humana e natural, até AGENDAR uma conversa rápida (reunião). Você NÃO vende serviço; você revela uma oportunidade que o lead ainda não percebeu.
+
+REGRA DE OURO: nunca dado isolado. Sempre Dado → Problema → Impacto → Oportunidade.
+
+O CAMINHO (mantenha SEMPRE como objetivo; avance marco a marco, com proatividade — nunca pare sem puxar o próximo passo):
+1. ABERTURA: confirmar que fala com o decisor, usando uma observação real da clínica (avaliações/conteúdo). Ex base: "Vi vocês nas avaliações de {ESPECIALIDADE}... {QTD_AVALIACOES} avaliações. Aí é a {NOME_EMPRESA}, do {NOME_DONO}?"
+2. OBSERVAÇÃO: elogiar a reputação real (avaliações, conteúdo {CONTEUDO_RECENTE}) e plantar a dúvida ("quem pesquisa pela 1ª vez nem sempre percebe isso").
+3. IMPLICAÇÃO (o "aha"): fazer o lead sentir/dimensionar a perda. Ex: "quando alguém pesquisa {ESPECIALIDADE} na região e não acha vocês rápido, marca com quem aparece primeiro — não com quem é melhor. Isso já aconteceu?"
+4. OFERTA DA PRÉVIA: oferecer mostrar uma prévia sem compromisso ("uma empresa por região").
+5. PRÉVIA: avisar que vai enviar (um humano envia o material; você só conduz).
+6. AGENDAMENTO: propor 2 horários concretos e fechar.
+
+COMO IMPROVISAR: leia a ÚLTIMA resposta do lead e responda ao que ele realmente disse — não ignore, não repita pergunta já respondida. Se ele objetar, ACOLHA (nunca corrija), reintroduza como curiosidade, e volte ao marco onde parou. Se ele já verbalizou a dor, NÃO repita a implicação. Se ele desviar, responda curto e puxe de volta pro próximo marco.
+
+VOZ: humana, direta, simples, brasileira. Mensagens curtas (1-3 linhas), como no WhatsApp. Pode usar no máximo 1 emoji ocasional. Proibido: marketingês ("solução completa", "presença digital", "potencializar"), prometer preço, inventar dado que você não tem.
+
+GUARDRAILS: nunca fale valores (se perguntarem, diga que depende e que vai mandar a página/prévia). Nunca invente diferencial sem evidência. Não cite termos técnicos (SEO score, Lighthouse, etc.) — fale em linguagem de negócio.
+
+ENTREGUE SEMPRE um JSON válido:
+{
+  "reply": ["mensagem 1", "mensagem 2"],
+  "stage": "abertura|observacao|implicacao|oferta_previa|previa|agendamento|encerrado",
+  "temperatura": "frio|morno|quente|fora_de_perfil",
+  "score": 1-10,
+  "send_preview": true|false,
+  "booked": true|false,
+  "precisa_humano": true|false,
+  "done": true|false
+}
+Contexto desta conversa:
+VARIÁVEIS: {{variaveis_json}}
+HISTÓRICO (mais antigo → mais novo): {{history}}
+ÚLTIMA MENSAGEM DO LEAD: {{ultima_msg}}
+(classificação prévia, se houver): {{classificacao}}`;
+
+const allowedStages = new Set([
+  'abertura',
+  'observacao',
+  'implicacao',
+  'oferta_previa',
+  'previa',
+  'agendamento',
+  'encerrado',
+]);
+
+const allowedTemperatures = new Set(['frio', 'morno', 'quente', 'fora_de_perfil']);
+
+function extractJson(text) {
+  const clean = String(text || '').replace(/```json\n?/gi, '').replace(/```/g, '').trim();
+  if (!clean) throw new Error('Gemini returned an empty response');
+
+  try {
+    return JSON.parse(clean);
+  } catch {}
+
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if (start >= 0 && end > start) return JSON.parse(clean.slice(start, end + 1));
+
+  throw new Error('Gemini response did not contain valid JSON');
+}
+
+function normalizeBrainResult(raw, session = {}) {
+  const reply = Array.isArray(raw.reply) ? raw.reply.map(String).filter(Boolean).slice(0, 3) : [];
+  if (!reply.length) throw new Error('Gemini JSON missing non-empty reply array');
+
+  const stage = allowedStages.has(raw.stage) ? raw.stage : session.currentNodeId || session.stage || 'abertura';
+  const temperatura = allowedTemperatures.has(raw.temperatura)
+    ? raw.temperatura
+    : allowedTemperatures.has(raw.temperature)
+      ? raw.temperature
+      : 'morno';
+  const score = Math.max(1, Math.min(10, Number.parseInt(raw.score, 10) || session.score || 1));
+
+  return {
+    reply,
+    stage,
+    temperatura,
+    temperature: temperatura,
+    score,
+    send_preview: Boolean(raw.send_preview),
+    booked: Boolean(raw.booked),
+    precisa_humano: Boolean(raw.precisa_humano),
+    done: Boolean(raw.done),
+  };
+}
+
+async function callBrain({ session, history, lastMessage, classificacao = '' }) {
+  const apiKey = geminiApiKey();
+  if (!apiKey) throw new Error('GEMINI_API_KEY is required');
+
+  const vars = JSON.stringify(session.variables || {});
+  const histText = history
+    .map((m) => `[${m.direction === 'in' ? 'LEAD' : 'BOT'}] ${m.text}`)
+    .join('\n');
+
+  let roteiroBlock = '';
+  try {
+    const activeFlow = await getActiveFlow();
+    if (activeFlow) {
+      const linhas = buildRoteiro(activeFlow.definition);
+      if (linhas.length) {
+        roteiroBlock = `\n\nROTEIRO ATIVO "${activeFlow.name || activeFlow.id}" - use como TRILHO (siga a ordem e a intencao destes passos, adaptando a fala a conversa real; nao copie literal se nao couber):\n` + linhas.map((l, i) => `${i + 1}. ${l}`).join('\n');
+      }
+    }
+  } catch (e) { /* sem flow ativo: usa o roteiro padrao */ }
+
+  const prompt = SYSTEM_PROMPT
+    .replace('{{variaveis_json}}', vars)
+    .replace('{{history}}', histText || '(sem histórico ainda)')
+    .replace('{{ultima_msg}}', lastMessage || '')
+    .replace('{{classificacao}}', classificacao || '') + roteiroBlock;
+
+  let result;
+  try {
+    const model = genAI.getGenerativeModel({ model: DEFAULT_MODEL });
+    result = await model.generateContent(prompt);
+  } catch (error) {
+    if (!String(error?.message || '').includes('404') || FALLBACK_MODEL === DEFAULT_MODEL) {
+      throw error;
+    }
+
+    console.warn(`[brain] modelo ${DEFAULT_MODEL} indisponível; usando fallback ${FALLBACK_MODEL}`);
+    const fallback = genAI.getGenerativeModel({ model: FALLBACK_MODEL });
+    result = await fallback.generateContent(prompt);
+  }
+  const text = result.response.text().trim();
+
+  try {
+    return normalizeBrainResult(extractJson(text), session);
+  } catch (error) {
+    console.error('[brain] JSON parse falhou:', text);
+    return {
+      reply: ['Já te respondo em instantes 😊'],
+      stage: session.currentNodeId || session.stage || 'abertura',
+      temperatura: 'morno',
+      temperature: 'morno',
+      score: session.score || 1,
+      send_preview: false,
+      booked: false,
+      precisa_humano: true,
+      done: false,
+    };
+  }
+}
+
+module.exports = {
+  SYSTEM_PROMPT,
+  callBrain,
+  callGemini: (session, history, lastMessage) => callBrain({ session, history, lastMessage }),
+  extractJson,
+  normalizeBrainResult,
+};

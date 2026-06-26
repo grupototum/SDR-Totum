@@ -1,0 +1,105 @@
+{
+  "flow_id": "odonto_stages_v2",
+  "name": "SDR Odonto — Estágios v2 (híbrido)",
+  "version": "2.0",
+  "source": "consolida flow_odonto_sdr_v1.json (181 nós) em mapa de estágios. Determinístico no caminho, improvisado na palavra.",
+  "niche": "odontologia",
+  "channel": "whatsapp",
+  "objective": "Conduzir o lead, de forma humana, até AGENDAR uma conversa rápida (reunião). Não vende serviço — revela uma oportunidade que ele ainda não percebeu.",
+  "required_variables": ["NOME_EMPRESA","NOME_DONO","ESPECIALIDADE","CIDADE","QTD_AVALIACOES","CONTEUDO_RECENTE","CONCORRENTE_1","CONCORRENTE_2","CONCORRENTE_3","tipo_clinica","TEM_SITE"],
+  "runtime_variables": ["NOME_DECISOR","HORA_CALCULADA","PONTO_RETORNO","NOME_SDR","LINK_AGENDA"],
+  "globals": {
+    "humanization": { "typing_wpm": 40, "reading_wpm": 225, "typing_indicator": "always", "max_consecutive": 3, "quiet_hours": ["22:00","08:00"], "timezone": "America/Sao_Paulo" },
+    "model_defaults": { "generator": "gemini-2.5-flash", "classifier": "groq-llama-3.3-70b" },
+    "guardrails": [
+      "Voz humana, direta, BR. Mensagens curtas (1-3 linhas), estilo WhatsApp. Máx 1 emoji ocasional.",
+      "Nunca prometer/revelar preço — se perguntarem, dizer que depende e que vai mandar a prévia/página.",
+      "Nunca inventar dado nem diferencial sem evidência.",
+      "Proibido marketingês (solução completa, presença digital, potencializar) e termos técnicos (SEO score, Lighthouse).",
+      "Regra de ouro: nunca dado isolado — sempre Dado → Problema → Impacto → Oportunidade.",
+      "Ler a última resposta do lead e responder ao que ele realmente disse; nunca repetir pergunta já respondida."
+    ]
+  },
+  "entry_stage": "abertura",
+  "stages": [
+    {
+      "id": "abertura",
+      "goal": "Confirmar que fala com o decisor, usando uma observação REAL da clínica.",
+      "instruction": "Abra com uma observação verdadeira (avaliações/conteúdo) e confirme se é o decisor. Selecionar o ângulo por tipo_clinica: especializada=observação técnica; geral=prova social/concorrência; solo=empatia individual (evitar 'clínica/empresa').",
+      "reference_copy": ["Vi vocês aqui nas avaliações de {{ESPECIALIDADE}} na região. {{QTD_AVALIACOES}} avaliações. Aí é a {{NOME_EMPRESA}}, do {{NOME_DONO}}?"],
+      "advance_when": "lead confirma ser o decisor OU dá acesso a ele",
+      "next": "observacao"
+    },
+    {
+      "id": "observacao",
+      "goal": "Validar a reputação real e plantar a dúvida da percepção.",
+      "instruction": "Elogie a reputação concreta (avaliações, {{CONTEUDO_RECENTE}}). Plante: 'quem ainda não conhece nem sempre percebe isso na 1ª pesquisa'. Descobrir se tem site/página (TEM_SITE).",
+      "reference_copy": [
+        "Estava pesquisando clínicas de {{ESPECIALIDADE}} em {{CIDADE}} e a de vocês me chamou atenção.",
+        "Vi um conteúdo recente sobre {{CONTEUDO_RECENTE}}. Diferente do que outras clínicas postam.",
+        "{{QTD_AVALIACOES}} avaliações e nota alta. Isso é reputação construída de verdade. Só fiquei com uma dúvida 🤔",
+        "Vocês têm algum site ou página própria hoje?"
+      ],
+      "advance_when": "lead respondeu sobre site/engajou na observação",
+      "next": "implicacao"
+    },
+    {
+      "id": "implicacao",
+      "goal": "Fazer o lead DIMENSIONAR a perda (o 'aha').",
+      "instruction": "Devolva a dor nas palavras do lead + 1 pergunta de implicação quantificável (frequência/impacto). Ex: 'quando o paciente pesquisa {{ESPECIALIDADE}} e não acha vocês rápido, marca com quem aparece primeiro — não com quem é melhor. Isso já aconteceu?'. CONDICIONAL: se o lead JÁ verbalizou a dor antes, não re-perguntar — só reconhecer e avançar.",
+      "reference_copy": [
+        "O cliente decide antes de te chamar. A maioria perde cliente antes da conversa começar.",
+        "Não por entregar serviço ruim — mas porque quem pesquisa não percebe rápido o diferencial."
+      ],
+      "advance_when": "lead reconhece/dimensiona a dor (ou concorda com a lógica)",
+      "next": "oferta_previa"
+    },
+    {
+      "id": "oferta_previa",
+      "goal": "Oferecer a prévia, sem compromisso.",
+      "instruction": "Posicione exclusividade ('uma empresa por região') e ofereça mostrar a oportunidade que você enxergou na clínica. Pergunta de fechamento: 'posso te mandar uma prévia sem compromisso?'",
+      "reference_copy": ["A gente trabalha com uma empresa por região. Antes de falar com outras clínicas daqui, queria te mostrar uma oportunidade que enxerguei na de vocês.", "Posso te mandar uma prévia sem compromisso?"],
+      "advance_when": "lead aceita ver a prévia",
+      "next": "previa"
+    },
+    {
+      "id": "previa",
+      "goal": "Confirmar o envio da prévia (humano envia o material).",
+      "instruction": "Avise que vai mandar e mantenha o lead engajado. A prévia em si é enviada por um humano (stub).",
+      "reference_copy": ["Perfeito! Já te mando aqui, fica de olho 👀"],
+      "actions": ["send_preview"],
+      "advance_when": "prévia enviada/reconhecida pelo lead",
+      "next": "agendamento"
+    },
+    {
+      "id": "agendamento",
+      "goal": "Propor 2 horários e fechar a reunião.",
+      "instruction": "Proponha uma conversa rápida de 15 min com 2 horários concretos. Ao confirmar, marque booked.",
+      "reference_copy": ["Que tal uma conversa rápida de 15 min pra eu te explicar o que identifiquei? Pode ser amanhã às 10h ou às 16h — qual fica melhor?", "Fechado! Te mando o link. Obrigado, {{NOME_DONO}} 🙌"],
+      "actions": ["book"],
+      "advance_when": "lead escolhe um horário (booked=true)",
+      "next": "encerrado"
+    },
+    {
+      "id": "encerrado",
+      "goal": "Encerrar (reunião marcada, rejeitado ou follow-up).",
+      "instruction": "Fechar com elegância conforme o resultado. Gerar o report.",
+      "terminal": true,
+      "report": "hermes_report"
+    }
+  ],
+  "interrupts": [
+    {
+      "id": "objecao",
+      "trigger": "lead levanta objeção real: preço | tempo/não é o momento | já tem agência | não preciso | genérica",
+      "handler_instruction": "ACOLHER (nunca corrigir). Reintroduzir como curiosidade. Preço → não revelar valor, redirecionar pra prévia/página. Depois VOLTAR ao estágio de origem (PONTO_RETORNO).",
+      "categories": ["preco","tempo","ja_tem","nao_preciso","generica"],
+      "max_iterations": 2,
+      "on_exceed": { "goto": "encerrado", "set": { "temperatura": "frio" } },
+      "return": "{PONTO_RETORNO}"
+    }
+  ],
+  "report_schema": {
+    "fields": ["empresa","resultado","temperatura","score","abriu_pela_observacao","gatilho_preview","agendou","objecoes","resumo","transcript","proxima_acao","onde_travou"]
+  }
+}
