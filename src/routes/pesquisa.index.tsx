@@ -158,7 +158,7 @@ function PesquisaIndexPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar ordens…"
+                placeholder="Buscar por nome, nicho ou UF…"
                 className="flex-1 bg-transparent py-2.5 text-sm text-white placeholder:text-[color:var(--color-text-muted)] outline-none"
               />
               {search && (
