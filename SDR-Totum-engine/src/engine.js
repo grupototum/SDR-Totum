@@ -3,6 +3,7 @@ const { callBrain } = require('./brain');
 const { addMessage, getActiveFlow, touch } = require('./store');
 const { canSend } = require('./evolution');
 const senderState = require('./sender_state');
+const memory = require('./memory');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -512,6 +513,9 @@ async function sendBrainReplies({ conversation, result, sendText }) {
       transport,
     });
     outbound.push(message);
+    const phone = conversation.target?.phone;
+    const stage = result.stage || conversation.currentNodeId;
+    memory.ingestMemory(phone, text, stage);
   }
 
   return outbound;
@@ -752,11 +756,19 @@ async function runBrainTurn({ conversation, lastMessage, sendText }) {
   const nodeFlowResult = await runNodeFlowTurn({ conversation, lastMessage, sendText });
   if (nodeFlowResult) return nodeFlowResult;
 
+  const phone = conversation.target?.phone;
+  let ragContext = null;
+  if (phone && lastMessage) {
+    try { ragContext = await memory.buildPrompt(phone, lastMessage, conversation.messages || []); }
+    catch (e) { console.error('[memory] buildPrompt failed:', e.message); }
+  }
+
   let result = await callBrain({
     session: conversation,
     history: conversation.messages || [],
     lastMessage,
     classificacao: conversation.variables?.classificacao || '',
+    ragContext,
   });
 
   if (isInfoDemandIntent(result)) {
@@ -910,6 +922,9 @@ async function receiveHumanMessage({ conversation, text, variables = {}, sendTex
     sender: 'lead',
     text,
   });
+  const phone = conversation.target?.phone;
+  const stage = conversation.currentNodeId || conversation.stage;
+  memory.ingestMemory(phone, text, stage);
 
   conversation.variables = mergeVariables(conversation.variables, variables, { last_human_message: text });
   clearNoResponseTimer(conversation);

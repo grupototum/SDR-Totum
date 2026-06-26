@@ -100,7 +100,7 @@ function authorizeActions(stage, raw) {
   return { send_preview, booked };
 }
 
-function buildV2Prompt({ def, stageId, session, history, lastMessage, classificacao }) {
+function buildV2Prompt({ def, stageId, session, history, lastMessage, classificacao, ragContext }) {
   const vars = session.variables || {};
   const map = stageMap(def);
   const st = map[stageId] || map[def.entry_stage] || (def.stages || [])[0] || {};
@@ -111,6 +111,8 @@ function buildV2Prompt({ def, stageId, session, history, lastMessage, classifica
   const obj = objectionInterrupt(def);
   const histText = history.map((m) => `[${m.direction === 'in' ? 'LEAD' : 'BOT'}] ${m.text}`).join('\n');
   const stageIds = (def.stages || []).map((s) => s.id).join(' | ');
+
+  const ragSection = ragContext ? `\nMEMÓRIA DE LONGO PRAZO (recuperada por similaridade semântica):\n${ragContext}\n` : '';
 
   return `Você é um SDR consultivo da Totum no WhatsApp (voz humana, BR, mensagens curtas estilo WhatsApp).
 
@@ -133,7 +135,7 @@ DEMANDA DE INFORMAÇÃO: se o lead estiver pedindo explicações detalhadas do m
 REGRA DE MENSAGEM ÚNICA: gere EXATAMENTE UMA mensagem no campo "reply". Nunca envie variantes ou alternativas da mesma ideia — apenas a melhor versão. O engine só envia a primeira mensagem da lista.
 
 REGRAS DE AVANÇO: você PROPÕE o próximo estágio em "stage_proposto", mas só avance 1 passo (para "${st.next || stageId}") quando a condição for satisfeita: "${st.advance_when || ''}". Se não, mantenha "${stageId}". Nunca pule etapas. Leia a ÚLTIMA mensagem do lead e responda ao que ele disse; não repita pergunta já respondida.
-
+${ragSection}
 CONTEXTO:
 VARIÁVEIS: ${JSON.stringify(vars)}
 HISTÓRICO (antigo→novo):
@@ -161,7 +163,7 @@ async function generate(prompt, kind = 'prod') {
 }
 
 // callBrain: contrato compatível com engine.js. flowOverride permite SHADOW sem ativar em prod.
-async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null }) {
+async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null, ragContext = null }) {
   const _kind = flowOverride ? 'sim' : 'prod'; // sim usa LLM_CHAIN_SIM, prod usa LLM_CHAIN_PROD
 
   let active = flowOverride;
@@ -176,7 +178,7 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   }
 
   const current = session.currentNodeId || session.stage || def.entry_stage || 'abertura';
-  const prompt = buildV2Prompt({ def, stageId: current, session, history, lastMessage, classificacao });
+  const prompt = buildV2Prompt({ def, stageId: current, session, history, lastMessage, classificacao, ragContext });
 
   let raw;
   try { raw = extractJson(await generate(prompt, _kind)); }
