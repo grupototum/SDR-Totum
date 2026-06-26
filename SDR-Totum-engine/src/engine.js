@@ -129,6 +129,8 @@ const SCRIPT_TRIGGER_WAIT_MS = {
 
 const DEFAULT_NO_RESPONSE_WAIT_MS = 20 * 60 * 1000;
 const MAX_NO_RESPONSE_TOUCHES = 2;
+const COMPLEX_REDIRECT_STAGE = 'COMPLEX_REDIRECT';
+const COMPLEX_QUESTION_THRESHOLD = 2;
 
 function nowMs() {
   return Date.now();
@@ -323,6 +325,79 @@ function clearNoResponseTimer(conversation) {
   if (conversation.variables?._sdrNoResponse) delete conversation.variables._sdrNoResponse;
 }
 
+function landingPageUrl() {
+  return process.env.LANDING_PAGE_URL || 'https://grupototum.com';
+}
+
+function complexRedirectResult(conversation, reason = 'complex') {
+  return {
+    reply: [
+      'Posso ver que você tem interesse real no método 👀 As perguntas que você está fazendo são exatamente as que a gente responde em profundidade na nossa reunião de apresentação.',
+      `Aqui está nossa página pra você conhecer antes da gente conversar: ${landingPageUrl()}`,
+      'Qual o melhor horário pra você amanhã ou depois? Tenho manhã ou tarde disponível.',
+    ],
+    msgIds: [
+      `${COMPLEX_REDIRECT_STAGE}:msg1`,
+      `${COMPLEX_REDIRECT_STAGE}:msg2`,
+      `${COMPLEX_REDIRECT_STAGE}:msg3`,
+    ],
+    stage: COMPLEX_REDIRECT_STAGE,
+    stage_proposto: COMPLEX_REDIRECT_STAGE,
+    stage_anterior: conversation.currentNodeId || conversation.stage || null,
+    temperatura: conversation.temperature || 'quente',
+    temperature: conversation.temperature || 'quente',
+    score: Math.max(1, Number(conversation.score || 1)),
+    send_preview: false,
+    booked: false,
+    precisa_humano: false,
+    done: false,
+    objecao: null,
+    intent: 'complex_redirect',
+    complex: true,
+    complex_reason: reason,
+  };
+}
+
+function isInfoDemandIntent(result) {
+  return String(result?.intent || result?.intencao || result?.intenção || '').toLowerCase() === 'info_demand';
+}
+
+function isQuestionLike(text) {
+  const normalized = String(text || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.includes('?')) return true;
+  return /\b(por\s*que|porque|como|qual|quais|quando|onde|quem|quanto|quantos|voc[eê]s?\s+podem|me\s+explica|explica|detalhe|detalhar|ajudar\s+no\s+que|no\s+que\s+voc[eê]s?\s+ajudam)\b/i.test(normalized);
+}
+
+function updateComplexityState(conversation, text) {
+  if (!conversation.variables) conversation.variables = {};
+  const vars = conversation.variables;
+  const currentStage = conversation.currentNodeId || conversation.stage || null;
+  const wasWaiting = conversation.status === 'waiting_input';
+  const questionLike = isQuestionLike(text);
+
+  if (!wasWaiting || !questionLike) {
+    vars.__questionCount = 0;
+    vars.__questionStage = currentStage;
+    return { complex: Boolean(vars.complex || vars.__complex), questionCount: Number(vars.__questionCount || 0) };
+  }
+
+  const previousQuestionStage = vars.__questionStage || currentStage;
+  const stageDidNotAdvance = previousQuestionStage === currentStage;
+  const questionCount = stageDidNotAdvance ? Number(vars.__questionCount || 0) + 1 : 1;
+  vars.__questionCount = questionCount;
+  vars.__questionStage = currentStage;
+
+  if (questionCount >= COMPLEX_QUESTION_THRESHOLD) {
+    vars.complex = true;
+    vars.__complex = true;
+    vars.__complexReason = 'question_loop';
+    vars.__complexMarkedAt = iso();
+  }
+
+  return { complex: Boolean(vars.complex || vars.__complex), questionCount };
+}
+
 async function markColdAndClose(conversation, reason = 'no_response_after_second_touch') {
   conversation.status = 'frio';
   conversation.temperature = 'frio';
@@ -375,6 +450,9 @@ function applyBrainResult(conversation, result) {
       booked: result.booked,
       precisa_humano: result.precisa_humano,
       done: result.done,
+      intent: result.intent,
+      complex: result.complex,
+      complex_reason: result.complex_reason,
       updated_at: new Date().toISOString(),
     },
   };
@@ -656,15 +734,39 @@ async function runNodeFlowTurn({ conversation, lastMessage, sendText, noResponse
 }
 
 async function runBrainTurn({ conversation, lastMessage, sendText }) {
+  if ((conversation.variables?.complex || conversation.variables?.__complex)
+    && conversation.currentNodeId !== COMPLEX_REDIRECT_STAGE) {
+    const result = complexRedirectResult(conversation, conversation.variables.__complexReason || 'complex');
+    console.log('[complex] redirect antes do brain:', JSON.stringify({
+      phone: conversation.target?.phone,
+      stage: conversation.currentNodeId,
+      reason: result.complex_reason,
+    }));
+    applyBrainResult(conversation, result);
+    await touch(conversation);
+    const outbound = await sendBrainReplies({ conversation, result, sendText });
+    syncInboxState(conversation, true);
+    return { status: conversation.status, brain: result, outbound };
+  }
+
   const nodeFlowResult = await runNodeFlowTurn({ conversation, lastMessage, sendText });
   if (nodeFlowResult) return nodeFlowResult;
 
-  const result = await callBrain({
+  let result = await callBrain({
     session: conversation,
     history: conversation.messages || [],
     lastMessage,
     classificacao: conversation.variables?.classificacao || '',
   });
+
+  if (isInfoDemandIntent(result)) {
+    conversation.variables.complex = true;
+    conversation.variables.__complex = true;
+    conversation.variables.__complexReason = 'info_demand';
+    conversation.variables.__complexMarkedAt = iso();
+    result = complexRedirectResult(conversation, 'info_demand');
+  }
+
   console.log('[brain] JSON antes do envio:', JSON.stringify(result, null, 2));
   applyBrainResult(conversation, result);
 
@@ -800,6 +902,7 @@ async function receiveHumanMessage({ conversation, text, variables = {}, sendTex
     return { status: conversation.status, outbound: [], brain: null };
   }
 
+  updateComplexityState(conversation, text);
   setAwaitUser(conversation, false);
 
   await addMessage(conversation, {

@@ -128,6 +128,8 @@ PRÓXIMO ESTÁGIO no trilho: ${st.next || '(terminal)'} . Estágios válidos: ${
 
 OBJEÇÕES: se o lead levantar objeção real (${obj ? obj.categories.join(', ') : 'preço, tempo, já tem, não preciso, genérica'}), ACOLHA (nunca corrija), reintroduza como curiosidade, e devolva o campo "objecao" com a categoria. Preço: nunca revele valor, redirecione pra prévia/página.
 
+DEMANDA DE INFORMAÇÃO: se o lead estiver pedindo explicações detalhadas do método, fazendo perguntas difíceis em sequência, tentando extrair detalhes pelo WhatsApp antes da reunião, ou insistindo em entender "como funciona"/"no que ajudam", devolva "intent": "info_demand". Não entregue o método detalhado por WhatsApp.
+
 REGRA DE MENSAGEM ÚNICA: gere EXATAMENTE UMA mensagem no campo "reply". Nunca envie variantes ou alternativas da mesma ideia — apenas a melhor versão. O engine só envia a primeira mensagem da lista.
 
 REGRAS DE AVANÇO: você PROPÕE o próximo estágio em "stage_proposto", mas só avance 1 passo (para "${st.next || stageId}") quando a condição for satisfeita: "${st.advance_when || ''}". Se não, mantenha "${stageId}". Nunca pule etapas. Leia a ÚLTIMA mensagem do lead e responda ao que ele disse; não repita pergunta já respondida.
@@ -149,7 +151,8 @@ Responda SOMENTE um JSON válido:
   "booked": false,
   "precisa_humano": false,
   "done": false,
-  "objecao": null
+  "objecao": null,
+  "intent": null
 }`;
 }
 
@@ -181,7 +184,7 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
     return {
       reply: ['Já te respondo em instantes 😊'], stage: current, stage_proposto: current, stage_anterior: current,
       temperatura: 'morno', temperature: 'morno', score: session.score || 1,
-      send_preview: false, booked: false, precisa_humano: true, done: false, objecao: null,
+      send_preview: false, booked: false, precisa_humano: true, done: false, objecao: null, intent: null,
     };
   }
 
@@ -207,6 +210,7 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
     objecao: decision.flags.objecao,
     objecao_count: decision.flags.objecao_count,
     clamped: decision.flags.clamped,
+    intent: raw.intent || null,
   };
 }
 
