@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ThemeToggle } from "@/components/liquid-glass/ThemeToggle";
 
 function NotFoundComponent() {
   return (
@@ -111,12 +112,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
-      { rel: "preconnect", href: "https://api.fontshare.com" },
-      { rel: "preconnect", href: "https://cdn.fontshare.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://api.fontshare.com/v2/css?f[]=geomanist@300,400,500&display=swap",
-      },
       {
         rel: "stylesheet",
         href: "https://cdn.jsdelivr.net/npm/@xyflow/react@12/dist/style.css",
@@ -148,10 +143,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <div className="lg-aurora" aria-hidden />
       <SidebarProvider defaultOpen={false}>
-        <div className="flex min-h-screen w-full" style={{ background: "#0e0918" }}>
+        <div className="flex min-h-screen w-full">
           <AppSidebar />
           <div className="relative flex-1 flex flex-col min-w-0">
+            <div className="pointer-events-none absolute right-4 top-4 z-20 pointer-events-auto">
+              <div className="glass-pill iris-ring px-3 py-1.5">
+                <ThemeToggle />
+              </div>
+            </div>
             <main className="flex-1 min-w-0">
               <Outlet />
             </main>
@@ -159,15 +160,14 @@ function RootComponent() {
         </div>
       </SidebarProvider>
       <Toaster
-        theme="dark"
+        theme="system"
         position="bottom-right"
         toastOptions={{
+          className: "glass iris-ring",
           style: {
-            background: "#1b1728",
-            color: "#fff",
+            color: "var(--lg-fg)",
             borderRadius: "16px",
-            padding: "16px 24px",
-            boxShadow: "inset 0 0 0 1px hsla(0,0%,100%,0.1)",
+            padding: "14px 20px",
           },
         }}
       />
