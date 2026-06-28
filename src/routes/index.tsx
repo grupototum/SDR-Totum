@@ -157,7 +157,7 @@ function StartConversationModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Nav sidebar ────────────────────────────────────────────────────────────────
+// ── Nav links ──────────────────────────────────────────────────────────────────
 const navLinks = [
   { to: "/pesquisa" as const, icon: Search, label: "Pesquisa" },
   { to: "/builder" as const, icon: Workflow, label: "Flow Builder" },
@@ -165,53 +165,54 @@ const navLinks = [
   { to: "/reports" as const, icon: BarChart3, label: "Relatórios" },
 ];
 
-// ── Home ───────────────────────────────────────────────────────────────────────
+import { LiquidNav, LiquidFeatureCard, LiquidButton, LiquidTabs } from "@/components/liquid-glass";
+import { useNavigate } from "@tanstack/react-router";
+
 function Home() {
   const [showDisparo, setShowDisparo] = useState(false);
+  const navigate = useNavigate();
 
   return (
-    <main className="min-h-screen" style={{ background: "#0e0918" }}>
+    <main className="min-h-screen">
       {showDisparo && <StartConversationModal onClose={() => setShowDisparo(false)} />}
 
-      {/* Top nav */}
-      <nav
-        className="sticky top-0 z-10 flex items-center justify-between px-8 py-4"
-        style={{
-          background: "rgba(14,9,24,0.9)",
-          backdropFilter: "blur(16px)",
-          boxShadow: "inset 0 -1px 0 0 #1f192a",
-        }}
-      >
-        <div className="flex items-center gap-1">
-          <span className="text-white font-medium mr-6">SDR Totum</span>
-          {navLinks.map(({ to, icon: Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-[color:var(--color-text-muted)] hover:text-white hover:bg-[#1f192a] transition-colors"
-            >
-              <Icon className="size-3.5" /> {label}
-            </Link>
-          ))}
-        </div>
-        <TotumButton variant="primary" size="sm" onClick={() => setShowDisparo(true)}>
-          <Rocket className="size-3.5" /> Iniciar Conversa
-        </TotumButton>
-      </nav>
+      {/* Top floating glass nav */}
+      <div className="sticky top-0 z-10 flex justify-center px-6 py-5">
+        <LiquidNav
+          items={navLinks.map((l) => ({
+            id: l.to,
+            label: l.label,
+            icon: <l.icon className="size-3.5" />,
+            onClick: () => navigate({ to: l.to }),
+          }))}
+          trailing={
+            <LiquidButton variant="primary" onClick={() => setShowDisparo(true)}>
+              <Rocket className="size-3.5" /> Iniciar Conversa
+            </LiquidButton>
+          }
+        />
+      </div>
 
-      {/* Dashboard */}
-      <section className="mx-auto max-w-5xl px-6 py-16">
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
-          <TotumButton asChild variant="primary" size="lg">
-            <Link to="/builder">
-              <Plus className="size-4" /> Novo Flow
-            </Link>
-          </TotumButton>
-          <TotumButton variant="secondary" size="lg" onClick={() => setShowDisparo(true)}>
+      {/* Hero */}
+      <section className="mx-auto max-w-5xl px-6 pt-6 pb-10 text-center">
+        <h1 className="text-5xl md:text-6xl tracking-tight text-[color:var(--lg-fg)]">
+          Conversas que parecem humanas.
+        </h1>
+        <p className="mt-4 text-base md:text-lg text-[color:var(--lg-muted-fg)] max-w-2xl mx-auto">
+          Flow builder visual, IA proativa e humanização — tudo em uma camada liquida.
+        </p>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <LiquidButton variant="primary" onClick={() => navigate({ to: "/builder" })}>
+            <Plus className="size-4" /> Novo Flow
+          </LiquidButton>
+          <LiquidButton onClick={() => setShowDisparo(true)}>
             <Rocket className="size-4" /> Iniciar Conversa
-          </TotumButton>
+          </LiquidButton>
         </div>
+      </section>
 
+      {/* Metrics */}
+      <section className="mx-auto max-w-6xl px-6 pb-10">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "Conversas Ativas", value: 12, icon: MessageCircle },
@@ -219,78 +220,94 @@ function Home() {
             { label: "Flows Criados", value: 8, icon: Workflow },
             { label: "Pesquisas Hoje", value: 3, icon: Search },
           ].map((card) => (
-            <div
+            <LiquidFeatureCard
               key={card.label}
-              className="flex flex-col gap-3 p-5"
-              style={{
-                background: "#1b1728",
-                borderRadius: 24,
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <div
-                className="flex size-10 items-center justify-center rounded-full text-white"
-                style={{ backgroundImage: "var(--gradient-secondary)" }}
-              >
-                <card.icon className="size-4" />
-              </div>
-              <div>
-                <div
-                  className="text-white"
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 300,
-                    letterSpacing: "-0.02em",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {card.value}
-                </div>
-                <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                  {card.label}
-                </div>
-              </div>
-            </div>
+              icon={<card.icon className="size-5" />}
+              title={
+                <span className="text-4xl font-light tracking-tight">{card.value}</span>
+              }
+              description={card.label}
+            />
           ))}
         </div>
       </section>
 
-      {/* Cards */}
+      {/* Tabs */}
       <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {navLinks.map(({ to, icon: Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex flex-col gap-4 transition-all hover:bg-[#272333]"
-              style={{
-                background: "#1b1728",
-                borderRadius: 24,
-                padding: 32,
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <div
-                className="flex size-10 items-center justify-center rounded-full text-white"
-                style={{ backgroundImage: "var(--gradient-secondary)" }}
-              >
-                <Icon className="size-4" />
-              </div>
-              <div>
-                <h3 className="text-lg text-white">{label}</h3>
-                <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-                  {to === "/pesquisa" && "Monte ordens de pesquisa e gere o prompt do agente"}
-                  {to === "/builder" && "Crie e edite flows visuais de automação"}
-                  {to === "/conversations" && "Monitore e intervenha em conversas ao vivo"}
-                  {to === "/reports" && "Analise resultados e temperaturas de leads"}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-[color:var(--color-text-muted)]">
-                Acessar <ArrowRight className="size-3.5" />
-              </div>
-            </Link>
-          ))}
-        </div>
+        <LiquidTabs
+          tabs={[
+            {
+              id: "modulos",
+              label: "Módulos",
+              content: (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+                  {navLinks.map(({ to, icon: Icon, label }) => (
+                    <LiquidFeatureCard
+                      key={to}
+                      icon={<Icon className="size-5" />}
+                      title={label}
+                      description={
+                        to === "/pesquisa"
+                          ? "Monte ordens de pesquisa e gere o prompt do agente."
+                          : to === "/builder"
+                            ? "Crie e edite flows visuais de automação."
+                            : to === "/conversations"
+                              ? "Monitore e intervenha em conversas ao vivo."
+                              : "Analise resultados e temperaturas de leads."
+                      }
+                      footer={
+                        <Link
+                          to={to}
+                          className="inline-flex items-center gap-1 text-sm text-[color:var(--lg-fg)] hover:gap-2 transition-all"
+                        >
+                          Acessar <ArrowRight className="size-3.5" />
+                        </Link>
+                      }
+                    />
+                  ))}
+                </div>
+              ),
+            },
+            {
+              id: "atalhos",
+              label: "Atalhos",
+              content: (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <LiquidFeatureCard
+                    icon={<Plus className="size-5" />}
+                    title="Criar novo flow"
+                    description="Partir de um template ou do zero."
+                    footer={
+                      <LiquidButton onClick={() => navigate({ to: "/builder" })}>
+                        Abrir builder
+                      </LiquidButton>
+                    }
+                  />
+                  <LiquidFeatureCard
+                    icon={<Rocket className="size-5" />}
+                    title="Disparar conversa"
+                    description="Testar um flow contra um número real."
+                    footer={
+                      <LiquidButton variant="primary" onClick={() => setShowDisparo(true)}>
+                        Iniciar
+                      </LiquidButton>
+                    }
+                  />
+                  <LiquidFeatureCard
+                    icon={<BarChart3 className="size-5" />}
+                    title="Ver relatórios"
+                    description="Temperaturas, conversões e funil."
+                    footer={
+                      <LiquidButton onClick={() => navigate({ to: "/reports" })}>
+                        Abrir
+                      </LiquidButton>
+                    }
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
       </section>
     </main>
   );
