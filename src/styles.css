@@ -92,28 +92,26 @@
   --lg-card: rgba(255, 255, 255, 0.08);
   --lg-card-hover: rgba(255, 255, 255, 0.16);
   --lg-border: rgba(255, 255, 255, 0.18);
-  --lg-accent: #a78bfa;
+  --lg-accent: #e3433e;
 
-  --gradient-primary: linear-gradient(135deg, #a78bfa, #60a5fa);
-  --gradient-secondary: linear-gradient(135deg, #67e8f9, #a78bfa);
+  --gradient-primary: linear-gradient(135deg, #e3433e, #da2128);
+  --gradient-secondary: linear-gradient(135deg, #da2128, #b71c1c);
   --gradient-iris: linear-gradient(
     135deg,
-    rgba(167, 139, 250, 0.9),
-    rgba(96, 165, 250, 0.9),
-    rgba(103, 232, 249, 0.9),
-    rgba(240, 171, 252, 0.9)
+    rgba(227, 67, 62, 0.9),
+    rgba(218, 33, 40, 0.9)
   );
-  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(167, 139, 250, 0.45), transparent 60%),
-    radial-gradient(50% 50% at 85% 0%, rgba(96, 165, 250, 0.4), transparent 60%),
-    radial-gradient(60% 60% at 80% 90%, rgba(240, 171, 252, 0.35), transparent 60%),
-    radial-gradient(50% 50% at 10% 95%, rgba(103, 232, 249, 0.3), transparent 60%);
+  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(227, 67, 62, 0.35), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(218, 33, 40, 0.3), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(183, 28, 28, 0.25), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(227, 67, 62, 0.2), transparent 60%);
 
   --shadow-inset-border: inset 0 0 0 1px var(--lg-border);
   --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 20px 60px -20px rgba(0, 0, 0, 0.6);
   --shadow-brand-card: var(--shadow-card);
-  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 24px -8px rgba(167, 139, 250, 0.6);
-  --shadow-halo-red: 0 0 60px -10px rgba(167, 139, 250, 0.7);
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 24px -8px rgba(218, 33, 40, 0.6);
+  --shadow-halo-red: 0 0 60px -10px rgba(218, 33, 40, 0.7);
   --shadow-node-selected: inset 0 0 0 2px var(--lg-accent);
   --shadow-node-error: inset 0 0 0 2px #f43f5e;
 }
@@ -128,18 +126,19 @@
   --lg-card: rgba(255, 255, 255, 0.55);
   --lg-card-hover: rgba(255, 255, 255, 0.75);
   --lg-border: rgba(255, 255, 255, 0.7);
-  --lg-accent: #6d28d9;
+  --lg-accent: #da2128;
 
-  --gradient-primary: linear-gradient(135deg, #6d28d9, #2563eb);
-  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(167, 139, 250, 0.55), transparent 60%),
-    radial-gradient(50% 50% at 85% 0%, rgba(96, 165, 250, 0.5), transparent 60%),
-    radial-gradient(60% 60% at 80% 90%, rgba(240, 171, 252, 0.45), transparent 60%),
-    radial-gradient(50% 50% at 10% 95%, rgba(103, 232, 249, 0.4), transparent 60%);
+  --gradient-primary: linear-gradient(135deg, #e3433e, #da2128);
+  --gradient-iris: linear-gradient(135deg, rgba(227, 67, 62, 0.9), rgba(218, 33, 40, 0.9));
+  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(227, 67, 62, 0.45), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(218, 33, 40, 0.4), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(183, 28, 28, 0.35), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(227, 67, 62, 0.3), transparent 60%);
 
   --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
     inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 20px 60px -20px rgba(11, 11, 20, 0.18);
-  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px -8px rgba(109, 40, 217, 0.45);
-  --shadow-halo-red: 0 0 60px -10px rgba(109, 40, 217, 0.45);
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px -8px rgba(218, 33, 40, 0.45);
+  --shadow-halo-red: 0 0 60px -10px rgba(218, 33, 40, 0.45);
 }
 
 /* ====== Glass utilities ====== */
@@ -288,10 +287,10 @@
 
 /* React Flow overrides (kept compatible) */
 .react-flow__edge-path { stroke: var(--lg-accent); stroke-width: 2; transition: stroke 150ms; }
-.react-flow__edge:hover .react-flow__edge-path { stroke: var(--color-iris-pink); }
+.react-flow__edge:hover .react-flow__edge-path { stroke: var(--lg-accent); opacity: 0.8; }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--color-iris-pink);
-  filter: drop-shadow(0 0 6px rgba(240, 171, 252, 0.6));
+  stroke: var(--lg-accent);
+  filter: drop-shadow(0 0 6px rgba(218, 33, 40, 0.6));
 }
 .react-flow__handle {
   width: 10px; height: 10px;

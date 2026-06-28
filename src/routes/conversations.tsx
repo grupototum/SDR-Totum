@@ -75,12 +75,9 @@ function ConversationView({ conv, onClose }: { conv: ConversationDetail; onClose
   });
 
   return (
-    <div className="flex h-full flex-col" style={{ background: "#1b1728" }}>
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-3"
-        style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
-      >
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
         <div>
           <div className="font-medium text-white">{conv.lead.empresa}</div>
           <div className="text-xs text-[color:var(--color-text-muted)]">
@@ -96,7 +93,8 @@ function ConversationView({ conv, onClose }: { conv: ConversationDetail; onClose
           </span>
           <span
             className="rounded-full px-2 py-0.5 text-[10px]"
-            style={{ background: "#1f192a", color: statusColor(conv.status) }}
+            className="glass rounded-full px-2 py-0.5 text-[10px]"
+            style={{ color: statusColor(conv.status) }}
           >
             {conv.status}
           </span>
@@ -201,13 +199,12 @@ function ConversationsPage() {
   });
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0e0918" }}>
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar list */}
       <div
-        className="w-80 shrink-0 flex flex-col overflow-hidden"
-        style={{ boxShadow: "inset -1px 0 0 0 #1f192a" }}
+        className="w-80 shrink-0 flex flex-col overflow-hidden border-r border-border"
       >
-        <div className="px-5 py-4" style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}>
+        <div className="px-5 py-4 border-b border-border">
           <h1 className="text-base text-white flex items-center gap-2">
             <MessageCircle className="size-4" /> Conversas
           </h1>
@@ -224,11 +221,7 @@ function ConversationsPage() {
             <button
               key={c.id}
               onClick={() => setSelectedId(c.id)}
-              className="w-full text-left px-5 py-3 transition-colors"
-              style={{
-                background: selectedId === c.id ? "#1f192a" : "transparent",
-                boxShadow: "inset 0 -1px 0 0 #1f192a",
-              }}
+              className={`w-full text-left px-5 py-3 transition-colors border-b border-border ${selectedId === c.id ? "bg-[color:var(--lg-card-hover)]" : "hover:bg-[color:var(--lg-card)]"}`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white truncate">{c.empresa}</span>

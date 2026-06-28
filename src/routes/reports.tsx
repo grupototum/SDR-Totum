@@ -109,13 +109,10 @@ function ReportsPage() {
   });
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0e0918" }}>
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <div
-        className="w-80 shrink-0 flex flex-col overflow-hidden"
-        style={{ boxShadow: "inset -1px 0 0 0 #1f192a" }}
-      >
-        <div className="px-5 py-4" style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}>
+      <div className="w-80 shrink-0 flex flex-col overflow-hidden border-r border-border">
+        <div className="px-5 py-4 border-b border-border">
           <h1 className="text-base text-white flex items-center gap-2">
             <BarChart3 className="size-4" /> Relatórios
           </h1>
@@ -134,11 +131,7 @@ function ReportsPage() {
             <button
               key={r.conversationId}
               onClick={() => setSelectedId(r.conversationId)}
-              className="w-full text-left px-5 py-3 transition-colors"
-              style={{
-                background: selectedId === r.conversationId ? "#1f192a" : "transparent",
-                boxShadow: "inset 0 -1px 0 0 #1f192a",
-              }}
+              className={`w-full text-left px-5 py-3 transition-colors border-b border-border ${selectedId === r.conversationId ? "bg-[color:var(--lg-card-hover)]" : "hover:bg-[color:var(--lg-card)]"}`}
             >
               <div className="flex items-center gap-2">
                 <ResultIcon r={r.resultado} />
