@@ -34,64 +34,58 @@ export function AppSidebar() {
     url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader
-        className="h-14 flex-row items-center gap-2 px-3"
-        style={{ boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.06)" }}
-      >
-        <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
-        {!collapsed && <span className="text-white text-sm tracking-[-0.02em]">SDR Totum</span>}
-      </SidebarHeader>
+    <Sidebar collapsible="icon" className="border-r-0 bg-transparent">
+      <div className="glass iris-ring m-2 flex flex-1 flex-col rounded-3xl overflow-hidden">
+        <SidebarHeader className="h-14 flex-row items-center gap-2 px-3 bg-transparent">
+          <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
+          {!collapsed && (
+            <span className="text-sm tracking-tight text-[color:var(--lg-fg)]">SDR Totum</span>
+          )}
+        </SidebarHeader>
 
-      <SidebarContent style={{ background: "var(--color-card-totum)" }}>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => {
-                const active = isActive(item.url);
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className="data-[active=true]:text-white"
-                      style={
-                        active
-                          ? {
-                              background:
-                                "linear-gradient(135deg, rgba(227,67,62,0.18), rgba(218,33,40,0.18))",
-                              boxShadow: "inset 0 0 0 1px rgba(218,33,40,0.45)",
-                            }
-                          : undefined
-                      }
-                    >
-                      <Link to={item.url}>
-                        <item.icon
-                          className="size-4"
-                          style={active ? { color: "#e3433e" } : undefined}
-                        />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+        <SidebarContent className="bg-transparent">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => {
+                  const active = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        tooltip={item.title}
+                        className="rounded-full data-[active=true]:text-[color:var(--lg-fg)] hover:bg-white/10"
+                        style={
+                          active
+                            ? {
+                                backgroundImage: "var(--gradient-iris)",
+                                color: "#fff",
+                                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
+                              }
+                            : undefined
+                        }
+                      >
+                        <Link to={item.url}>
+                          <item.icon className="size-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-      <SidebarFooter
-        className="px-3 py-2"
-        style={{ boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.06)" }}
-      >
-        <SidebarTrigger
-          className="size-8 rounded-full text-white hover:bg-[color:var(--color-hover-surface)]"
-          style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
-        />
-      </SidebarFooter>
-
+        <SidebarFooter className="px-3 py-2 bg-transparent">
+          <SidebarTrigger
+            className="size-8 rounded-full text-[color:var(--lg-fg)] hover:bg-white/15"
+            style={{ boxShadow: "inset 0 0 0 1px var(--lg-border)" }}
+          />
+        </SidebarFooter>
+      </div>
       <SidebarRail />
     </Sidebar>
   );

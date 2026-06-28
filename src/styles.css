@@ -1,207 +1,321 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "@fontsource-variable/inter";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
 
 @theme inline {
-  /* Totum surfaces */
-  --color-surface: #0e0918;
-  --color-card-totum: #1b1728;
-  --color-elevated: #1f192a;
-  --color-hover-surface: #272333;
-  --color-warm-rust: #432d33;
-  --color-cool-graphite: #191422;
+  /* === Liquid Glass: neutral palette === */
+  --color-glass-50: rgba(255, 255, 255, 0.06);
+  --color-glass-100: rgba(255, 255, 255, 0.10);
+  --color-glass-200: rgba(255, 255, 255, 0.18);
+  --color-glass-300: rgba(255, 255, 255, 0.28);
+  --color-glass-border: rgba(255, 255, 255, 0.22);
 
-  /* Totum brand */
-  --color-totum-red: #da2128;
-  --color-brand-red-bright: #e3433e;
-  --color-brand-red-light: #ef9a9a;
-  --color-totum-blue: #077ac7;
-  --color-totum-purple: #6b21ef;
-  --color-brand-purple-bright: #a06ff6;
+  /* Iridescent accents */
+  --color-iris-cyan: #67e8f9;
+  --color-iris-violet: #a78bfa;
+  --color-iris-pink: #f0abfc;
+  --color-iris-blue: #60a5fa;
+  --color-iris-mint: #6ee7b7;
 
-  /* Text */
-  --color-text-body: #d1cece;
-  --color-text-muted: #9ca3af;
-  --color-white-soft: #d1cece;
-
-  /* States */
-  --color-totum-success: #35a670;
-  --color-totum-error: #d91616;
-
-  /* Shadcn-compatible mappings (so existing UI components keep working) */
-  --color-background: var(--color-surface);
-  --color-foreground: #ffffff;
-  --color-card: var(--color-card-totum);
-  --color-card-foreground: #ffffff;
-  --color-popover: var(--color-card-totum);
-  --color-popover-foreground: #ffffff;
-  --color-primary: var(--color-totum-red);
+  /* Semantic tokens (resolved from :root vars so light/dark can swap) */
+  --color-background: var(--lg-bg);
+  --color-foreground: var(--lg-fg);
+  --color-card: var(--lg-card);
+  --color-card-foreground: var(--lg-fg);
+  --color-popover: var(--lg-card);
+  --color-popover-foreground: var(--lg-fg);
+  --color-primary: var(--lg-accent);
   --color-primary-foreground: #ffffff;
-  --color-secondary: var(--color-elevated);
-  --color-secondary-foreground: var(--color-text-body);
-  --color-muted: var(--color-elevated);
-  --color-muted-foreground: var(--color-text-muted);
-  --color-accent: var(--color-hover-surface);
-  --color-accent-foreground: #ffffff;
-  --color-destructive: var(--color-totum-error);
+  --color-secondary: var(--lg-card);
+  --color-secondary-foreground: var(--lg-fg);
+  --color-muted: var(--lg-muted);
+  --color-muted-foreground: var(--lg-muted-fg);
+  --color-accent: var(--lg-card-hover);
+  --color-accent-foreground: var(--lg-fg);
+  --color-destructive: #f43f5e;
   --color-destructive-foreground: #ffffff;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-input: var(--color-elevated);
-  --color-ring: var(--color-totum-red);
+  --color-border: var(--lg-border);
+  --color-input: var(--lg-card);
+  --color-ring: var(--lg-accent);
 
-  --color-sidebar: var(--color-card-totum);
-  --color-sidebar-foreground: #ffffff;
-  --color-sidebar-primary: var(--color-totum-red);
+  --color-sidebar: var(--lg-card);
+  --color-sidebar-foreground: var(--lg-fg);
+  --color-sidebar-primary: var(--lg-accent);
   --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: var(--color-hover-surface);
-  --color-sidebar-accent-foreground: #ffffff;
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
-  --color-sidebar-ring: var(--color-totum-red);
+  --color-sidebar-accent: var(--lg-card-hover);
+  --color-sidebar-accent-foreground: var(--lg-fg);
+  --color-sidebar-border: var(--lg-border);
+  --color-sidebar-ring: var(--lg-accent);
 
-  --font-sans: geomanist, ui-sans-serif, system-ui, sans-serif;
-  --font-geomanist: geomanist, ui-sans-serif, system-ui, sans-serif;
+  /* Legacy Totum aliases mapped to glass (so untouched files don't break) */
+  --color-surface: var(--lg-bg);
+  --color-card-totum: var(--lg-card);
+  --color-elevated: var(--lg-card-hover);
+  --color-hover-surface: var(--lg-card-hover);
+  --color-warm-rust: var(--lg-card);
+  --color-cool-graphite: var(--lg-card);
+  --color-totum-red: var(--lg-accent);
+  --color-brand-red-bright: var(--lg-accent);
+  --color-brand-red-light: var(--lg-accent);
+  --color-totum-blue: var(--color-iris-blue);
+  --color-totum-purple: var(--color-iris-violet);
+  --color-brand-purple-bright: var(--color-iris-pink);
+  --color-text-body: var(--lg-fg);
+  --color-text-muted: var(--lg-muted-fg);
+  --color-white-soft: var(--lg-fg);
+  --color-totum-success: #34d399;
+  --color-totum-error: #f43f5e;
 
-  --radius: 0.625rem;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-geomanist: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius: 1rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
   --radius-pill: 9999px;
 }
 
-:root {
+/* ====== Dark (default) ====== */
+:root,
+.dark {
   color-scheme: dark;
+  --lg-bg: #0b0b14;
+  --lg-fg: #ffffff;
+  --lg-muted: rgba(255, 255, 255, 0.08);
+  --lg-muted-fg: rgba(255, 255, 255, 0.65);
+  --lg-card: rgba(255, 255, 255, 0.08);
+  --lg-card-hover: rgba(255, 255, 255, 0.16);
+  --lg-border: rgba(255, 255, 255, 0.18);
+  --lg-accent: #a78bfa;
 
-  --gradient-primary: linear-gradient(135deg, #e3433e, #da2128);
-  --gradient-secondary: linear-gradient(135deg, #077ac7, #6b21ef);
-  --gradient-brand-card: linear-gradient(180deg, #432d33, #0e0918);
-  --gradient-nav-active: linear-gradient(to bottom, #a06ff6, #6b21ef);
+  --gradient-primary: linear-gradient(135deg, #a78bfa, #60a5fa);
+  --gradient-secondary: linear-gradient(135deg, #67e8f9, #a78bfa);
+  --gradient-iris: linear-gradient(
+    135deg,
+    rgba(167, 139, 250, 0.9),
+    rgba(96, 165, 250, 0.9),
+    rgba(103, 232, 249, 0.9),
+    rgba(240, 171, 252, 0.9)
+  );
+  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(167, 139, 250, 0.45), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(96, 165, 250, 0.4), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(240, 171, 252, 0.35), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(103, 232, 249, 0.3), transparent 60%);
 
-  --shadow-inset-border: inset 0 0 0 1px hsla(0, 0%, 100%, 0.1);
-  --shadow-inset-top: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
-  --shadow-card: inset 0 0 0 1px hsla(0, 0%, 100%, 0.1), inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
-  --shadow-brand-card:
-    inset 0 0 0 1px hsla(0, 0%, 100%, 0.1), inset 0 1px 0 0 rgba(218, 33, 40, 0.3);
-  --shadow-btn-primary: inset 0 1px 1px hsla(0, 0%, 100%, 0.2), 0 1px 2px rgba(8, 8, 8, 0.2);
-  --shadow-halo-red:
-    inset 0 1px 1px hsla(0, 0%, 100%, 0.2), 0 1px 2px rgba(8, 8, 8, 0.2), 0 7px 80px -12px #da2128;
-  --shadow-node-selected: inset 0 0 0 2px #da2128;
-  --shadow-node-error: inset 0 0 0 2px #d91616;
+  --shadow-inset-border: inset 0 0 0 1px var(--lg-border);
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+  --shadow-brand-card: var(--shadow-card);
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 24px -8px rgba(167, 139, 250, 0.6);
+  --shadow-halo-red: 0 0 60px -10px rgba(167, 139, 250, 0.7);
+  --shadow-node-selected: inset 0 0 0 2px var(--lg-accent);
+  --shadow-node-error: inset 0 0 0 2px #f43f5e;
 }
 
+/* ====== Light ====== */
+.light {
+  color-scheme: light;
+  --lg-bg: #f4f5fb;
+  --lg-fg: #0b0b14;
+  --lg-muted: rgba(11, 11, 20, 0.05);
+  --lg-muted-fg: rgba(11, 11, 20, 0.55);
+  --lg-card: rgba(255, 255, 255, 0.55);
+  --lg-card-hover: rgba(255, 255, 255, 0.75);
+  --lg-border: rgba(255, 255, 255, 0.7);
+  --lg-accent: #6d28d9;
+
+  --gradient-primary: linear-gradient(135deg, #6d28d9, #2563eb);
+  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(167, 139, 250, 0.55), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(96, 165, 250, 0.5), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(240, 171, 252, 0.45), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(103, 232, 249, 0.4), transparent 60%);
+
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 20px 60px -20px rgba(11, 11, 20, 0.18);
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px -8px rgba(109, 40, 217, 0.45);
+  --shadow-halo-red: 0 0 60px -10px rgba(109, 40, 217, 0.45);
+}
+
+/* ====== Glass utilities ====== */
+@utility glass {
+  background: var(--lg-card);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+@utility glass-strong {
+  background: var(--lg-card-hover);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+@utility glass-pill {
+  background: var(--lg-card);
+  backdrop-filter: blur(14px) saturate(160%);
+  border-radius: 9999px;
+  box-shadow: var(--shadow-card);
+}
+@utility iris-border {
+  position: relative;
+}
 @utility inset-border {
   box-shadow: var(--shadow-inset-border);
 }
-
 @utility card-shadow {
   box-shadow: var(--shadow-card);
 }
-
 @utility brand-card-shadow {
-  box-shadow: var(--shadow-brand-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Iridescent border via mask trick — applied with .iris-ring class */
+.iris-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--gradient-iris);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* Cursor shimmer overlay for .lg-shimmer */
+.lg-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.lg-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    160px 160px at var(--mx, -200px) var(--my, -200px),
+    rgba(255, 255, 255, 0.18),
+    transparent 60%
+  );
+  transition: background 80ms linear;
+  border-radius: inherit;
+}
+
+/* Hover lift */
+.lg-hover {
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms;
+}
+.lg-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Ripple */
+.lg-ripple-dot {
+  position: absolute;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%) scale(0);
+  background: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  animation: lg-ripple 600ms ease-out forwards;
+}
+@keyframes lg-ripple {
+  to {
+    transform: translate(-50%, -50%) scale(18);
+    opacity: 0;
+  }
+}
+
+/* Aurora animated bg */
+.lg-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--gradient-aurora), var(--lg-bg);
+  filter: saturate(120%);
+  animation: lg-drift 22s ease-in-out infinite alternate;
+}
+@keyframes lg-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-2%, 2%, 0) scale(1.05);
+  }
 }
 
 @layer base {
   html {
-    background-color: var(--color-surface);
+    background-color: var(--lg-bg);
   }
-
   body {
-    background-color: var(--color-surface);
-    color: #ffffff;
-    font-family: var(--font-geomanist);
+    background-color: transparent;
+    color: var(--lg-fg);
+    font-family: var(--font-sans);
     font-weight: 400;
-    letter-spacing: 0;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
   }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-weight: 300;
-    letter-spacing: -0.02em;
-    color: #ffffff;
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+    letter-spacing: -0.022em;
+    color: var(--lg-fg);
   }
-
-  strong,
-  b {
-    font-weight: 400;
-  }
-
+  strong, b { font-weight: 600; }
   *:focus-visible {
-    outline: 1px solid var(--color-totum-red);
+    outline: 2px solid var(--lg-accent);
     outline-offset: 2px;
   }
-
   ::selection {
-    background: rgba(218, 33, 40, 0.4);
-    color: #fff;
+    background: color-mix(in oklab, var(--lg-accent) 40%, transparent);
+    color: var(--lg-fg);
   }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: var(--color-surface);
-  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-elevated);
+    background: var(--lg-card-hover);
     border-radius: 9999px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-hover-surface);
-  }
 }
 
-/* React Flow overrides */
-.react-flow__edge-path {
-  stroke: #6b21ef;
-  stroke-width: 2;
-  transition: stroke 150ms;
-}
-.react-flow__edge:hover .react-flow__edge-path {
-  stroke: #da2128;
-}
+/* React Flow overrides (kept compatible) */
+.react-flow__edge-path { stroke: var(--lg-accent); stroke-width: 2; transition: stroke 150ms; }
+.react-flow__edge:hover .react-flow__edge-path { stroke: var(--color-iris-pink); }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #da2128;
-  filter: drop-shadow(0 0 6px rgba(218, 33, 40, 0.6));
+  stroke: var(--color-iris-pink);
+  filter: drop-shadow(0 0 6px rgba(240, 171, 252, 0.6));
 }
 .react-flow__handle {
-  width: 10px;
-  height: 10px;
-  background: #1b1728;
-  box-shadow: inset 0 0 0 2px #6b21ef;
+  width: 10px; height: 10px;
+  background: var(--lg-card);
+  box-shadow: inset 0 0 0 2px var(--lg-accent);
   border: none;
 }
-.react-flow__handle:hover {
-  box-shadow: inset 0 0 0 2px #da2128;
-}
 .react-flow__controls {
-  background: #1b1728;
+  background: var(--lg-card);
+  backdrop-filter: blur(14px);
   box-shadow: var(--shadow-card);
   border-radius: 12px;
   overflow: hidden;
 }
 .react-flow__controls button {
-  background: #1b1728;
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: var(--lg-fg);
+  border-bottom: 1px solid var(--lg-border);
 }
-.react-flow__controls button:hover {
-  background: #272333;
-}
+.react-flow__controls button:hover { background: var(--lg-card-hover); }
 .react-flow__minimap {
-  background: #1b1728 !important;
+  background: var(--lg-card) !important;
+  backdrop-filter: blur(14px);
   box-shadow: var(--shadow-card);
   border-radius: 12px;
 }
-.react-flow__attribution {
-  display: none;
-}
+.react-flow__attribution { display: none; }
