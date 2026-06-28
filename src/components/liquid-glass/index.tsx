@@ -93,7 +93,7 @@ export function LiquidToggle({ checked, onChange, label, className }: LiquidTogg
 }
 
 /* ─────────── FeatureCard ─────────── */
-export interface LiquidFeatureCardProps extends HTMLAttributes<HTMLDivElement> {
+export interface LiquidFeatureCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   icon?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
