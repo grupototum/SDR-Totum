@@ -91,10 +91,7 @@ function WorkflowDetail({ id }: { id: string }) {
           </div>
         </div>
 
-        <div
-          className="flex items-center justify-between rounded-xl px-4 py-3"
-          style={{ background: "#1f192a", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
-        >
+        <div className="glass flex items-center justify-between rounded-xl px-4 py-3">
           <div className="flex items-center gap-2">
             {active ? (
               <Power className="size-4 text-[#35a670]" />
@@ -154,16 +151,10 @@ function N8nPage() {
   });
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0e0918" }}>
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Lista */}
-      <div
-        className="w-80 shrink-0 flex flex-col overflow-hidden"
-        style={{ boxShadow: "inset -1px 0 0 0 #1f192a" }}
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
-        >
+      <div className="w-80 shrink-0 flex flex-col overflow-hidden border-r border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <WorkflowIcon className="size-4 text-[#e3433e]" />
             <h1 className="text-sm text-white">N8N Workflows</h1>
@@ -197,11 +188,7 @@ function N8nPage() {
               <button
                 key={w.id}
                 onClick={() => setSelectedId(w.id)}
-                className="flex w-full items-center justify-between gap-2 px-5 py-3 text-left transition-colors"
-                style={{
-                  background: selected ? "#1f192a" : "transparent",
-                  boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.04)",
-                }}
+                className={`flex w-full items-center justify-between gap-2 px-5 py-3 text-left transition-colors border-b border-border ${selected ? "bg-[color:var(--lg-card-hover)]" : "hover:bg-[color:var(--lg-card)]"}`}
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm text-white">{w.name}</p>
