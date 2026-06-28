@@ -63,12 +63,15 @@ export function V2Builder({ flowId }: { flowId?: string } = {}) {
 
   useEffect(() => {
     if (flowId && remoteQuery.data) {
+      // Guard: se o flowId já está no store, não re-setar — sem isso,
+      // setFlow altera `flow` (que está nos deps) causando loop infinito.
+      if (flowId === currentFlowId) return;
       setFlow(remoteQuery.data as unknown as FlowV2);
       setCurrentFlow(flowId);
     } else if (!flowId && !flow) {
       setFlow(flowV2Default as unknown as FlowV2);
     }
-  }, [flowId, remoteQuery.data, flow, setFlow, setCurrentFlow]);
+  }, [flowId, remoteQuery.data, currentFlowId, flow, setFlow, setCurrentFlow]);
 
   const setModeAndStore = (m: Mode) => {
     setMode(m);
