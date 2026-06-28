@@ -30,10 +30,7 @@ export function LiquidNav({
   return (
     <nav
       ref={ref}
-      className={cn(
-        "glass-pill iris-ring lg-shimmer flex items-center gap-1 px-2 py-2",
-        className,
-      )}
+      className={cn("glass-pill iris-ring lg-shimmer flex items-center gap-1 px-2 py-2", className)}
     >
       {items.map((it) => (
         <button
@@ -110,10 +107,7 @@ export const LiquidFeatureCard = forwardRef<HTMLDivElement, LiquidFeatureCardPro
           if (typeof fwd === "function") fwd(node);
           else if (fwd) fwd.current = node;
         }}
-        className={cn(
-          "glass iris-ring lg-shimmer lg-hover p-6 flex flex-col gap-4",
-          className,
-        )}
+        className={cn("glass iris-ring lg-shimmer lg-hover p-6 flex flex-col gap-4", className)}
       >
         {icon && (
           <div className="flex size-11 items-center justify-center rounded-2xl bg-[image:var(--gradient-iris)] text-white shadow-[var(--shadow-btn-primary)]">
