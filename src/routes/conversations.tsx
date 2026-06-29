@@ -92,7 +92,6 @@ function ConversationView({ conv, onClose }: { conv: ConversationDetail; onClose
             {conv.temperatura}
           </span>
           <span
-            className="rounded-full px-2 py-0.5 text-[10px]"
             className="glass rounded-full px-2 py-0.5 text-[10px]"
             style={{ color: statusColor(conv.status) }}
           >

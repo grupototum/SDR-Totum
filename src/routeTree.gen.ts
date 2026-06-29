@@ -14,6 +14,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as N8nRouteImport } from './routes/n8n'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
 import { Route as BuilderRouteImport } from './routes/builder'
@@ -46,6 +47,11 @@ const N8nRoute = N8nRouteImport.update({
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/reports': typeof ReportsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
+    | '/diagnostics'
     | '/financeiro'
     | '/n8n'
     | '/pesquisa'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/'
     | '/builder-legacy'
     | '/conversations'
+    | '/diagnostics'
     | '/financeiro'
     | '/n8n'
     | '/reports'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
+    | '/diagnostics'
     | '/financeiro'
     | '/n8n'
     | '/pesquisa'
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   BuilderRoute: typeof BuilderRouteWithChildren
   BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
+  DiagnosticsRoute: typeof DiagnosticsRoute
   FinanceiroRoute: typeof FinanceiroRoute
   N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
@@ -226,6 +239,13 @@ declare module '@tanstack/react-router' {
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -319,6 +339,7 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderRoute: BuilderRouteWithChildren,
   BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
+  DiagnosticsRoute: DiagnosticsRoute,
   FinanceiroRoute: FinanceiroRoute,
   N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
@@ -328,13 +349,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
