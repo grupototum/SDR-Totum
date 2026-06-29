@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase, type Account, type Transaction } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, type Account, type Transaction } from "@/lib/supabase";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 
 export const Route = createFileRoute("/financeiro")({
