@@ -60,6 +60,45 @@ export function BuilderSidebar({ collapsed = false, onToggle }: BuilderSidebarPr
   }
 
   return (
+  if (collapsed) {
+    return (
+      <aside
+        className="flex h-full w-14 shrink-0 flex-col items-center gap-2 py-4"
+        style={{
+          background: "#1b1728",
+          boxShadow: "inset -1px 0 0 0 hsla(0,0%,100%,0.06)",
+        }}
+      >
+        <button
+          onClick={onToggle}
+          className="grid size-9 place-items-center rounded-full text-white/80 hover:bg-[#272333] hover:text-white"
+          title="Expandir menu"
+          aria-label="Expandir menu"
+        >
+          <PanelLeftOpen className="size-4" />
+        </button>
+        <Link
+          to="/pesquisa"
+          className="grid size-9 place-items-center rounded-full text-white/70 hover:bg-[#272333] hover:text-white"
+          title="Pesquisas"
+        >
+          <Search className="size-4" />
+        </Link>
+        <button
+          onClick={() => {
+            resetFlow();
+            toast.success("Novo flow em branco");
+          }}
+          className="grid size-9 place-items-center rounded-full text-white/70 hover:bg-[#272333] hover:text-white"
+          title="Novo flow"
+        >
+          <Plus className="size-4" />
+        </button>
+      </aside>
+    );
+  }
+
+  return (
     <aside
       className="flex h-full w-[280px] shrink-0 flex-col gap-6 p-5"
       style={{
@@ -67,13 +106,25 @@ export function BuilderSidebar({ collapsed = false, onToggle }: BuilderSidebarPr
         boxShadow: "inset -1px 0 0 0 hsla(0,0%,100%,0.06)",
       }}
     >
-      <div>
-        <h1 className="text-2xl" style={{ fontWeight: 300, letterSpacing: "-0.02em" }}>
-          SDR <strong>TOTUM</strong>
-        </h1>
-        <p className="mt-1 text-[11px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
-          Flow Builder
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl truncate" style={{ fontWeight: 300, letterSpacing: "-0.02em" }}>
+            SDR <strong>TOTUM</strong>
+          </h1>
+          <p className="mt-1 text-[11px] uppercase tracking-wider text-[color:var(--color-text-muted)]">
+            Flow Builder
+          </p>
+        </div>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="grid size-8 shrink-0 place-items-center rounded-full text-white/70 hover:bg-[#272333] hover:text-white"
+            title="Retrair menu"
+            aria-label="Retrair menu"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
+        )}
       </div>
 
       <Section title="Pesquisas" icon={Search}>
@@ -144,6 +195,7 @@ export function BuilderSidebar({ collapsed = false, onToggle }: BuilderSidebarPr
     </aside>
   );
 }
+
 
 function Section({
   title,
