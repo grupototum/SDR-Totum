@@ -4,8 +4,14 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useFlowStore } from "@/stores/flow-store";
 import { api, type FlowSummary } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
-import { Search, Workflow, Plus, Copy } from "lucide-react";
+import { Search, Workflow, Plus, Copy, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "sonner";
+
+type BuilderSidebarProps = {
+  collapsed?: boolean;
+  onToggle?: () => void;
+};
+
 
 export function BuilderSidebar() {
   const navigate = useNavigate();
