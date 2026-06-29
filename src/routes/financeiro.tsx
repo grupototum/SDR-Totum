@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase, type Account, type Transaction } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, type Account, type Transaction } from "@/lib/supabase";
 import { ArrowDownLeft, ArrowUpRight, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 
 export const Route = createFileRoute("/financeiro")({
@@ -447,6 +447,25 @@ function FinanceiroPage() {
   const [range, setRange] = useState<FilterRange>(30);
   const { accounts, loading: loadingAcc } = useAccounts();
   const { txs, loading: loadingTx } = useTransactions(range);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <main className="min-h-screen px-4 py-10 md:px-8 lg:px-12">
+        <div className="mb-10" style={{ letterSpacing: "-0.06em" }}>
+          <h1 className="text-3xl font-light text-[color:var(--lg-fg)]">Financeiro</h1>
+          <p className="mt-1 text-sm text-[color:var(--lg-muted-fg)]">Visão consolidada · Totum</p>
+        </div>
+        <div className="mx-auto max-w-2xl glass iris-ring p-8 text-sm text-[color:var(--lg-muted-fg)]">
+          <p className="mb-2 text-base text-[color:var(--lg-fg)]">Backend financeiro não configurado</p>
+          <p>
+            Defina <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code> (e
+            opcionalmente <code>VITE_FINANCE_TENANT_ID</code>) nas envs do projeto e republique
+            para ativar esta página.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
