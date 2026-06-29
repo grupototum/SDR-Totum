@@ -13,7 +13,7 @@ type BuilderSidebarProps = {
 };
 
 
-export function BuilderSidebar() {
+export function BuilderSidebar({ collapsed = false, onToggle }: BuilderSidebarProps = {}) {
   const navigate = useNavigate();
   const loadFlow = useFlowStore((s) => s.loadFlow);
   const resetFlow = useFlowStore((s) => s.resetFlow);
