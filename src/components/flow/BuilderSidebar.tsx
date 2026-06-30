@@ -59,7 +59,6 @@ export function BuilderSidebar({ collapsed = false, onToggle }: BuilderSidebarPr
     }
   }
 
-  return (
   if (collapsed) {
     return (
       <aside
