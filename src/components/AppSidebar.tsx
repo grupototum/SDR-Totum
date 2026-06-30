@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Search, Workflow, MessagesSquare, BarChart3, FlaskConical, Banknote } from "lucide-react";
+import { Home, Search, Workflow, MessagesSquare, BarChart3, FlaskConical } from "lucide-react";
 import logo from "@/assets/sdr-logo.png";
 import {
   Sidebar,
@@ -23,7 +23,6 @@ const items = [
   { title: "Simulador", url: "/simulator", icon: FlaskConical },
   { title: "Conversas", url: "/conversations", icon: MessagesSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Financeiro", url: "/financeiro", icon: Banknote },
 ] as const;
 
 export function AppSidebar() {
@@ -36,11 +35,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-transparent">
-      <div className="glass iris-ring m-2 flex flex-1 flex-col rounded-3xl overflow-hidden">
-        <SidebarHeader className="h-14 flex-row items-center gap-2 px-3 bg-transparent">
-          <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
+      <div className="glass iris-ring my-3 ml-3 mr-1 flex flex-1 flex-col rounded-3xl overflow-hidden">
+        <SidebarHeader className="h-16 flex-row items-center gap-3 px-4 bg-transparent">
+          <img src={logo} alt="SDR Totum" className="size-10 shrink-0 object-contain" />
           {!collapsed && (
-            <span className="text-sm tracking-tight text-[color:var(--lg-fg)]">SDR Totum</span>
+            <span className="text-base tracking-tight text-[color:var(--lg-fg)]">SDR Totum</span>
           )}
         </SidebarHeader>
 
