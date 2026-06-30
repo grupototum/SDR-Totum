@@ -35,16 +35,26 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-transparent">
-      <div className="glass iris-ring my-3 ml-3 mr-1 flex flex-1 flex-col rounded-3xl overflow-hidden">
-        <SidebarHeader className="h-16 flex-row items-center gap-3 px-4 bg-transparent">
-          <img src={logo} alt="SDR Totum" className="size-10 shrink-0 object-contain" />
+      <div
+        className={`glass iris-ring flex flex-1 flex-col overflow-hidden rounded-3xl ${
+          collapsed ? "m-1.5" : "my-3 ml-3 mr-1"
+        }`}
+      >
+        <SidebarHeader
+          className={`h-16 flex-row items-center gap-3 bg-transparent ${
+            collapsed ? "justify-center px-0" : "px-4"
+          }`}
+        >
+          <img src={logo} alt="SDR Totum" className="size-8 shrink-0 object-contain" />
           {!collapsed && (
-            <span className="text-base tracking-tight text-[color:var(--lg-fg)]">SDR Totum</span>
+            <span className="truncate text-base tracking-tight text-[color:var(--lg-fg)]">
+              SDR Totum
+            </span>
           )}
         </SidebarHeader>
 
         <SidebarContent className="bg-transparent">
-          <SidebarGroup>
+          <SidebarGroup className={collapsed ? "px-1" : undefined}>
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => {
@@ -66,9 +76,9 @@ export function AppSidebar() {
                             : undefined
                         }
                       >
-                        <Link to={item.url}>
-                          <item.icon className="size-4" />
-                          <span>{item.title}</span>
+                        <Link to={item.url} className="min-w-0">
+                          <item.icon className="size-4 shrink-0" />
+                          <span className="truncate">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -79,7 +89,9 @@ export function AppSidebar() {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="px-3 py-2 bg-transparent">
+        <SidebarFooter
+          className={`bg-transparent ${collapsed ? "items-center px-0 py-2" : "px-3 py-2"}`}
+        >
           <SidebarTrigger
             className="size-8 rounded-full text-[color:var(--lg-fg)] hover:bg-white/15"
             style={{ boxShadow: "inset 0 0 0 1px var(--lg-border)" }}
