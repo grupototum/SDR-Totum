@@ -13,7 +13,6 @@ import { Route as SimulatorRouteImport } from './routes/simulator'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as N8nRouteImport } from './routes/n8n'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
@@ -42,11 +41,6 @@ const PesquisaRoute = PesquisaRouteImport.update({
 const N8nRoute = N8nRouteImport.update({
   id: '/n8n',
   path: '/n8n',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/diagnostics': typeof DiagnosticsRoute
-  '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
@@ -116,7 +109,6 @@ export interface FileRoutesByTo {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/diagnostics': typeof DiagnosticsRoute
-  '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
@@ -132,7 +124,6 @@ export interface FileRoutesById {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/diagnostics': typeof DiagnosticsRoute
-  '/financeiro': typeof FinanceiroRoute
   '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/diagnostics'
-    | '/financeiro'
     | '/n8n'
     | '/pesquisa'
     | '/reports'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/diagnostics'
-    | '/financeiro'
     | '/n8n'
     | '/reports'
     | '/simulator'
@@ -180,7 +169,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/diagnostics'
-    | '/financeiro'
     | '/n8n'
     | '/pesquisa'
     | '/reports'
@@ -197,7 +185,6 @@ export interface RootRouteChildren {
   BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
   DiagnosticsRoute: typeof DiagnosticsRoute
-  FinanceiroRoute: typeof FinanceiroRoute
   N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
@@ -232,13 +219,6 @@ declare module '@tanstack/react-router' {
       path: '/n8n'
       fullPath: '/n8n'
       preLoaderRoute: typeof N8nRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diagnostics': {
@@ -340,7 +320,6 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
   DiagnosticsRoute: DiagnosticsRoute,
-  FinanceiroRoute: FinanceiroRoute,
   N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
@@ -349,13 +328,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

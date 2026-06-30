@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Search, Workflow, MessagesSquare, BarChart3, FlaskConical, Banknote } from "lucide-react";
+import { Home, Search, Workflow, MessagesSquare, BarChart3, FlaskConical } from "lucide-react";
 import logo from "@/assets/sdr-logo.png";
 import {
   Sidebar,
