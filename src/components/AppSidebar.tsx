@@ -23,7 +23,6 @@ const items = [
   { title: "Simulador", url: "/simulator", icon: FlaskConical },
   { title: "Conversas", url: "/conversations", icon: MessagesSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Financeiro", url: "/financeiro", icon: Banknote },
 ] as const;
 
 export function AppSidebar() {
