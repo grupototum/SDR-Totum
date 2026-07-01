@@ -14,7 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ThemeToggle } from "@/components/liquid-glass/ThemeToggle";
+
 
 function NotFoundComponent() {
   return (
@@ -148,11 +148,6 @@ function RootComponent() {
         <div className="flex min-h-screen w-full">
           <AppSidebar />
           <div className="relative flex-1 flex flex-col min-w-0">
-            <div className="pointer-events-none absolute right-4 top-4 z-20 pointer-events-auto">
-              <div className="glass-pill iris-ring px-3 py-1.5">
-                <ThemeToggle />
-              </div>
-            </div>
             <main className="flex-1 min-w-0">
               <Outlet />
             </main>

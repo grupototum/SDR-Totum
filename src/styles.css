@@ -101,10 +101,10 @@
     rgba(227, 67, 62, 0.9),
     rgba(218, 33, 40, 0.9)
   );
-  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(227, 67, 62, 0.35), transparent 60%),
-    radial-gradient(50% 50% at 85% 0%, rgba(218, 33, 40, 0.3), transparent 60%),
-    radial-gradient(60% 60% at 80% 90%, rgba(183, 28, 28, 0.25), transparent 60%),
-    radial-gradient(50% 50% at 10% 95%, rgba(227, 67, 62, 0.2), transparent 60%);
+  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(180, 40, 40, 0.20), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(160, 30, 30, 0.16), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(140, 25, 25, 0.14), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(180, 40, 40, 0.10), transparent 60%);
 
   --shadow-inset-border: inset 0 0 0 1px var(--lg-border);
   --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
