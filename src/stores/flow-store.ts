@@ -203,7 +203,7 @@ interface FlowStore {
   resetFlow: () => void;
 }
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = () => crypto.randomUUID().slice(0, 8);
 
 const defaultDataFor = (kind: NodeKind): NodeData => {
   switch (kind) {

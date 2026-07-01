@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SimulatorRouteImport } from './routes/simulator'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
-import { Route as N8nRouteImport } from './routes/n8n'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
@@ -36,11 +35,6 @@ const ReportsRoute = ReportsRouteImport.update({
 const PesquisaRoute = PesquisaRouteImport.update({
   id: '/pesquisa',
   path: '/pesquisa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const N8nRoute = N8nRouteImport.update({
-  id: '/n8n',
-  path: '/n8n',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
@@ -95,7 +89,6 @@ export interface FileRoutesByFullPath {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/financeiro': typeof FinanceiroRoute
-  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
@@ -109,7 +102,6 @@ export interface FileRoutesByTo {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/financeiro': typeof FinanceiroRoute
-  '/n8n': typeof N8nRoute
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
   '/builder/edit': typeof BuilderEditRoute
@@ -124,7 +116,6 @@ export interface FileRoutesById {
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/financeiro': typeof FinanceiroRoute
-  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
@@ -141,7 +132,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/financeiro'
-    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/simulator'
@@ -155,7 +145,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/financeiro'
-    | '/n8n'
     | '/reports'
     | '/simulator'
     | '/builder/edit'
@@ -169,7 +158,6 @@ export interface FileRouteTypes {
     | '/builder-legacy'
     | '/conversations'
     | '/financeiro'
-    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/simulator'
@@ -185,7 +173,6 @@ export interface RootRouteChildren {
   BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
   FinanceiroRoute: typeof FinanceiroRoute
-  N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
   SimulatorRoute: typeof SimulatorRoute
@@ -212,13 +199,6 @@ declare module '@tanstack/react-router' {
       path: '/pesquisa'
       fullPath: '/pesquisa'
       preLoaderRoute: typeof PesquisaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/n8n': {
-      id: '/n8n'
-      path: '/n8n'
-      fullPath: '/n8n'
-      preLoaderRoute: typeof N8nRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financeiro': {
@@ -320,7 +300,6 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
   FinanceiroRoute: FinanceiroRoute,
-  N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
   SimulatorRoute: SimulatorRoute,

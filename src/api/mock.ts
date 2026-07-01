@@ -10,7 +10,6 @@ import type {
   ConversationSummary,
   FlowSummary,
   Message,
-  ReportSchema,
   ReportSummary,
   StartConversationPayload,
   ResearchOrder,
@@ -80,22 +79,6 @@ const mockMessages: Message[] = [
     ts: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
   },
 ];
-
-const mockReport: ReportSchema = {
-  empresa: "Sorriso Perfeito",
-  resultado: "followup",
-  temperatura: "morno",
-  score: 7,
-  abriu_pela_observacao: true,
-  gatilho_preview: false,
-  agendou: false,
-  objecoes: ["já tem agência", "preço"],
-  resumo:
-    "Lead é o decisor, tem site, engajou bem na abertura. Pausou antes do preview de prévia. Segue em followup.",
-  transcript: mockMessages,
-  proxima_acao: "Ligar em 48h ou enviar prévia por e-mail",
-  onde_travou: "g09 — aguardando resposta",
-};
 
 const mockConversations: ConversationDetail[] = [
   {
@@ -546,6 +529,3 @@ export const mockApi: ApiClient = {
     };
   },
 };
-
-// Standalone mock report for fallback
-export { mockReport };

@@ -20,7 +20,7 @@ export function Field({
   );
 }
 
-export const inputStyle = {
+const inputStyle = {
   background: "#1f192a",
   color: "#d1cece",
   borderRadius: 6,
