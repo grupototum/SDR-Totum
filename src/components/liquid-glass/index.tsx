@@ -79,7 +79,7 @@ export function LiquidToggle({ checked, onChange, label, className }: LiquidTogg
         <span
           className={cn(
             "absolute top-0.5 left-0.5 h-6 w-6 rounded-full transition-all duration-300 ease-out",
-            "bg-[image:var(--gradient-iris)] shadow-[0_4px_14px_rgba(167,139,250,0.6)]",
+            "bg-[image:var(--gradient-iris)] shadow-[0_4px_14px_rgba(218,33,40,0.6)]",
             checked && "translate-x-5",
           )}
         />

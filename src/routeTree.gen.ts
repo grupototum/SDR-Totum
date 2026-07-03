@@ -12,7 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SimulatorRouteImport } from './routes/simulator'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as N8nRouteImport } from './routes/n8n'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
 import { Route as BuilderRouteImport } from './routes/builder'
@@ -37,9 +38,14 @@ const PesquisaRoute = PesquisaRouteImport.update({
   path: '/pesquisa',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
+const N8nRoute = N8nRouteImport.update({
+  id: '/n8n',
+  path: '/n8n',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -88,7 +94,8 @@ export interface FileRoutesByFullPath {
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
-  '/financeiro': typeof FinanceiroRoute
+  '/diagnostics': typeof DiagnosticsRoute
+  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
@@ -101,7 +108,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
-  '/financeiro': typeof FinanceiroRoute
+  '/diagnostics': typeof DiagnosticsRoute
+  '/n8n': typeof N8nRoute
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
   '/builder/edit': typeof BuilderEditRoute
@@ -115,7 +123,8 @@ export interface FileRoutesById {
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
-  '/financeiro': typeof FinanceiroRoute
+  '/diagnostics': typeof DiagnosticsRoute
+  '/n8n': typeof N8nRoute
   '/pesquisa': typeof PesquisaRouteWithChildren
   '/reports': typeof ReportsRoute
   '/simulator': typeof SimulatorRoute
@@ -131,7 +140,8 @@ export interface FileRouteTypes {
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
-    | '/financeiro'
+    | '/diagnostics'
+    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/simulator'
@@ -144,7 +154,8 @@ export interface FileRouteTypes {
     | '/'
     | '/builder-legacy'
     | '/conversations'
-    | '/financeiro'
+    | '/diagnostics'
+    | '/n8n'
     | '/reports'
     | '/simulator'
     | '/builder/edit'
@@ -157,7 +168,8 @@ export interface FileRouteTypes {
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
-    | '/financeiro'
+    | '/diagnostics'
+    | '/n8n'
     | '/pesquisa'
     | '/reports'
     | '/simulator'
@@ -172,7 +184,8 @@ export interface RootRouteChildren {
   BuilderRoute: typeof BuilderRouteWithChildren
   BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
-  FinanceiroRoute: typeof FinanceiroRoute
+  DiagnosticsRoute: typeof DiagnosticsRoute
+  N8nRoute: typeof N8nRoute
   PesquisaRoute: typeof PesquisaRouteWithChildren
   ReportsRoute: typeof ReportsRoute
   SimulatorRoute: typeof SimulatorRoute
@@ -201,11 +214,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PesquisaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
+    '/n8n': {
+      id: '/n8n'
+      path: '/n8n'
+      fullPath: '/n8n'
+      preLoaderRoute: typeof N8nRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -299,7 +319,8 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderRoute: BuilderRouteWithChildren,
   BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
-  FinanceiroRoute: FinanceiroRoute,
+  DiagnosticsRoute: DiagnosticsRoute,
+  N8nRoute: N8nRoute,
   PesquisaRoute: PesquisaRouteWithChildren,
   ReportsRoute: ReportsRoute,
   SimulatorRoute: SimulatorRoute,
@@ -307,13 +328,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
