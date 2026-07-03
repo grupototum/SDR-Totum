@@ -21,6 +21,11 @@ import {
   Wand2,
   Workflow,
   ArrowLeft,
+  Search,
+  AlertTriangle,
+  PlayCircle,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 import { api } from "@/api";
@@ -35,9 +40,11 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { FlowV2 } from "@/lib/flow-v2";
 import { WizardMode } from "./WizardMode";
+import { FlowCanvasV2 } from "./FlowCanvasV2";
+import { extractPlaceholders, registeredVariableNames } from "@/lib/flow-v2";
 
-type View = "stage" | "interrupts" | "globals";
-type Mode = "wizard" | "builder";
+type View = "stage" | "interrupts" | "globals" | "pesquisa";
+type Mode = "wizard" | "canvas" | "builder";
 
 const MODE_KEY = "totum:builder-mode";
 
@@ -48,9 +55,10 @@ export function V2Builder({ flowId }: { flowId?: string } = {}) {
   const currentFlowId = useFlowV2Store((s) => s.currentFlowId);
   const [view, setView] = useState<View>("stage");
   const [legacy, setLegacy] = useState<V1LegacySummary | null>(null);
+  const [simOpen, setSimOpen] = useState(false);
   const [mode, setMode] = useState<Mode>(() => {
-    if (typeof window === "undefined") return "builder";
-    return (window.localStorage.getItem(MODE_KEY) as Mode) || "builder";
+    if (typeof window === "undefined") return "canvas";
+    return (window.localStorage.getItem(MODE_KEY) as Mode) || "canvas";
   });
 
   // Carrega flow por id quando vier da URL. Sem id → mantém o draft do store,
@@ -87,10 +95,26 @@ export function V2Builder({ flowId }: { flowId?: string } = {}) {
       className="flex h-screen w-full flex-col overflow-hidden"
       style={{ background: "#0e0918" }}
     >
-      <V2Toolbar onLegacy={setLegacy} mode={mode} setMode={setModeAndStore} />
-      {mode === "wizard" ? (
-        <WizardMode />
-      ) : (
+      <V2Toolbar
+        onLegacy={setLegacy}
+        mode={mode}
+        setMode={setModeAndStore}
+        onSimulate={() => setSimOpen(true)}
+      />
+      {mode === "wizard" && <WizardMode />}
+      {mode === "canvas" && (
+        <div
+          className="grid flex-1 overflow-hidden"
+          style={{ gridTemplateColumns: "300px 1fr 360px" }}
+        >
+          <StageRail view={view} setView={setView} />
+          <FlowCanvasV2 onSelectStage={() => setView("stage")} />
+          <div className="overflow-y-auto" style={{ boxShadow: "inset 1px 0 0 0 #1f192a" }}>
+            {view === "pesquisa" ? <PesquisaPanel /> : <StageEditor />}
+          </div>
+        </div>
+      )}
+      {mode === "builder" && (
         <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr" }}>
           <StageRail view={view} setView={setView} />
           <div className="overflow-y-auto">
@@ -101,6 +125,7 @@ export function V2Builder({ flowId }: { flowId?: string } = {}) {
         </div>
       )}
       {legacy && <LegacyOverlay summary={legacy} onClose={() => setLegacy(null)} />}
+      {simOpen && <SimulationOverlay onClose={() => setSimOpen(false)} />}
     </div>
   );
 }
@@ -111,10 +136,12 @@ function V2Toolbar({
   onLegacy,
   mode,
   setMode,
+  onSimulate,
 }: {
   onLegacy: (s: V1LegacySummary) => void;
   mode: Mode;
   setMode: (m: Mode) => void;
+  onSimulate: () => void;
 }) {
   const flow = useFlowV2Store((s) => s.flow)!;
   const patchMeta = useFlowV2Store((s) => s.patchMeta);
@@ -127,8 +154,16 @@ function V2Toolbar({
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
+  // Marca a origem do flow só se ainda não tiver sido marcada (não sobrescreve
+  // "copilot" — preserva round-trip de flows já tagueados).
+  function stampAuthoringMode(env: Record<string, unknown>) {
+    const meta = (env.meta as Record<string, unknown> | undefined) ?? {};
+    if (!meta.authoring_mode) env.meta = { ...meta, authoring_mode: "flow_builder" };
+    return env;
+  }
+
   async function persist(): Promise<string> {
-    const env = JSON.parse(exportToJSON()) as Record<string, unknown>;
+    const env = stampAuthoringMode(JSON.parse(exportToJSON()) as Record<string, unknown>);
     if (currentFlowId) {
       await api.updateFlow(currentFlowId, env);
       return currentFlowId;
@@ -186,7 +221,7 @@ function V2Toolbar({
   }
 
   function handleExport() {
-    const json = exportToJSON();
+    const json = JSON.stringify(stampAuthoringMode(JSON.parse(exportToJSON())), null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -253,6 +288,18 @@ function V2Toolbar({
           <Wand2 className="size-3.5" /> Wizard
         </button>
         <button
+          onClick={() => setMode("canvas")}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
+          style={{
+            background: mode === "canvas" ? "#da2128" : "transparent",
+            color: mode === "canvas" ? "#fff" : "#9ca3af",
+          }}
+          aria-selected={mode === "canvas"}
+          role="tab"
+        >
+          <Workflow className="size-3.5" /> Canvas
+        </button>
+        <button
           onClick={() => setMode("builder")}
           className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
           style={{
@@ -262,7 +309,7 @@ function V2Toolbar({
           aria-selected={mode === "builder"}
           role="tab"
         >
-          <Workflow className="size-3.5" /> Builder
+          <Layers className="size-3.5" /> Formulário
         </button>
       </div>
 
@@ -284,6 +331,9 @@ function V2Toolbar({
           <Link to="/builder-legacy">
             <Layers className="size-3.5" /> Flow Builder
           </Link>
+        </TotumButton>
+        <TotumButton variant="ghost" size="sm" onClick={onSimulate}>
+          <PlayCircle className="size-3.5" /> Simular
         </TotumButton>
       </div>
 
@@ -398,6 +448,12 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
 
       <div className="flex flex-col gap-1 p-2" style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
         <RailNav
+          active={view === "pesquisa"}
+          onClick={() => setView("pesquisa")}
+          icon={<Search className="size-4" />}
+          label={`Pesquisa (${(flow.required_variables ?? []).length} variáveis)`}
+        />
+        <RailNav
           active={view === "interrupts"}
           onClick={() => setView("interrupts")}
           icon={<ShieldAlert className="size-4" />}
@@ -441,6 +497,103 @@ function RailNav({
   );
 }
 
+// ─── Placeholder picker (insere {{VAR}} na posição do cursor) ────────────────
+
+function insertAtCursor(
+  el: HTMLTextAreaElement | null,
+  value: string,
+  text: string,
+  onChange: (v: string) => void,
+) {
+  const start = el?.selectionStart ?? value.length;
+  const end = el?.selectionEnd ?? value.length;
+  onChange(value.slice(0, start) + text + value.slice(end));
+}
+
+function PlaceholderPicker({ onInsert }: { onInsert: (name: string) => void }) {
+  const flow = useFlowV2Store((s) => s.flow)!;
+  const createPlaceholder = useFlowV2Store((s) => s.createPlaceholder);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const names = useMemo(() => [...registeredVariableNames(flow)].sort(), [flow]);
+
+  function pick(name: string) {
+    onInsert(`{{${name}}}`);
+    setOpen(false);
+  }
+
+  function createAndPick() {
+    const name = draft
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, "_");
+    if (!name) return;
+    createPlaceholder(name);
+    pick(name);
+    setDraft("");
+  }
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="text-[11px] text-[color:var(--color-text-muted)] hover:text-white"
+        title="Inserir placeholder"
+      >
+        + placeholder
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-5 z-30 flex w-56 flex-col gap-1 rounded-lg p-2"
+          style={{ background: "#1f192a", boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="max-h-40 overflow-y-auto">
+            {names.length === 0 && (
+              <p className="px-2 py-1 text-[11px] text-[color:var(--color-text-muted)]">
+                Nenhuma variável registrada.
+              </p>
+            )}
+            {names.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => pick(n)}
+                className="block w-full rounded px-2 py-1 text-left text-xs text-white hover:bg-[#272333]"
+              >
+                {`{{${n}}}`}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 border-t border-white/10 pt-1">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  createAndPick();
+                }
+              }}
+              placeholder="NOVA_VAR"
+              className="min-w-0 flex-1 rounded bg-transparent px-2 py-1 text-xs text-white outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }}
+            />
+            <button
+              type="button"
+              onClick={createAndPick}
+              className="rounded px-2 text-xs text-white"
+              style={{ background: "#da2128" }}
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Editor de estágio ───────────────────────────────────────────────────────
 
 function StageEditor() {
@@ -448,6 +601,7 @@ function StageEditor() {
   const selectedStageId = useFlowV2Store((s) => s.selectedStageId);
   const updateStage = useFlowV2Store((s) => s.updateStage);
   const removeStage = useFlowV2Store((s) => s.removeStage);
+  const instructionRef = useRef<HTMLTextAreaElement>(null);
   const stage = useMemo(
     () => flow.stages.find((s) => s.id === selectedStageId),
     [flow.stages, selectedStageId],
@@ -492,8 +646,25 @@ function StageEditor() {
           rows={2}
         />
       </Field>
-      <Field label="Instruction (como o modelo conduz)">
+      <Field
+        label="Instruction (como o modelo conduz)"
+        action={
+          <PlaceholderPicker
+            onInsert={(text) =>
+              patch({
+                instruction: (() => {
+                  const current = stage.instruction ?? "";
+                  let next = current;
+                  insertAtCursor(instructionRef.current, current, text, (v) => (next = v));
+                  return next;
+                })(),
+              })
+            }
+          />
+        }
+      >
         <Textarea
+          ref={instructionRef}
           value={stage.instruction ?? ""}
           onChange={(e) => patch({ instruction: e.target.value })}
           rows={4}
@@ -505,6 +676,7 @@ function StageEditor() {
         values={stage.reference_copy ?? []}
         onChange={(v) => patch({ reference_copy: v })}
         multiline
+        withPlaceholderPicker
       />
 
       <StringListField
@@ -775,6 +947,256 @@ function GlobalsPanel() {
   );
 }
 
+// ─── Bloco Pesquisa (variáveis de pesquisa do lead) ─────────────────────────
+
+function PesquisaPanel() {
+  const flow = useFlowV2Store((s) => s.flow)!;
+  const setRequiredVariable = useFlowV2Store((s) => s.setRequiredVariable);
+  const setVariableDescription = useFlowV2Store((s) => s.setVariableDescription);
+  const removeVariable = useFlowV2Store((s) => s.removeVariable);
+  const createPlaceholder = useFlowV2Store((s) => s.createPlaceholder);
+  const [draft, setDraft] = useState("");
+
+  const required = new Set(flow.required_variables ?? []);
+  const names = new Set([...Object.keys(flow.variables ?? {}), ...required]);
+
+  const usedNotRegistered = useMemo(() => {
+    const registered = registeredVariableNames(flow);
+    const used = new Set<string>();
+    for (const st of flow.stages) for (const p of extractPlaceholders(st)) used.add(p);
+    return [...used].filter((p) => !registered.has(p));
+  }, [flow]);
+
+  function addVariable() {
+    const name = draft
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, "_");
+    if (!name) return;
+    createPlaceholder(name);
+    setDraft("");
+  }
+
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
+      <div>
+        <h2 className="text-lg text-white">Pesquisa</h2>
+        <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+          Variáveis de pesquisa do lead que o flow exige (ex: QTD_AVALIACOES, CONCORRENTE_1). Não
+          vira estágio de conversa — o motor aborta o disparo se uma variável obrigatória faltar.
+        </p>
+      </div>
+
+      {usedNotRegistered.length > 0 && (
+        <div
+          className="flex items-start gap-2 rounded-xl p-3 text-xs"
+          style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}
+        >
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            Usados na copy mas não registrados aqui:{" "}
+            {usedNotRegistered.map((p) => `{{${p}}}`).join(", ")}
+          </span>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {[...names].map((name) => (
+          <div
+            key={name}
+            className="flex flex-col gap-2 rounded-xl p-4"
+            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <code className="text-sm text-white">{`{{${name}}}`}</code>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs text-[color:var(--color-text-muted)]">
+                  <Switch
+                    checked={required.has(name)}
+                    onCheckedChange={(v) => setRequiredVariable(name, v)}
+                  />
+                  Obrigatória
+                </label>
+                <button
+                  onClick={() => removeVariable(name)}
+                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                  title="Remover"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            </div>
+            <Input
+              placeholder="Descrição (o que essa variável representa)"
+              value={flow.variable_descriptions?.[name] ?? ""}
+              onChange={(e) => setVariableDescription(name, e.target.value)}
+            />
+          </div>
+        ))}
+        {names.size === 0 && (
+          <p className="text-sm text-[color:var(--color-text-muted)]">Nenhuma variável ainda.</p>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addVariable();
+            }
+          }}
+          placeholder="NOVA_VARIAVEL"
+        />
+        <TotumButton variant="outline" size="md" onClick={addVariable} type="button">
+          <Plus className="size-4" /> Adicionar
+        </TotumButton>
+      </div>
+    </div>
+  );
+}
+
+// ─── Simulação (motor v3) ─────────────────────────────────────────────────────
+
+function SimulationOverlay({ onClose }: { onClose: () => void }) {
+  const flow = useFlowV2Store((s) => s.flow)!;
+  const exportToJSON = useFlowV2Store((s) => s.exportToJSON);
+  const [llm, setLlm] = useState<"mock" | "real">("mock");
+
+  const statusQuery = useQuery({
+    queryKey: ["sim-v3-status"],
+    queryFn: () => api.getSimV3Status(),
+    retry: false,
+  });
+
+  const runMut = useMutation({
+    mutationFn: () => api.runSimulationV3({ flow: JSON.parse(exportToJSON()), llm }),
+    onError: (e) => toast.error(`Erro ao simular: ${(e as Error).message}`),
+  });
+
+  const realAvailable = Boolean(statusQuery.data?.realLlmConfigured);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col gap-4 overflow-hidden rounded-2xl p-6"
+        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg text-white">Simular</h2>
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              Roda as 3 personas (interessado, cético, secretária) contra o flow atual do canvas.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[color:var(--color-text-muted)] hover:text-white"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-1 rounded-full p-1"
+            style={{ background: "#1f192a" }}
+          >
+            <button
+              onClick={() => setLlm("mock")}
+              className="rounded-full px-3 py-1 text-xs"
+              style={{
+                background: llm === "mock" ? "#da2128" : "transparent",
+                color: llm === "mock" ? "#fff" : "#9ca3af",
+              }}
+            >
+              Modo A · Mock
+            </button>
+            <button
+              onClick={() => setLlm("real")}
+              disabled={!realAvailable}
+              title={realAvailable ? "" : "Motor sem GROQ_API_KEY/NVIDIA_API_KEY configurada"}
+              className="rounded-full px-3 py-1 text-xs disabled:opacity-40"
+              style={{
+                background: llm === "real" ? "#da2128" : "transparent",
+                color: llm === "real" ? "#fff" : "#9ca3af",
+              }}
+            >
+              Modo B · LLM real
+            </button>
+          </div>
+          <TotumButton
+            variant="primary"
+            size="sm"
+            onClick={() => runMut.mutate()}
+            disabled={runMut.isPending}
+          >
+            <PlayCircle className="size-3.5" /> {runMut.isPending ? "Rodando…" : "Rodar simulação"}
+          </TotumButton>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {statusQuery.isError && (
+            <p className="text-xs text-[#f59e0b]">
+              Motor v3 indisponível (proxy /api/engine-v3 não configurado ou motor offline).
+            </p>
+          )}
+          {!runMut.data && !runMut.isPending && (
+            <p className="text-sm text-[color:var(--color-text-muted)]">
+              Flow atual: {flow.stages.length} estágios. Clique em "Rodar simulação".
+            </p>
+          )}
+          {runMut.data?.results.map((r) => (
+            <div
+              key={r.id}
+              className="mb-3 flex flex-col gap-2 rounded-xl p-4"
+              style={{ background: "#0e0918", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white">{r.label}</span>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
+                  style={{
+                    background: r.passed ? "rgba(53,166,112,0.15)" : "rgba(217,22,22,0.15)",
+                    color: r.passed ? "#35a670" : "#d91616",
+                  }}
+                >
+                  {r.passed ? <CheckCircle className="size-3" /> : <XCircle className="size-3" />}
+                  {r.passed ? "PASSOU" : "FALHOU"}
+                </span>
+              </div>
+              <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                desfecho={r.status} stage={r.stage} temp={r.temperatura} trocas={r.trocas}
+              </p>
+              <div
+                className="max-h-40 overflow-y-auto rounded-lg p-3 text-xs leading-relaxed text-[#d1cece]"
+                style={{ background: "#1f192a", fontFamily: "ui-monospace, Menlo, monospace" }}
+              >
+                {r.transcript.map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </div>
+              {r.violations.length > 0 && (
+                <ul className="text-[11px] text-[#f59e0b]">
+                  {r.violations.map((v, i) => (
+                    <li key={i}>⚠️ {v}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Legacy v1 (read-only) ───────────────────────────────────────────────────
 
 function LegacyOverlay({ summary, onClose }: { summary: V1LegacySummary; onClose: () => void }) {
@@ -837,10 +1259,23 @@ function LegacyOverlay({ summary, onClose }: { summary: V1LegacySummary; onClose
 
 // ─── Primitivos de form ──────────────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <Label className="text-xs text-[color:var(--color-text-muted)]">{label}</Label>}
+      {(label || action) && (
+        <div className="flex items-center justify-between">
+          {label && <Label className="text-xs text-[color:var(--color-text-muted)]">{label}</Label>}
+          {action}
+        </div>
+      )}
       {children}
     </div>
   );
@@ -851,12 +1286,15 @@ function StringListField({
   values,
   onChange,
   multiline,
+  withPlaceholderPicker,
 }: {
   label: string;
   values: string[];
   onChange: (v: string[]) => void;
   multiline?: boolean;
+  withPlaceholderPicker?: boolean;
 }) {
+  const refs = useRef<Record<number, HTMLTextAreaElement | null>>({});
   const update = (i: number, val: string) =>
     onChange(values.map((v, idx) => (idx === i ? val : v)));
   const remove = (i: number) => onChange(values.filter((_, idx) => idx !== i));
@@ -865,24 +1303,40 @@ function StringListField({
     <Field label={label}>
       <div className="flex flex-col gap-2">
         {values.map((v, i) => (
-          <div key={`${i}-${v.slice(0, 16)}`} className="flex gap-2">
-            {multiline ? (
-              <Textarea
-                value={v}
-                onChange={(e) => update(i, e.target.value)}
-                rows={2}
-                className="flex-1"
-              />
-            ) : (
-              <Input value={v} onChange={(e) => update(i, e.target.value)} className="flex-1" />
+          <div key={`${i}-${v.slice(0, 16)}`} className="flex flex-col gap-1">
+            {withPlaceholderPicker && (
+              <div className="flex justify-end">
+                <PlaceholderPicker
+                  onInsert={(text) => {
+                    let next = v;
+                    insertAtCursor(refs.current[i] ?? null, v, text, (nv) => (next = nv));
+                    update(i, next);
+                  }}
+                />
+              </div>
             )}
-            <button
-              onClick={() => remove(i)}
-              className="self-start pt-2 text-[color:var(--color-text-muted)] hover:text-white"
-              title="Remover"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            <div className="flex gap-2">
+              {multiline ? (
+                <Textarea
+                  ref={(el) => {
+                    refs.current[i] = el;
+                  }}
+                  value={v}
+                  onChange={(e) => update(i, e.target.value)}
+                  rows={2}
+                  className="flex-1"
+                />
+              ) : (
+                <Input value={v} onChange={(e) => update(i, e.target.value)} className="flex-1" />
+              )}
+              <button
+                onClick={() => remove(i)}
+                className="self-start pt-2 text-[color:var(--color-text-muted)] hover:text-white"
+                title="Remover"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
           </div>
         ))}
         <TotumButton variant="outline" size="sm" onClick={add} className="self-start">

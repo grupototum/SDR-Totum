@@ -18,18 +18,7 @@ const mod = await import(
 );
 const { parseFlowV2, serializeFlowV2, detectFormat } = mod;
 
-const original = readFileSync(`${root}docs/flow_odonto_stages_v2.json`, "utf8");
-const origParsed = JSON.parse(original);
-
-console.log(`Formato detectado: ${detectFormat(origParsed)}`);
-
-// IMPORT -> EXPORT
-const flow = parseFlowV2(original);
-console.log(
-  `Importado: ${flow.stages.length} estágios, ${(flow.interrupts ?? []).length} interrupção(ões), entry=${flow.entry_stage}`,
-);
-const exported = serializeFlowV2(flow);
-const expParsed = JSON.parse(exported);
+const fixtures = [`${root}docs/flow_odonto_stages_v2.json`, `${root}engine/flows/flow_odonto_v2.6.json`];
 
 // ─── Deep compare (key-order insensitive, array-order sensitive) ─────────────
 const diffs = [];
@@ -58,13 +47,94 @@ function walk(a, b, path) {
   diffs.push(`${path}: ${JSON.stringify(a)} -> ${JSON.stringify(b)}`);
 }
 
-walk(origParsed, expParsed, "flow");
+let failed = false;
 
-if (diffs.length === 0) {
-  console.log("\n✅ V2 ROUND-TRIP OK — import→export lossless (estrutura idêntica).");
-  process.exit(0);
-} else {
-  console.log(`\n❌ ${diffs.length} diferença(s):\n`);
-  for (const d of diffs.slice(0, 60)) console.log("  " + d);
-  process.exit(1);
+// ─── Copilot: flow sintético (mesmo shape que WizardMode.applyToStore produz) ─
+const docsDefault = JSON.parse(readFileSync(fixtures[0], "utf8"));
+const copilotFlow = {
+  flow_id: "copilot_smoke_test",
+  name: "Copilot smoke test",
+  version: docsDefault.version,
+  niche: "Odontologia",
+  channel: docsDefault.channel,
+  objective: "Agendar uma conversa.",
+  meta: { authoring_mode: "copilot" },
+  globals: { ...docsDefault.globals, guardrails: ["Nunca falar preço antes da prévia"] },
+  entry_stage: "abertura",
+  stages: [
+    {
+      id: "abertura",
+      goal: "Abrir contato",
+      instruction: "Se apresente e confirme a empresa.",
+      advance_when: "O lead respondeu.",
+      reference_copy: ["Oi! Tudo bem?"],
+      next: "diagnostico",
+    },
+    {
+      id: "diagnostico",
+      goal: "Mostrar oportunidade",
+      instruction: "Explique o que encontrou na pesquisa.",
+      advance_when: "O lead reconheceu a dor.",
+      reference_copy: ["Percebi uma oportunidade na sua clínica."],
+      next: "encerrado",
+    },
+    {
+      id: "encerrado",
+      goal: "Encerrar",
+      instruction: "Encerre cordialmente.",
+      advance_when: "Conversa encerrada.",
+      reference_copy: ["Obrigado pelo papo!"],
+      terminal: true,
+    },
+  ],
+};
+
+{
+  console.log("\n(sintético) flow autorado no Copilot — formato: v2 (3 estágios)");
+  const flow = parseFlowV2(JSON.stringify(copilotFlow));
+  const exported = JSON.parse(serializeFlowV2(flow));
+  diffs.length = 0;
+  walk(copilotFlow, exported, "flow");
+  if (diffs.length === 0 && exported.meta?.authoring_mode === "copilot") {
+    console.log("  ✅ round-trip Copilot↔Flow Builder OK (mesmo objeto, meta.authoring_mode preservado)");
+  } else {
+    failed = true;
+    console.log(`  ❌ ${diffs.length} diferença(s) ou meta.authoring_mode perdido:`);
+    for (const d of diffs.slice(0, 60)) console.log("    " + d);
+  }
+
+  const { runPersona } = await import(`${root}engine/sim/run.js`);
+  const persona = JSON.parse(readFileSync(`${root}engine/sim/personas.json`, "utf8"))[0];
+  const result = await runPersona(persona, { flow: copilotFlow, llm: "mock" });
+  if (result?.log?.length > 0) {
+    console.log(`  ✅ flow do Copilot roda no simulador (${result.log.length} linhas de transcript)`);
+  } else {
+    failed = true;
+    console.log("  ❌ flow do Copilot não produziu transcript no simulador");
+  }
 }
+
+for (const path of fixtures) {
+  const original = readFileSync(path, "utf8");
+  const origParsed = JSON.parse(original);
+  console.log(`\n${path.replace(root, "")} — formato: ${detectFormat(origParsed)}`);
+
+  const flow = parseFlowV2(original);
+  console.log(
+    `  importado: ${flow.stages.length} estágios, ${(flow.interrupts ?? []).length} interrupção(ões), entry=${flow.entry_stage}`,
+  );
+  const exported = serializeFlowV2(flow);
+  const expParsed = JSON.parse(exported);
+
+  diffs.length = 0;
+  walk(origParsed, expParsed, "flow");
+  if (diffs.length === 0) {
+    console.log("  ✅ round-trip lossless OK");
+  } else {
+    failed = true;
+    console.log(`  ❌ ${diffs.length} diferença(s):`);
+    for (const d of diffs.slice(0, 60)) console.log("    " + d);
+  }
+}
+
+process.exit(failed ? 1 : 0);

@@ -44,7 +44,7 @@ export interface V2Stage {
   guardrails?: string[];
   actions?: string[];
   advance_when?: string;
-  next?: string;
+  next?: string | null;
   terminal?: boolean;
   report?: string;
   [k: string]: unknown;
@@ -82,12 +82,53 @@ export interface FlowV2 {
   objective?: string;
   required_variables?: string[];
   runtime_variables?: string[];
+  /** mapa nome→valor (formato usado pelo motor v3, engine/flows/*.json). */
+  variables?: Record<string, string>;
+  /** descrições de placeholder custom, criadas via UI (não faz parte do schema do motor). */
+  variable_descriptions?: Record<string, string>;
+  meta?: { authoring_mode?: "copilot" | "flow_builder"; [k: string]: unknown };
   globals: V2Globals;
   entry_stage: string;
   stages: V2Stage[];
   interrupts?: V2Interrupt[];
   report_schema?: V2ReportSchema;
   [k: string]: unknown;
+}
+
+// ─── Variáveis / placeholders ─────────────────────────────────────────────────
+
+const PLACEHOLDER_RE = /\{\{?([A-Z][A-Z0-9_]*)\}?\}/g;
+
+/** Extrai nomes de placeholder ({{VAR}} ou {VAR}) usados no texto do estágio. */
+export function extractPlaceholders(stage: V2Stage): string[] {
+  const text = [stage.goal, stage.instruction, ...(stage.reference_copy ?? [])]
+    .filter(Boolean)
+    .join("\n");
+  const found = new Set<string>();
+  for (const m of text.matchAll(PLACEHOLDER_RE)) found.add(m[1]);
+  return [...found];
+}
+
+/** Nomes de variável já registrados no flow (variables map + required/runtime arrays). */
+export function registeredVariableNames(flow: FlowV2): Set<string> {
+  const names = new Set<string>();
+  const varsObj = flow.variables;
+  if (varsObj && typeof varsObj === "object") {
+    for (const k of Object.keys(varsObj as Record<string, unknown>)) names.add(k);
+  }
+  for (const k of flow.required_variables ?? []) names.add(k);
+  for (const k of flow.runtime_variables ?? []) names.add(k);
+  return names;
+}
+
+/** Estágios (exceto entry_stage) sem nenhuma transição de outro estágio apontando pra eles. */
+export function findOrphanStageIds(flow: FlowV2): Set<string> {
+  const incoming = new Set(flow.stages.map((s) => s.next).filter((n): n is string => !!n));
+  const orphans = new Set<string>();
+  for (const s of flow.stages) {
+    if (s.id !== flow.entry_stage && !incoming.has(s.id)) orphans.add(s.id);
+  }
+  return orphans;
 }
 
 // ─── Detecção de formato ─────────────────────────────────────────────────────

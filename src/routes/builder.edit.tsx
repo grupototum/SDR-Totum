@@ -40,9 +40,13 @@ import flowV2Default from "../../docs/flow_odonto_stages_v2.json";
 
 type BuilderMode = "wizard" | "builder" | "automacoes";
 
+// "wizard" = Copilot (formulário enxuto), "builder" = Flow Builder (canvas completo).
+// Persistido em localStorage; default = Flow Builder.
+const AUTHORING_MODE_KEY = "totum:authoring-mode";
+
 const MODE_TABS: { id: BuilderMode; label: string; icon: React.ReactNode }[] = [
-  { id: "wizard", label: "Wizard", icon: <Wand2 className="size-3.5" /> },
-  { id: "builder", label: "Builder", icon: <Layers className="size-3.5" /> },
+  { id: "wizard", label: "Copilot", icon: <Wand2 className="size-3.5" /> },
+  { id: "builder", label: "Flow Builder", icon: <Layers className="size-3.5" /> },
   { id: "automacoes", label: "Automações", icon: <Webhook className="size-3.5" /> },
 ];
 
@@ -256,7 +260,17 @@ function AutomacoesPanel() {
 function BuilderEditPage() {
   const navigate = useNavigate();
   const { flow: flowId } = Route.useSearch();
-  const [mode, setMode] = useState<BuilderMode>("builder");
+  const [mode, setModeState] = useState<BuilderMode>(() => {
+    if (typeof window === "undefined") return "builder";
+    const saved = window.localStorage.getItem(AUTHORING_MODE_KEY);
+    return saved === "wizard" || saved === "builder" ? saved : "builder";
+  });
+  const setMode = (m: BuilderMode) => {
+    setModeState(m);
+    if (typeof window !== "undefined" && (m === "wizard" || m === "builder")) {
+      window.localStorage.setItem(AUTHORING_MODE_KEY, m);
+    }
+  };
 
   const setFlow = useFlowV2Store((s) => s.setFlow);
   const setCurrentFlow = useFlowV2Store((s) => s.setCurrentFlow);

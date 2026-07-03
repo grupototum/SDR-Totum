@@ -10,13 +10,15 @@ import type {
   ConversationSummary,
   FlowSummary,
   Message,
-  ReportSchema,
   ReportSummary,
   StartConversationPayload,
   ResearchOrder,
   N8nWorkflow,
   N8nWorkflowSummary,
   SimTurnRequest,
+  SimV3RunRequest,
+  SimV3RunResponse,
+  SimV3Status,
 } from "./types";
 import { generateResearchPrompt } from "@/lib/research-prompt";
 import { mockSimTurn } from "@/lib/sim-turn";
@@ -80,22 +82,6 @@ const mockMessages: Message[] = [
     ts: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
   },
 ];
-
-const mockReport: ReportSchema = {
-  empresa: "Sorriso Perfeito",
-  resultado: "followup",
-  temperatura: "morno",
-  score: 7,
-  abriu_pela_observacao: true,
-  gatilho_preview: false,
-  agendou: false,
-  objecoes: ["já tem agência", "preço"],
-  resumo:
-    "Lead é o decisor, tem site, engajou bem na abertura. Pausou antes do preview de prévia. Segue em followup.",
-  transcript: mockMessages,
-  proxima_acao: "Ligar em 48h ou enviar prévia por e-mail",
-  onde_travou: "g09 — aguardando resposta",
-};
 
 const mockConversations: ConversationDetail[] = [
   {
@@ -529,6 +515,23 @@ export const mockApi: ApiClient = {
     throw new Error("importScript disponível apenas com engine real — configure VITE_API_BASE_URL");
   },
 
+  // Simulador do builder (motor v3) — sempre real via proxy same-origin,
+  // independente do modo mock das demais rotas (não há "mock" pro motor v3).
+  async runSimulationV3(payload: SimV3RunRequest) {
+    const res = await fetch("/api/engine-v3/api/sim/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+    return res.json() as Promise<SimV3RunResponse>;
+  },
+  async getSimV3Status() {
+    const res = await fetch("/api/engine-v3/api/sim/status");
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+    return res.json() as Promise<SimV3Status>;
+  },
+
   async getSimReport() {
     await delay();
     // Sem engine real: computa a MESMA métrica localmente e marca mock=true
@@ -546,6 +549,3 @@ export const mockApi: ApiClient = {
     };
   },
 };
-
-// Standalone mock report for fallback
-export { mockReport };

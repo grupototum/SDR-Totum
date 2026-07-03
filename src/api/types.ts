@@ -186,6 +186,41 @@ export interface SimReport {
   [k: string]: unknown;
 }
 
+// ── Simulador do builder (motor v3 — engine/, distinto do simTurn/getSimReport
+//    acima, que falam com o motor legado) ─────────────────────────────────────
+
+export interface SimV3RunRequest {
+  /** Flow v2 (lossless) do canvas atual, tal como exportado pelo store. */
+  flow: Record<string, unknown>;
+  /** Roda só uma persona; omitido = roda as 3. */
+  personaId?: string;
+  /** 'mock' força o cérebro determinístico; 'real' usa o que estiver configurado no motor. */
+  llm?: "mock" | "real";
+}
+
+export interface SimV3PersonaResult {
+  id: string;
+  label: string;
+  status: string;
+  stage: string;
+  temperatura: string;
+  trocas: number;
+  transcript: string[];
+  violations: string[];
+  passed: boolean;
+}
+
+export interface SimV3RunResponse {
+  ok: boolean;
+  results: SimV3PersonaResult[];
+}
+
+export interface SimV3Status {
+  ok: boolean;
+  /** true quando o motor tem GROQ_API_KEY/NVIDIA_API_KEY configurada (Modo B disponível). */
+  realLlmConfigured: boolean;
+}
+
 // ── N8N bridge (same-origin /api/n8n → proxy injeta X-N8N-API-KEY) ────────────
 
 /** Item da lista de workflows do n8n (GET /workflows → { data: [...] }). */
@@ -255,6 +290,14 @@ export interface ApiClient {
    * A SDR_API_KEY é injetada no servidor — nunca exposta ao bundle.
    */
   validateFlow(flow: Record<string, unknown>): Promise<ValidateFlowResult>;
+
+  /**
+   * Simulador do builder contra o motor v3 (POST /api/sim/run via proxy
+   * same-origin /api/engine-v3). Sempre real — não depende de VITE_API_BASE_URL.
+   */
+  runSimulationV3(payload: SimV3RunRequest): Promise<SimV3RunResponse>;
+  /** GET /api/sim/status via /api/engine-v3 — diz se o Modo B (LLM real) está disponível. */
+  getSimV3Status(): Promise<SimV3Status>;
 }
 
 export interface ValidateFlowResult {
