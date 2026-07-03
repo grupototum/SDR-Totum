@@ -16,6 +16,9 @@ import type {
   N8nWorkflow,
   N8nWorkflowSummary,
   SimTurnRequest,
+  SimV3RunRequest,
+  SimV3RunResponse,
+  SimV3Status,
 } from "./types";
 import { generateResearchPrompt } from "@/lib/research-prompt";
 import { mockSimTurn } from "@/lib/sim-turn";
@@ -510,6 +513,23 @@ export const mockApi: ApiClient = {
 
   async importScript() {
     throw new Error("importScript disponível apenas com engine real — configure VITE_API_BASE_URL");
+  },
+
+  // Simulador do builder (motor v3) — sempre real via proxy same-origin,
+  // independente do modo mock das demais rotas (não há "mock" pro motor v3).
+  async runSimulationV3(payload: SimV3RunRequest) {
+    const res = await fetch("/api/engine-v3/api/sim/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+    return res.json() as Promise<SimV3RunResponse>;
+  },
+  async getSimV3Status() {
+    const res = await fetch("/api/engine-v3/api/sim/status");
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+    return res.json() as Promise<SimV3Status>;
   },
 
   async getSimReport() {

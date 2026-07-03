@@ -19,6 +19,8 @@ export function loadFlow(path = process.env.FLOW_PATH || join(__dir, '..', 'flow
 
 export function getFlow() { return (_cache ??= loadFlow()); }
 export function resetFlowCache() { _cache = null; }
+/** Override em memória (usado pelo simulador do builder para rodar o flow do canvas, sem tocar no arquivo). */
+export function setFlowOverride(def) { _cache = def; }
 
 export const stageIds = (def) => def.stages.map(s => s.id);
 export const stageMap = (def) => Object.fromEntries(def.stages.map((s, i) => [s.id, { ...s, __i: i }]));

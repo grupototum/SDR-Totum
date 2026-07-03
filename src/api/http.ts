@@ -23,6 +23,9 @@ import type {
   SimTurnResponse,
   SimReport,
   ValidateFlowResult,
+  SimV3RunRequest,
+  SimV3RunResponse,
+  SimV3Status,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -137,4 +140,12 @@ export const httpApi: ApiClient = {
       method: "POST",
       body: JSON.stringify({ flow }),
     }),
+
+  // Simulador do builder — motor v3, proxy same-origin /api/engine-v3.
+  runSimulationV3: (payload: SimV3RunRequest) =>
+    call<SimV3RunResponse>("/api/engine-v3/api/sim/run", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getSimV3Status: () => call<SimV3Status>("/api/engine-v3/api/sim/status"),
 };

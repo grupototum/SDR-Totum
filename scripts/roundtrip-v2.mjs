@@ -18,18 +18,7 @@ const mod = await import(
 );
 const { parseFlowV2, serializeFlowV2, detectFormat } = mod;
 
-const original = readFileSync(`${root}docs/flow_odonto_stages_v2.json`, "utf8");
-const origParsed = JSON.parse(original);
-
-console.log(`Formato detectado: ${detectFormat(origParsed)}`);
-
-// IMPORT -> EXPORT
-const flow = parseFlowV2(original);
-console.log(
-  `Importado: ${flow.stages.length} estágios, ${(flow.interrupts ?? []).length} interrupção(ões), entry=${flow.entry_stage}`,
-);
-const exported = serializeFlowV2(flow);
-const expParsed = JSON.parse(exported);
+const fixtures = [`${root}docs/flow_odonto_stages_v2.json`, `${root}engine/flows/flow_odonto_v2.6.json`];
 
 // ─── Deep compare (key-order insensitive, array-order sensitive) ─────────────
 const diffs = [];
@@ -58,13 +47,28 @@ function walk(a, b, path) {
   diffs.push(`${path}: ${JSON.stringify(a)} -> ${JSON.stringify(b)}`);
 }
 
-walk(origParsed, expParsed, "flow");
+let failed = false;
+for (const path of fixtures) {
+  const original = readFileSync(path, "utf8");
+  const origParsed = JSON.parse(original);
+  console.log(`\n${path.replace(root, "")} — formato: ${detectFormat(origParsed)}`);
 
-if (diffs.length === 0) {
-  console.log("\n✅ V2 ROUND-TRIP OK — import→export lossless (estrutura idêntica).");
-  process.exit(0);
-} else {
-  console.log(`\n❌ ${diffs.length} diferença(s):\n`);
-  for (const d of diffs.slice(0, 60)) console.log("  " + d);
-  process.exit(1);
+  const flow = parseFlowV2(original);
+  console.log(
+    `  importado: ${flow.stages.length} estágios, ${(flow.interrupts ?? []).length} interrupção(ões), entry=${flow.entry_stage}`,
+  );
+  const exported = serializeFlowV2(flow);
+  const expParsed = JSON.parse(exported);
+
+  diffs.length = 0;
+  walk(origParsed, expParsed, "flow");
+  if (diffs.length === 0) {
+    console.log("  ✅ round-trip lossless OK");
+  } else {
+    failed = true;
+    console.log(`  ❌ ${diffs.length} diferença(s):`);
+    for (const d of diffs.slice(0, 60)) console.log("    " + d);
+  }
 }
+
+process.exit(failed ? 1 : 0);

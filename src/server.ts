@@ -79,6 +79,56 @@ async function proxyEngine(request: Request): Promise<Response> {
 }
 
 /**
+ * Same-origin proxy para o motor v3 (engine/ — flow-driven, distinto do motor
+ * legado atrás de `/api/engine`/ENGINE_URL). Hoje só serve o simulador do
+ * builder (`/api/sim/run`, `/api/sim/status`). O motor v3 não expõe rota
+ * pública além dessas — não injeta Bearer porque o serviço não valida nenhum.
+ */
+async function proxyEngineV3(request: Request): Promise<Response> {
+  const ENGINE_V3_URL = process.env.ENGINE_V3_URL;
+  const jsonHeaders = { "content-type": "application/json" };
+
+  if (!ENGINE_V3_URL) {
+    return new Response(JSON.stringify({ error: "engine v3 not configured" }), {
+      status: 503,
+      headers: jsonHeaders,
+    });
+  }
+
+  const url = new URL(request.url);
+  const rawPath = url.pathname.replace(/^\/api\/engine-v3\/?/, "");
+  if (decodeURIComponent(rawPath).includes("..")) {
+    return new Response(JSON.stringify({ error: "invalid path" }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
+  }
+  const target = `${ENGINE_V3_URL.replace(/\/$/, "")}/${rawPath}${url.search}`;
+
+  const init: RequestInit = {
+    method: request.method,
+    headers: { "content-type": "application/json" },
+  };
+  if (!["GET", "HEAD"].includes(request.method)) {
+    init.body = await request.text();
+  }
+
+  try {
+    const resp = await fetch(target, init);
+    const body = await resp.text();
+    return new Response(body, {
+      status: resp.status,
+      headers: { "content-type": resp.headers.get("content-type") ?? "application/json" },
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: "upstream unavailable" }), {
+      status: 502,
+      headers: jsonHeaders,
+    });
+  }
+}
+
+/**
  * Same-origin proxy para o N8N (mesma regra de segurança da engine).
  * O cliente chama `/api/n8n/<path>` (same-origin); aqui — e SÓ aqui, no
  * servidor — injetamos o header `X-N8N-API-KEY` com a `N8N_API_KEY` lida de
@@ -164,6 +214,10 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/engine" || pathname.startsWith("/api/engine/")) {
       return proxyEngine(request);
+    }
+    // Rota-proxy same-origin do motor v3 (simulador do builder).
+    if (pathname === "/api/engine-v3" || pathname.startsWith("/api/engine-v3/")) {
+      return proxyEngineV3(request);
     }
     // Rota-proxy same-origin do N8N: injeta o X-N8N-API-KEY no servidor.
     if (pathname === "/api/n8n" || pathname.startsWith("/api/n8n/")) {

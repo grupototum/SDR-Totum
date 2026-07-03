@@ -3,6 +3,9 @@ import express from 'express';
 import { openDb, STATUS, getLeadByPhone, addMessage, markProcessed, normPhone, getLeadsAwaitingReply } from './db.js';
 import { respondToLead } from './pipeline.js';
 import { makeEvolutionTransport } from './evolution.js';
+import { runPersona, personas } from '../sim/run.js';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 export function extractInbound(body) {
   // Evolution v2 messages.upsert. Retorna null p/ tudo que deve ser ignorado (anti-loop).
@@ -42,6 +45,42 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdr-totum' }));
 
+  // Simulador do builder: roda 1+ personas contra o flow do canvas (não o arquivo em disco).
+  app.get('/api/sim/status', (_req, res) => {
+    res.json({ ok: true, realLlmConfigured: Boolean(process.env.GROQ_API_KEY || process.env.NVIDIA_API_KEY) });
+  });
+
+  app.post('/api/sim/run', async (req, res) => {
+    try {
+      const { flow: rawFlow, personaId, llm } = req.body || {};
+      const flow = rawFlow ? (rawFlow.definition || rawFlow) : undefined;
+      const selected = personaId ? personas.filter((p) => p.id === personaId) : personas;
+      if (!selected.length) {
+        return res.status(400).json({ ok: false, error: `persona desconhecida: ${personaId}` });
+      }
+      // Sequencial (não paralelo): runPersona usa override de flow/LLM em memória, global ao processo.
+      const results = [];
+      for (const p of selected) {
+        const r = await runPersona(p, { flow, llm });
+        results.push({
+          id: r.id,
+          label: r.label,
+          status: r.status,
+          stage: r.stage,
+          temperatura: r.temperatura,
+          trocas: r.trocas,
+          transcript: r.log,
+          violations: r.violations,
+          passed: r.violations.length === 0,
+        });
+      }
+      res.json({ ok: true, results });
+    } catch (e) {
+      log.error?.(`[sim] ERRO: ${e.message}`);
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
   app.post('/webhook/evolution', (req, res) => {
     res.json({ ok: true }); // responde já; processamento é assíncrono
     try {
@@ -74,7 +113,7 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
 }
 
 // Execução direta (produção)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const db = openDb();
   const transport = makeEvolutionTransport();
   const app = createApp({ db, transport });

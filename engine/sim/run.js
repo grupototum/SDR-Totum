@@ -2,23 +2,16 @@
 // Sem WhatsApp: transporte fake. Uso: node sim/run.js  (SDR_LLM=mock|groq)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { openDb, getLeadByPhone, upsertLead, getHistory } from '../src/db.js';
 import { createApp } from '../src/server.js';
 import { dispatchNewLeads } from '../src/dispatch.js';
 import { makeFakeTransport } from '../src/evolution.js';
 import { normalizeText, hasPlaceholder, hasInventedName } from '../src/guardrails.js';
+import { setFlowOverride, resetFlowCache } from '../src/flow.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const personas = JSON.parse(readFileSync(join(__dir, 'personas.json'), 'utf8'));
-
-if (!process.env.SDR_LLM) {
-  process.env.SDR_LLM = process.env.GROQ_API_KEY ? 'groq' : 'mock';
-}
-console.log(`\n=== SIMULADOR SDR TOTUM | cérebro: ${process.env.SDR_LLM.toUpperCase()} ===`);
-if (process.env.SDR_LLM === 'mock') {
-  console.log('(sem GROQ_API_KEY: rodando com cérebro MOCK determinístico; plumbing/guardrails valem, a prosa final valida com groq)');
-}
+export const personas = JSON.parse(readFileSync(join(__dir, 'personas.json'), 'utf8'));
 
 const MAX_TROCAS = 15;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -36,7 +29,17 @@ async function waitBotReply(db, leadId, prevOutCount, timeoutMs = 90000) {
   throw new Error('timeout esperando resposta do bot');
 }
 
-async function runPersona(p) {
+/**
+ * Roda uma persona contra o flow em memória (ou o flow padrão do disco se `flow` for omitido).
+ * `llm`: 'mock' | 'groq' | 'nvidia' — sobrescreve SDR_LLM só durante esta chamada.
+ */
+export async function runPersona(p, { flow, llm } = {}) {
+  const prevLlm = process.env.SDR_LLM;
+  // 'real' = usa o que já estiver configurado no ambiente (groq/nvidia), sem sobrescrever.
+  if (llm && llm !== 'real') process.env.SDR_LLM = llm;
+  else if (!process.env.SDR_LLM) process.env.SDR_LLM = process.env.GROQ_API_KEY ? 'groq' : 'mock';
+  if (flow) setFlowOverride(flow);
+
   const db = openDb(':memory:');
   const transport = makeFakeTransport();
   const app = createApp({ db, transport, debounceMs: 60, log: { info() {}, warn: console.warn, error: console.error } });
@@ -97,20 +100,31 @@ async function runPersona(p) {
     return { id: p.id, label: p.label, status: fin.status, stage: fin.stage, temperatura: fin.temperatura, trocas, log, violations };
   } finally {
     server.close();
+    if (flow) resetFlowCache();
+    process.env.SDR_LLM = prevLlm;
   }
 }
 
-const only = process.argv[2]; // node sim/run.js [id-da-persona]
-const selected = only ? personas.filter(p => p.id === only) : personas;
-let allOk = true;
-for (const p of selected) {
-  const r = await runPersona(p);
-  const ok = r.violations.length === 0;
-  allOk &&= ok;
-  console.log(`\n--- Persona: ${r.label} ---`);
-  console.log(r.log.join('\n'));
-  console.log(`  ➜ desfecho=${r.status} stage=${r.stage} temp=${r.temperatura} trocas=${r.trocas} ${ok ? '✅ PASSOU' : '❌ FALHOU'}`);
-  for (const v of r.violations) console.log(`    ⚠️  ${v}`);
+// Execução direta via CLI (npm run sim) — comportamento inalterado.
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  if (!process.env.SDR_LLM) process.env.SDR_LLM = process.env.GROQ_API_KEY ? 'groq' : 'mock';
+  console.log(`\n=== SIMULADOR SDR TOTUM | cérebro: ${process.env.SDR_LLM.toUpperCase()} ===`);
+  if (process.env.SDR_LLM === 'mock') {
+    console.log('(sem GROQ_API_KEY: rodando com cérebro MOCK determinístico; plumbing/guardrails valem, a prosa final valida com groq)');
+  }
+
+  const only = process.argv[2]; // node sim/run.js [id-da-persona]
+  const selected = only ? personas.filter(p => p.id === only) : personas;
+  let allOk = true;
+  for (const p of selected) {
+    const r = await runPersona(p);
+    const ok = r.violations.length === 0;
+    allOk &&= ok;
+    console.log(`\n--- Persona: ${r.label} ---`);
+    console.log(r.log.join('\n'));
+    console.log(`  ➜ desfecho=${r.status} stage=${r.stage} temp=${r.temperatura} trocas=${r.trocas} ${ok ? '✅ PASSOU' : '❌ FALHOU'}`);
+    for (const v of r.violations) console.log(`    ⚠️  ${v}`);
+  }
+  console.log(`\n=== RESULTADO: ${allOk ? '✅ 3/3 PERSONAS PASSARAM' : '❌ HÁ FALHAS'} ===\n`);
+  process.exit(allOk ? 0 : 1);
 }
-console.log(`\n=== RESULTADO: ${allOk ? '✅ 3/3 PERSONAS PASSARAM' : '❌ HÁ FALHAS'} ===\n`);
-process.exit(allOk ? 0 : 1);

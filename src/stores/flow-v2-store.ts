@@ -32,11 +32,19 @@ interface FlowV2Store {
   addStage: () => void;
   removeStage: (id: string) => void;
   moveStage: (id: string, dir: -1 | 1) => void;
+  /** Transição (aresta): liga/religa (target) ou apaga (null) o `next` de um estágio. */
+  setStageNext: (stageId: string, next: string | null) => void;
 
   // Interrupções
   updateInterrupt: (id: string, patch: Partial<V2Interrupt>) => void;
   addInterrupt: () => void;
   removeInterrupt: (id: string) => void;
+
+  // Variáveis / placeholders (bloco Pesquisa + picker)
+  setRequiredVariable: (name: string, required: boolean) => void;
+  setVariableDescription: (name: string, description: string) => void;
+  removeVariable: (name: string) => void;
+  createPlaceholder: (name: string) => void;
 }
 
 function uniqueId(items: { id: string }[], base = "novo_estagio"): string {
@@ -117,6 +125,13 @@ export const useFlowV2Store = create<FlowV2Store>((set, get) => ({
       return { flow: { ...s.flow, stages } };
     }),
 
+  setStageNext: (stageId, next) =>
+    set((s) => {
+      if (!s.flow) return s;
+      const stages = s.flow.stages.map((st) => (st.id === stageId ? { ...st, next } : st));
+      return { flow: { ...s.flow, stages } };
+    }),
+
   updateInterrupt: (id, patch) =>
     set((s) => {
       if (!s.flow) return s;
@@ -148,4 +163,48 @@ export const useFlowV2Store = create<FlowV2Store>((set, get) => ({
           }
         : s,
     ),
+
+  setRequiredVariable: (name, required) =>
+    set((s) => {
+      if (!s.flow) return s;
+      const current = new Set(s.flow.required_variables ?? []);
+      if (required) current.add(name);
+      else current.delete(name);
+      return { flow: { ...s.flow, required_variables: [...current] } };
+    }),
+
+  setVariableDescription: (name, description) =>
+    set((s) => {
+      if (!s.flow) return s;
+      const variable_descriptions = {
+        ...(s.flow.variable_descriptions ?? {}),
+        [name]: description,
+      };
+      return { flow: { ...s.flow, variable_descriptions } };
+    }),
+
+  removeVariable: (name) =>
+    set((s) => {
+      if (!s.flow) return s;
+      const variables = { ...(s.flow.variables ?? {}) };
+      delete variables[name];
+      const descriptions = { ...(s.flow.variable_descriptions ?? {}) };
+      delete descriptions[name];
+      return {
+        flow: {
+          ...s.flow,
+          variables,
+          variable_descriptions: descriptions,
+          required_variables: (s.flow.required_variables ?? []).filter((n) => n !== name),
+        },
+      };
+    }),
+
+  createPlaceholder: (name) =>
+    set((s) => {
+      if (!s.flow) return s;
+      const variables = { ...(s.flow.variables ?? {}) };
+      if (!(name in variables)) variables[name] = "";
+      return { flow: { ...s.flow, variables } };
+    }),
 }));
