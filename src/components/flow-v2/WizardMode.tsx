@@ -48,6 +48,8 @@ function Step1({
   setObjective,
   niche,
   setNiche,
+  guardrails,
+  setGuardrails,
 }: {
   name: string;
   setName: (v: string) => void;
@@ -55,6 +57,8 @@ function Step1({
   setObjective: (v: string) => void;
   niche: string;
   setNiche: (v: string) => void;
+  guardrails: string;
+  setGuardrails: (v: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -89,13 +93,30 @@ function Step1({
           placeholder="O que o SDR deve conseguir com esse flow?"
         />
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-[color:var(--color-text-muted)]">
+          Guardrails globais (uma regra por linha)
+        </Label>
+        <Textarea
+          value={guardrails}
+          onChange={(e) => setGuardrails(e.target.value)}
+          rows={3}
+          placeholder="ex: Nunca falar preço antes da prévia"
+        />
+      </div>
     </div>
   );
 }
 
 // ── Step 2: estágios ────────────────────────────────────────────────────────
 
-type DraftStage = { id: string; goal: string; instruction: string; reference_copy?: string };
+type DraftStage = {
+  id: string;
+  goal: string;
+  instruction: string;
+  advance_when?: string;
+  reference_copy?: string;
+};
 
 function Step2({
   stages,
@@ -169,6 +190,16 @@ function Step2({
                 onChange={(e) => patch(i, { instruction: e.target.value })}
                 rows={2}
                 placeholder="Como o SDR deve se comportar neste estágio?"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 pl-7">
+              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
+                Advance when (condição para avançar)
+              </Label>
+              <Input
+                value={s.advance_when ?? ""}
+                onChange={(e) => patch(i, { advance_when: e.target.value })}
+                placeholder="ex: o lead confirmou interesse na prévia"
               />
             </div>
           </div>
@@ -404,6 +435,7 @@ export function WizardMode() {
   const [name, setName] = useState("");
   const [niche, setNiche] = useState("");
   const [objective, setObjective] = useState("");
+  const [guardrails, setGuardrails] = useState("");
   const [stages, setStages] = useState<DraftStage[]>([
     { id: "abertura", goal: "", instruction: "" },
   ]);
@@ -424,6 +456,7 @@ export function WizardMode() {
       id: s.id || `estagio_${i + 1}`,
       goal: s.goal,
       instruction: s.instruction,
+      advance_when: s.advance_when || undefined,
       reference_copy: s.reference_copy
         ? s.reference_copy
             .split("\n")
@@ -440,12 +473,22 @@ export function WizardMode() {
       handler_instruction: v.handler_instruction,
     }));
 
+    const guardrailLines = guardrails
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
     const newFlow: FlowV2 = {
       ...base,
       flow_id: name.toLowerCase().replace(/\s+/g, "_"),
       name,
       niche: niche || base.niche,
       objective,
+      meta: { ...base.meta, authoring_mode: "copilot" },
+      globals: {
+        ...base.globals,
+        guardrails: guardrailLines.length > 0 ? guardrailLines : (base.globals.guardrails ?? []),
+      },
       entry_stage: v2Stages[0].id,
       stages: v2Stages,
       interrupts: v2Interrupts.length > 0 ? v2Interrupts : (base.interrupts ?? []),
@@ -492,6 +535,8 @@ export function WizardMode() {
               setObjective={setObjective}
               niche={niche}
               setNiche={setNiche}
+              guardrails={guardrails}
+              setGuardrails={setGuardrails}
             />
           )}
           {step === 1 && <Step2 stages={stages} setStages={setStages} />}

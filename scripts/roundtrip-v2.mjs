@@ -48,6 +48,72 @@ function walk(a, b, path) {
 }
 
 let failed = false;
+
+// ─── Copilot: flow sintético (mesmo shape que WizardMode.applyToStore produz) ─
+const docsDefault = JSON.parse(readFileSync(fixtures[0], "utf8"));
+const copilotFlow = {
+  flow_id: "copilot_smoke_test",
+  name: "Copilot smoke test",
+  version: docsDefault.version,
+  niche: "Odontologia",
+  channel: docsDefault.channel,
+  objective: "Agendar uma conversa.",
+  meta: { authoring_mode: "copilot" },
+  globals: { ...docsDefault.globals, guardrails: ["Nunca falar preço antes da prévia"] },
+  entry_stage: "abertura",
+  stages: [
+    {
+      id: "abertura",
+      goal: "Abrir contato",
+      instruction: "Se apresente e confirme a empresa.",
+      advance_when: "O lead respondeu.",
+      reference_copy: ["Oi! Tudo bem?"],
+      next: "diagnostico",
+    },
+    {
+      id: "diagnostico",
+      goal: "Mostrar oportunidade",
+      instruction: "Explique o que encontrou na pesquisa.",
+      advance_when: "O lead reconheceu a dor.",
+      reference_copy: ["Percebi uma oportunidade na sua clínica."],
+      next: "encerrado",
+    },
+    {
+      id: "encerrado",
+      goal: "Encerrar",
+      instruction: "Encerre cordialmente.",
+      advance_when: "Conversa encerrada.",
+      reference_copy: ["Obrigado pelo papo!"],
+      terminal: true,
+    },
+  ],
+};
+
+{
+  console.log("\n(sintético) flow autorado no Copilot — formato: v2 (3 estágios)");
+  const flow = parseFlowV2(JSON.stringify(copilotFlow));
+  const exported = JSON.parse(serializeFlowV2(flow));
+  diffs.length = 0;
+  walk(copilotFlow, exported, "flow");
+  if (diffs.length === 0 && exported.meta?.authoring_mode === "copilot") {
+    console.log("  ✅ round-trip Copilot↔Flow Builder OK (mesmo objeto, meta.authoring_mode preservado)");
+  } else {
+    failed = true;
+    console.log(`  ❌ ${diffs.length} diferença(s) ou meta.authoring_mode perdido:`);
+    for (const d of diffs.slice(0, 60)) console.log("    " + d);
+  }
+
+  const { runPersona } = await import(`${root}engine/sim/run.js`);
+  const persona = JSON.parse(readFileSync(`${root}engine/sim/personas.json`, "utf8"))[0];
+  const result = await runPersona(persona, { flow: copilotFlow, llm: "mock" });
+  if (result?.log?.length > 0) {
+    console.log(`  ✅ flow do Copilot roda no simulador (${result.log.length} linhas de transcript)`);
+  } else {
+    failed = true;
+    console.log("  ❌ flow do Copilot não produziu transcript no simulador");
+  }
+}
+
 for (const path of fixtures) {
   const original = readFileSync(path, "utf8");
   const origParsed = JSON.parse(original);

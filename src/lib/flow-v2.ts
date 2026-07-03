@@ -86,6 +86,7 @@ export interface FlowV2 {
   variables?: Record<string, string>;
   /** descrições de placeholder custom, criadas via UI (não faz parte do schema do motor). */
   variable_descriptions?: Record<string, string>;
+  meta?: { authoring_mode?: "copilot" | "flow_builder"; [k: string]: unknown };
   globals: V2Globals;
   entry_stage: string;
   stages: V2Stage[];

@@ -154,8 +154,16 @@ function V2Toolbar({
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
+  // Marca a origem do flow só se ainda não tiver sido marcada (não sobrescreve
+  // "copilot" — preserva round-trip de flows já tagueados).
+  function stampAuthoringMode(env: Record<string, unknown>) {
+    const meta = (env.meta as Record<string, unknown> | undefined) ?? {};
+    if (!meta.authoring_mode) env.meta = { ...meta, authoring_mode: "flow_builder" };
+    return env;
+  }
+
   async function persist(): Promise<string> {
-    const env = JSON.parse(exportToJSON()) as Record<string, unknown>;
+    const env = stampAuthoringMode(JSON.parse(exportToJSON()) as Record<string, unknown>);
     if (currentFlowId) {
       await api.updateFlow(currentFlowId, env);
       return currentFlowId;
@@ -213,7 +221,7 @@ function V2Toolbar({
   }
 
   function handleExport() {
-    const json = exportToJSON();
+    const json = JSON.stringify(stampAuthoringMode(JSON.parse(exportToJSON())), null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
