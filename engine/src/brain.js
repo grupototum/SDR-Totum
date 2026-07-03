@@ -1,17 +1,27 @@
-// O CÉREBRO: LLM (Groq→NVIDIA) guiado pelo FLOW v2 do builder. Entrada = system prompt
+// O CÉREBRO: LLM (Gemini→Groq→NVIDIA) guiado pelo FLOW v2 do builder. Entrada = system prompt
 // (gerado do flow) + histórico. Saída = { mensagem, stage, temperatura, objetivo_atingido, precisa_humano }.
+// Auth do Gemini: API key isolada (GEMINI_API_KEY), NUNCA cota compartilhada com outro uso do
+// Google — já derrubou o SDR em produção antes. Sem OAuth: não existe caminho server-side estável
+// pra autenticar como assinatura pessoal (só API key ou OAuth de service account do GCP, que é
+// cobrado por uso igual à API key — não dá acesso "de graça" à cota da assinatura).
 import { mockThink } from './mockBrain.js';
 import { getFlow, stageMap, stageIds, entryStage, leadVars, renderTemplate, renderCopy, objectionInterrupt } from './flow.js';
 
 const PROVIDERS = {
+  gemini: {
+    kind: 'gemini',
+    url: (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    key: () => process.env.GEMINI_API_KEY,
+    model: () => process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+  },
   groq: {
-    url: 'https://api.groq.com/openai/v1/chat/completions',
+    url: () => 'https://api.groq.com/openai/v1/chat/completions',
     key: () => process.env.GROQ_API_KEY,
     model: () => process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
     jsonMode: true,
   },
   nvidia: {
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    url: () => 'https://integrate.api.nvidia.com/v1/chat/completions',
     key: () => process.env.NVIDIA_API_KEY,
     model: () => process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
     jsonMode: false, // nem todo modelo NVIDIA aceita response_format; parse robusto abaixo
@@ -84,25 +94,54 @@ ${retryNote ? `\n# ATENÇÃO\n${retryNote}` : ''}
  "precisa_humano": <true|false>}`;
 }
 
+// Converte o array de mensagens estilo OpenAI (system/user/assistant) pro formato Gemini
+// (systemInstruction + contents com role user/model).
+function toGeminiRequest(messages) {
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  return {
+    systemInstruction: { parts: [{ text: system }] },
+    contents,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 500, responseMimeType: 'application/json' },
+  };
+}
+
 async function callLlm(provider, messages) {
   const p = PROVIDERS[provider];
   const key = p.key();
   if (!key) throw new Error(`chave do provider ${provider} não setada`);
-  const body = { model: p.model(), messages, temperature: 0.7, max_tokens: 500 };
-  if (p.jsonMode) body.response_format = { type: 'json_object' };
+  const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 8000);
+  const isGemini = p.kind === 'gemini';
+  const model = p.model();
+  // Gemini: key vai no header x-goog-api-key, nunca na URL — URL pode acabar em
+  // log/mensagem de erro (ex.: falha de rede do fetch inclui a URL na exceção).
+  const url = isGemini ? p.url(model) : p.url();
+  const body = isGemini
+    ? toGeminiRequest(messages)
+    : (() => {
+        const b = { model, messages, temperature: 0.7, max_tokens: 500 };
+        if (p.jsonMode) b.response_format = { type: 'json_object' };
+        return b;
+      })();
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 25000);
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
-      const res = await fetch(p.url, {
+      const res = await fetch(url, {
         method: 'POST',
         signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isGemini ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` }),
+        },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`${provider} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const data = await res.json();
-      return data.choices[0].message.content;
+      return isGemini ? data.candidates[0].content.parts[0].text : data.choices[0].message.content;
     } catch (e) {
       if (attempt === 2) throw e;
       await new Promise(r => setTimeout(r, 1500));
@@ -139,10 +178,10 @@ function parseBrainOutput(raw, fallback = {}, validIds = []) {
  */
 export async function think(lead, history, opts = {}) {
   const conf = process.env.SDR_LLM
-    || (process.env.GROQ_API_KEY ? 'groq' : (process.env.NVIDIA_API_KEY ? 'nvidia' : ''));
+    || (process.env.GEMINI_API_KEY ? 'gemini' : (process.env.GROQ_API_KEY ? 'groq' : (process.env.NVIDIA_API_KEY ? 'nvidia' : '')));
   if (conf === 'mock') return mockThink(lead, history, opts);
   const providers = conf.split(',').map(s => s.trim()).filter(p => PROVIDERS[p]);
-  if (!providers.length) throw new Error('Configure SDR_LLM=groq|nvidia|groq,nvidia (com as chaves) ou SDR_LLM=mock');
+  if (!providers.length) throw new Error('Configure SDR_LLM=gemini|groq|nvidia (com as chaves, ex: gemini,groq,nvidia) ou SDR_LLM=mock');
 
   const def = opts.flow || getFlow();
   const map = stageMap(def);
