@@ -1,9 +1,23 @@
 // Cérebro MOCK determinístico (SDR_LLM=mock): valida plumbing, guardrails, persistência e
 // simulador SEM chave Groq. Segue a mesma máquina de estágios do cérebro real.
 // NÃO é o produto final: em produção usar SDR_LLM=groq.
+//
+// Copy do estágio: usa reference_copy[0] do flow atual (canvas/builder) em vez de texto fixo,
+// pra editar copy no builder já refletir aqui. Se o estágio não tiver reference_copy, ou sobrar
+// placeholder sem valor (variável do lead vazia), cai pro roteiro fixo (ladderText) — nunca
+// envia {{...}}/{...} cru (mesma regra do cérebro real).
+import { getFlow, stageMap, leadVars } from './flow.js';
 
 const LP = () => process.env.LINK_LP || 'https://lp.grupototum.com/';
 const SDR = () => process.env.NOME_SDR || 'Rael';
+
+// Aceita {{VAR}} e {VAR} — o flow v2.6 do engine usa chave simples, o builder usa chave dupla.
+function resolvePlaceholders(text, vars) {
+  return String(text).replace(/\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}/g, (m, k) => {
+    const v = vars[k] ?? vars[String(k).toUpperCase()];
+    return v === undefined || v === null || v === '' ? m : String(v);
+  });
+}
 
 const RE = {
   gatekeeper: /secret[aá]ri|recep[cç]|quem decide [eé] o|n[aã]o sou (o |a )?(dono|respons|decis)|sou (a |o )?assistente/i,
@@ -56,12 +70,37 @@ function ladderText(r, lead, variant) {
 // ids alinhados ao flow v2.6 do builder
 const STAGE_BY_RUNG = ['abertura', 'abertura', 'qualificacao', 'diagnostico', 'oferta_previa', 'agendamento', 'encerrado'];
 
+// abertura ocupa os degraus 0 e 1 (saudação, depois a pergunta do site) — pega a posição do
+// degrau dentro do próprio estágio, pra rung 0 usar reference_copy[0] e rung 1 usar [1] (sem
+// repetir a mesma linha, o que a checagem anti-repetição bloquearia de qualquer forma).
+function stageLineIndex(rung) {
+  const stageId = STAGE_BY_RUNG[rung];
+  let idx = 0;
+  for (let r = 0; r < rung; r++) if (STAGE_BY_RUNG[r] === stageId) idx++;
+  return idx;
+}
+
+// Texto do degrau: reference_copy do estágio do flow atual (placeholders resolvidos),
+// com o roteiro fixo (ladderText) como rede de segurança (estágio sem copy, ou copy com
+// variável do lead vazia — nunca envia placeholder cru).
+function stageCopy(rung, lead, variant, def) {
+  const stageId = STAGE_BY_RUNG[Math.min(rung, STAGE_BY_RUNG.length - 1)];
+  const stage = def ? stageMap(def)[stageId] : null;
+  const refCopy = stage?.reference_copy;
+  const line = refCopy?.[Math.min(stageLineIndex(rung), refCopy.length - 1)];
+  if (line) {
+    const resolved = resolvePlaceholders(line, leadVars(lead, def));
+    if (!/[{}]/.test(resolved)) return resolved;
+  }
+  return ladderText(rung, lead, variant);
+}
+
 function newState() {
   return { rung: 0, asked: [0, 0, 0, 0, 0, 0, 0], mode: 'main', gkStep: 0, temp: 'morno', done: false, human: false, whoAnswered: false, priceAnswered: false };
 }
 
 // Um passo: dado o estado e a fala do lead, devolve a resposta e muta o estado.
-function step(st, inText, lead) {
+function step(st, inText, lead, def) {
   const t = String(inText || '');
   const out = (mensagem, extra = {}) => ({
     mensagem,
@@ -104,7 +143,7 @@ function step(st, inText, lead) {
   // "Quem é você?": responde curto e volta ao ponto.
   if (RE.who.test(t) && !st.whoAnswered) {
     st.whoAnswered = true;
-    const back = st.rung <= 1 ? `Vi a ${lead.nome_empresa} pesquisando ${lead.especialidade} em ${lead.cidade}, e uma coisa me chamou atenção. Vocês têm site ou página própria hoje?` : `Voltando: ${ladderText(st.rung, lead, 1)}`;
+    const back = st.rung <= 1 ? `Vi a ${lead.nome_empresa} pesquisando ${lead.especialidade} em ${lead.cidade}, e uma coisa me chamou atenção. Vocês têm site ou página própria hoje?` : `Voltando: ${stageCopy(st.rung, lead, 1, def)}`;
     st.asked[st.rung] += 1; st.rung = Math.max(st.rung, 1);
     return out(`Justo! Sou o ${SDR()}, da Totum, trabalho com clínicas desde 2003. Não estou vendendo nada agora. ${back}`);
   }
@@ -119,19 +158,20 @@ function step(st, inText, lead) {
   st.rung += 1;
   if (st.rung >= 6) {
     st.done = true; st.temp = 'quente';
-    return out(ladderText(6, lead, st.asked[6]++), { stage: 'encerrado', done: true, temp: 'quente' });
+    return out(stageCopy(6, lead, st.asked[6]++, def), { stage: 'encerrado', done: true, temp: 'quente' });
   }
   if (st.rung === 5) st.temp = 'quente';
   if (st.rung >= 3 && RE.accept.test(t)) st.temp = 'quente';
-  return out(ladderText(st.rung, lead, st.asked[st.rung]++));
+  return out(stageCopy(st.rung, lead, st.asked[st.rung]++, def));
 }
 
-export function mockThink(lead, history) {
+export function mockThink(lead, history, opts = {}) {
+  const def = opts.flow || getFlow();
   const st = newState();
   // Abertura (sem histórico)
   if (!history || history.length === 0) {
     return {
-      mensagem: ladderText(0, lead, 0),
+      mensagem: stageCopy(0, lead, 0, def),
       stage: 'abertura', temperatura: 'morno', objetivo_atingido: false, precisa_humano: false,
     };
   }
@@ -139,7 +179,7 @@ export function mockThink(lead, history) {
   let reply = null;
   st.asked[0] = 1; // abertura já enviada
   for (const m of history) {
-    if (m.direction === 'in') reply = step(st, m.text, lead);
+    if (m.direction === 'in') reply = step(st, m.text, lead, def);
   }
-  return reply ?? { mensagem: ladderText(1, lead, 0), stage: 'abertura', temperatura: 'morno', objetivo_atingido: false, precisa_humano: false };
+  return reply ?? { mensagem: stageCopy(1, lead, 0, def), stage: 'abertura', temperatura: 'morno', objetivo_atingido: false, precisa_humano: false };
 }
