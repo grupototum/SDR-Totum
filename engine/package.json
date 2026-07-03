@@ -1,0 +1,18 @@
+{
+  "name": "sdr-totum",
+  "version": "1.0.0",
+  "description": "SDR de IA por WhatsApp (Evolution API + Groq) — um serviço só",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "ingest": "node src/ingest.js",
+    "dispatch": "node src/dispatch.js",
+    "sim": "node sim/run.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": { "node": ">=22.13" }
+}
