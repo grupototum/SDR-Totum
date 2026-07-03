@@ -53,7 +53,7 @@ export async function runPersona(p, { flow, llm } = {}) {
   try {
     upsertLead(db, p.lead);
     // Disparo da abertura
-    const disp = await dispatchNewLeads(db, transport, { log: { info() {}, warn: console.warn, error: console.error } });
+    const disp = await dispatchNewLeads(db, transport, { log: { info() {}, warn: console.warn, error: console.error }, humanize: false });
     if (!disp[0]?.ok) throw new Error(`disparo falhou: ${disp[0]?.reason}`);
     const lead = getLeadByPhone(db, p.lead.whatsapp);
     say('bot', transport.sent[0].text);

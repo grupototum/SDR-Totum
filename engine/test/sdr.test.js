@@ -86,7 +86,7 @@ test('estado PERSISTE: serviço reiniciado no meio da conversa continua', async 
   {
     const db = openDb(dbPath);
     upsertLead(db, LEAD);
-    await dispatchNewLeads(db, makeFakeTransport(), { log: silent });
+    await dispatchNewLeads(db, makeFakeTransport(), { log: silent, humanize: false });
     const lead = getLeadByPhone(db, LEAD.whatsapp);
     addMessage(db, lead.id, 'in', 'sou eu sim, pode falar'); // chegou e o serviço "caiu"
     db.close();
@@ -111,7 +111,7 @@ test('disparo ABORTA lead com variável obrigatória vazia (nunca placeholder)',
   const db = openDb(':memory:');
   upsertLead(db, { whatsapp: '5533922222222', nome_empresa: '', especialidade: 'orto', cidade: 'BH', qtd_avaliacoes: '10' });
   const transport = makeFakeTransport();
-  const r = await dispatchNewLeads(db, transport, { log: silent });
+  const r = await dispatchNewLeads(db, transport, { log: silent, humanize: false });
   assert.equal(r[0].ok, false);
   assert.match(r[0].reason, /faltando:nome_empresa/);
   assert.equal(transport.sent.length, 0, 'nada enviado');

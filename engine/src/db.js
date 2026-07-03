@@ -42,6 +42,12 @@ export function openDb(path = process.env.DB_PATH || './data/sdr.db') {
       wa_msg_id TEXT PRIMARY KEY,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS dispatch_daily (
+      instance_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (instance_id, date)
+    );
     CREATE INDEX IF NOT EXISTS idx_msgs_lead ON messages(lead_id, id);
   `);
   return db;
@@ -112,6 +118,34 @@ export function markProcessed(db, waMsgId) {
   try { db.prepare('INSERT INTO processed (wa_msg_id) VALUES (?)').run(waMsgId); return true; }
   catch { return false; }
 }
+
+// Ramp-up de tráfego por instância: dia de vida = dias desde o 1º registro em dispatch_daily.
+export function dispatchDayOfLife(db, instanceId, dateStr) {
+  const row = db.prepare('SELECT MIN(date) as first FROM dispatch_daily WHERE instance_id = ?').get(instanceId);
+  if (!row?.first) return 1; // ainda não disparou nenhum dia — hoje é o dia 1
+  const days = Math.floor((new Date(`${dateStr}T00:00:00Z`) - new Date(`${row.first}T00:00:00Z`)) / 86400000) + 1;
+  return Math.max(1, days);
+}
+
+export function dispatchSentToday(db, instanceId, dateStr) {
+  const row = db.prepare('SELECT sent_count FROM dispatch_daily WHERE instance_id=? AND date=?').get(instanceId, dateStr);
+  return row?.sent_count ?? 0;
+}
+
+export function incrementDispatchCount(db, instanceId, dateStr) {
+  db.prepare(`
+    INSERT INTO dispatch_daily (instance_id, date, sent_count) VALUES (?,?,1)
+    ON CONFLICT(instance_id, date) DO UPDATE SET sent_count = sent_count + 1
+  `).run(instanceId, dateStr);
+}
+
+// Últimas N aberturas enviadas (1ª mensagem 'out' de cada lead) — para a checagem anti-template.
+export const getRecentOpenings = (db, n) =>
+  db.prepare(`
+    SELECT m.text FROM messages m
+    WHERE m.direction = 'out' AND m.id IN (SELECT MIN(id) FROM messages GROUP BY lead_id)
+    ORDER BY m.id DESC LIMIT ?
+  `).all(n).map(r => r.text);
 
 // Leads em conversa cuja última mensagem é do lead (resposta pendente) — usado no boot pós-restart.
 export const getLeadsAwaitingReply = (db) =>
