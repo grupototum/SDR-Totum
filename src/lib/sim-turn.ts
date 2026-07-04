@@ -9,6 +9,43 @@
  * trata o loop de interrupção (objeção) com max_iterations / on_exceed do flow.
  */
 import type { SimTurnRequest, SimTurnResponse, SimFlags } from "@/api/types";
+import { httpApi } from "@/api/http";
+
+/**
+ * Turno via motor REAL, com fallback EXPLÍCITO no mock: quando o motor falha,
+ * o motivo (status HTTP + corpo) vai em `raw.engine_error` — a UI mostra o
+ * banner/toast com a causa em vez de esconder a falha.
+ */
+export async function simTurnWithFallback(req: SimTurnRequest): Promise<SimTurnResponse> {
+  try {
+    return await httpApi.simTurn(req);
+  } catch (e) {
+    const reason = (e as Error).message;
+    console.error("[sim] motor inacessível — fallback mock:", reason);
+    const res = mockSimTurn(req);
+    res.raw.engine_error = reason;
+    return res;
+  }
+}
+
+/** Extrai o motivo da queda pro mock (setado por simTurnWithFallback), se houve. */
+export function engineErrorOf(res: SimTurnResponse): string | null {
+  return typeof res.raw.engine_error === "string" ? res.raw.engine_error : null;
+}
+
+/** Ping do motor via proxy same-origin — alimenta o indicador "Motor: OK". */
+export async function engineHealth(): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const res = await fetch("/api/engine/health");
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, reason: `HTTP ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
+}
 
 interface RawStage {
   id: string;
