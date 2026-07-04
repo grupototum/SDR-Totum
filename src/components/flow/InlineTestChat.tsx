@@ -9,8 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFlowStore } from "@/stores/flow-store";
-import { httpApi } from "@/api/http";
-import { mockSimTurn } from "@/lib/sim-turn";
+import { simTurnWithFallback, engineErrorOf } from "@/lib/sim-turn";
 import type { SimMessage, SimTurnResponse } from "@/api";
 import { TotumButton } from "@/components/ui/totum-button";
 import {
@@ -24,14 +23,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-
-async function simTurnWithFallback(payload: Parameters<typeof httpApi.simTurn>[0]) {
-  try {
-    return await httpApi.simTurn(payload);
-  } catch {
-    return mockSimTurn(payload);
-  }
-}
 
 type Turn = { lead: string; mock: boolean } & SimTurnResponse;
 
@@ -95,9 +86,11 @@ export function InlineTestChat({ onClose }: { onClose: () => void }) {
         sessionState,
       });
       const mock = res.raw?.mock === true;
+      const engineErr = engineErrorOf(res);
       setTurns((t) => [...t, { lead: text, mock, ...res }]);
       setSessionState(res.sessionState);
-      if (mock) toast.info("Turno via MOCK — não validado pelo motor real");
+      if (engineErr) toast.warning(`Motor inacessível (${engineErr}) — turno via MOCK`);
+      else if (mock) toast.info("Turno via MOCK — não validado pelo motor real");
     } catch (e) {
       toast.error(`Erro no turno: ${(e as Error).message}`);
     } finally {
