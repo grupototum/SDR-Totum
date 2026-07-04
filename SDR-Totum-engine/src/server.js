@@ -241,6 +241,20 @@ async function handler(req, res) {
       const target = body.target || body.phone || body.number;
       if (!target) return sendJson(res, 400, { error: 'target or phone is required' });
 
+      // Variáveis obrigatórias: todo {{TOKEN}} usado no flow precisa vir preenchido.
+      // Faltou → 400 e o disparo é abortado; placeholder nunca chega no lead.
+      const flowRecord = await getFlow(String(body.flowId));
+      if (!flowRecord) return sendJson(res, 404, { error: 'flow not found', flowId: body.flowId });
+      const requiredVars = [...new Set(
+        (JSON.stringify(flowRecord.definition || {}).match(/\{\{\s*[\w.-]+\s*\}\}/g) || [])
+          .map((t) => t.replace(/[{}\s]/g, '')),
+      )];
+      const startVars = body.variables || {};
+      const missingVars = requiredVars.filter((k) => startVars[k] === undefined || startVars[k] === null || String(startVars[k]).trim() === '');
+      if (missingVars.length) {
+        return sendJson(res, 400, { error: 'variáveis obrigatórias do flow ausentes — disparo abortado', missing: missingVars });
+      }
+
       const conversation = await createConversation({
         flowId: body.flowId,
         target,
@@ -594,21 +608,26 @@ async function handler(req, res) {
   }
 }
 
-const server = http.createServer(handler);
+// exportado p/ testes (test/*.test.cjs); o boot só roda quando executado direto
+module.exports = { handler };
 
-ensureSchema()
-  .then(() => {
-    server.listen(port, host, () => {
-      console.log(`SDR Totum engine listening on http://${host}:${port}`);
-    });
-    const intervalMs = Number(process.env.NO_RESPONSE_TICK_MS || 5000);
-    setInterval(() => {
-      runNoResponseTimeoutTick().catch((error) => {
-        console.error('[no-response-tick] failed', error);
+if (require.main === module) {
+  const server = http.createServer(handler);
+
+  ensureSchema()
+    .then(() => {
+      server.listen(port, host, () => {
+        console.log(`SDR Totum engine listening on http://${host}:${port}`);
       });
-    }, Math.max(1000, intervalMs)).unref();
-  })
-  .catch((error) => {
-    console.error('Failed to initialize SDR schema:', error);
-    process.exit(1);
-  });
+      const intervalMs = Number(process.env.NO_RESPONSE_TICK_MS || 5000);
+      setInterval(() => {
+        runNoResponseTimeoutTick().catch((error) => {
+          console.error('[no-response-tick] failed', error);
+        });
+      }, Math.max(1000, intervalMs)).unref();
+    })
+    .catch((error) => {
+      console.error('Failed to initialize SDR schema:', error);
+      process.exit(1);
+    });
+}

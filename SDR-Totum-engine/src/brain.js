@@ -162,6 +162,40 @@ async function generate(prompt, kind = 'prod') {
   return llmProvider.generate(prompt, kind);
 }
 
+// ───────────────────── guarda de saída (produção) ─────────────────────
+// Mensagem com placeholder não resolvido ou literal de demo NUNCA vai pro lead.
+const DEMO_LITERALS = ['clínica exemplo', 'clinica exemplo', 'dr. exemplo', 'dr exemplo', 'clínica odontosorriso', 'clinica odontosorriso'];
+function unsafeReplyReason(text, { checkDemo = true } = {}) {
+  const t = String(text || '');
+  if (/\{\{\s*[\w.-]+\s*\}\}/.test(t)) return 'placeholder não resolvido';
+  if (checkDemo) {
+    const low = t.toLowerCase();
+    const hit = DEMO_LITERALS.find((d) => low.includes(d));
+    if (hit) return `literal de demo "${hit}"`;
+  }
+  return null;
+}
+
+// ───────────────────── anti-repetição rígida ─────────────────────
+// Repetição = igual (normalizado) a uma das últimas 3 mensagens do BOT,
+// ou mesmas primeiras 8 palavras. Nunca mandar a mesma frase 2x.
+function normalizeMsg(text) {
+  return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// (acima: normalize('NFD') separa acentos; a faixa U+0300–U+036F remove os diacríticos)
+function isRepeatOfHistory(text, history = []) {
+  const n = normalizeMsg(text);
+  if (!n) return false;
+  const nWords = n.split(' ');
+  const nHead = nWords.slice(0, 8).join(' ');
+  return history
+    .filter((m) => m && m.direction === 'out')
+    .slice(-3)
+    .map((m) => normalizeMsg(m.text))
+    .some((b) => b && (b === n || (nWords.length >= 8 && b.split(' ').slice(0, 8).join(' ') === nHead)));
+}
+
 // callBrain: contrato compatível com engine.js. flowOverride permite SHADOW sem ativar em prod.
 async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null, ragContext = null }) {
   const _kind = flowOverride ? 'sim' : 'prod'; // sim usa LLM_CHAIN_SIM, prod usa LLM_CHAIN_PROD
@@ -191,7 +225,27 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   }
 
   // Apenas variante A (índice 0): se o LLM retornar A+B juntos, descarta B e seguintes.
-  const reply = Array.isArray(raw.reply) ? raw.reply.map(String).filter(Boolean).slice(0, 1) : [];
+  const firstReply = (r) => (Array.isArray(r.reply) ? r.reply.map(String).filter(Boolean).slice(0, 1) : []);
+  let reply = firstReply(raw);
+
+  // anti-repetição rígida: 1 re-geração; se ainda repetir, suprime (nunca manda a mesma frase 2x)
+  let suppressedRepeat = false;
+  if (reply.length && isRepeatOfHistory(reply[0], history)) {
+    let second = null;
+    try {
+      second = extractJson(await generate(
+        prompt + '\n\nATENÇÃO: você JÁ ENVIOU essa mensagem nesta conversa. Reformule com outras palavras ou avance a conversa dentro das regras do estágio. NUNCA repita a mesma frase.',
+        _kind,
+      ));
+    } catch { second = null; }
+    const secondReply = second ? firstReply(second) : [];
+    if (secondReply.length && !isRepeatOfHistory(secondReply[0], history)) {
+      raw = second; reply = secondReply;
+    } else {
+      console.error('[brain] anti-repetição: reply idêntica às últimas mensagens do bot — suprimida, estágio mantido/decidido pelo motor');
+      suppressedRepeat = true; reply = [];
+    }
+  }
   const proposed = raw.stage_proposto || raw.stage || current;
   const decision = validateTransition({ def, current, proposed, raw, session });
   const stage = decision.stage;
@@ -200,14 +254,22 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   const { send_preview, booked } = authorizeActions(stage, raw);
   const done = Boolean(raw.done) || decision.done || booked || stage === 'encerrado';
 
+  // guarda de saída: placeholder/demo bloqueia envio e escala pra humano.
+  // No sim (session.id === 'sim') as variáveis demo são intencionais — só checa placeholder.
+  let blocked = null;
+  if (reply.length) {
+    blocked = unsafeReplyReason(reply[0], { checkDemo: session.id !== 'sim' });
+    if (blocked) console.error(`[brain] guarda de saída: reply bloqueada (${blocked}):`, reply[0]);
+  }
+
   return {
-    reply: reply.length ? reply : ['(sem resposta gerada)'],
+    reply: blocked || suppressedRepeat ? [] : reply.length ? reply : ['(sem resposta gerada)'],
     stage,                       // AUTORITATIVO (engine persiste isto)
     stage_proposto: proposed,    // p/ shadow / auditoria
     stage_anterior: current,
     temperatura, temperature: temperatura, score,
     send_preview, booked,
-    precisa_humano: Boolean(raw.precisa_humano),
+    precisa_humano: Boolean(raw.precisa_humano) || Boolean(blocked),
     done,
     objecao: decision.flags.objecao,
     objecao_count: decision.flags.objecao_count,
@@ -220,4 +282,5 @@ module.exports = {
   callBrain,
   callGemini: (session, history, lastMessage) => callBrain({ session, history, lastMessage }),
   extractJson, renderTemplate, validateTransition, authorizeActions, buildV2Prompt, stageMap,
+  unsafeReplyReason,
 };
