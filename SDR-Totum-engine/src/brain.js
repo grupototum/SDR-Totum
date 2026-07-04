@@ -176,6 +176,26 @@ function unsafeReplyReason(text, { checkDemo = true } = {}) {
   return null;
 }
 
+// ───────────────────── anti-repetição rígida ─────────────────────
+// Repetição = igual (normalizado) a uma das últimas 3 mensagens do BOT,
+// ou mesmas primeiras 8 palavras. Nunca mandar a mesma frase 2x.
+function normalizeMsg(text) {
+  return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// (acima: normalize('NFD') separa acentos; a faixa U+0300–U+036F remove os diacríticos)
+function isRepeatOfHistory(text, history = []) {
+  const n = normalizeMsg(text);
+  if (!n) return false;
+  const nWords = n.split(' ');
+  const nHead = nWords.slice(0, 8).join(' ');
+  return history
+    .filter((m) => m && m.direction === 'out')
+    .slice(-3)
+    .map((m) => normalizeMsg(m.text))
+    .some((b) => b && (b === n || (nWords.length >= 8 && b.split(' ').slice(0, 8).join(' ') === nHead)));
+}
+
 // callBrain: contrato compatível com engine.js. flowOverride permite SHADOW sem ativar em prod.
 async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null, ragContext = null }) {
   const _kind = flowOverride ? 'sim' : 'prod'; // sim usa LLM_CHAIN_SIM, prod usa LLM_CHAIN_PROD
@@ -205,7 +225,27 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   }
 
   // Apenas variante A (índice 0): se o LLM retornar A+B juntos, descarta B e seguintes.
-  const reply = Array.isArray(raw.reply) ? raw.reply.map(String).filter(Boolean).slice(0, 1) : [];
+  const firstReply = (r) => (Array.isArray(r.reply) ? r.reply.map(String).filter(Boolean).slice(0, 1) : []);
+  let reply = firstReply(raw);
+
+  // anti-repetição rígida: 1 re-geração; se ainda repetir, suprime (nunca manda a mesma frase 2x)
+  let suppressedRepeat = false;
+  if (reply.length && isRepeatOfHistory(reply[0], history)) {
+    let second = null;
+    try {
+      second = extractJson(await generate(
+        prompt + '\n\nATENÇÃO: você JÁ ENVIOU essa mensagem nesta conversa. Reformule com outras palavras ou avance a conversa dentro das regras do estágio. NUNCA repita a mesma frase.',
+        _kind,
+      ));
+    } catch { second = null; }
+    const secondReply = second ? firstReply(second) : [];
+    if (secondReply.length && !isRepeatOfHistory(secondReply[0], history)) {
+      raw = second; reply = secondReply;
+    } else {
+      console.error('[brain] anti-repetição: reply idêntica às últimas mensagens do bot — suprimida, estágio mantido/decidido pelo motor');
+      suppressedRepeat = true; reply = [];
+    }
+  }
   const proposed = raw.stage_proposto || raw.stage || current;
   const decision = validateTransition({ def, current, proposed, raw, session });
   const stage = decision.stage;
@@ -223,7 +263,7 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   }
 
   return {
-    reply: blocked ? [] : reply.length ? reply : ['(sem resposta gerada)'],
+    reply: blocked || suppressedRepeat ? [] : reply.length ? reply : ['(sem resposta gerada)'],
     stage,                       // AUTORITATIVO (engine persiste isto)
     stage_proposto: proposed,    // p/ shadow / auditoria
     stage_anterior: current,

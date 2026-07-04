@@ -1,4 +1,4 @@
-/* FIX 1 — guarda de saída do brain.js (placeholder / literal de demo nunca vai pro lead).
+/* FIX 1 (guarda de saída) + FIX 2 (anti-repetição rígida) no brain.js.
  * Node puro (sem deps), LLM stubado. Roda: node test/brain_guards.test.cjs */
 'use strict';
 process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://fake:fake@127.0.0.1:9/fake';
@@ -60,12 +60,38 @@ async function main() {
   assert.strictEqual(r.reply.length, 1);
   assert.strictEqual(r.precisa_humano, false);
 
-  // 5) unsafeReplyReason exportado (sanidade)
+  // 5) anti-repetição: 1ª geração repete → re-gera e usa a reformulada
+  const repetida = 'Consegui uma análise completa da sua clínica aqui e queria muito te mostrar hoje';
+  const history = [
+    { direction: 'out', text: repetida },
+    { direction: 'in', text: 'hm' },
+  ];
+  queue.push(llmJson(repetida)); // repete
+  queue.push(llmJson('Entendo! Então deixa eu te mostrar por outro ângulo: sua concorrente aparece na sua frente no Google'));
+  r = await callBrain({ session: freshSession(), history, lastMessage: 'hm', flowOverride });
+  assert.strictEqual(r.reply.length, 1, 'deveria ter usado a re-geração');
+  assert.ok(!/an[aá]lise completa/i.test(r.reply[0]), 'não deveria repetir a frase antiga');
+
+  // 6) anti-repetição: re-geração TAMBÉM repete → suprime (nunca manda a mesma frase 2x)
+  queue.push(llmJson(repetida));
+  queue.push(llmJson(repetida.toUpperCase() + '!!!')); // mesma frase normalizada
+  r = await callBrain({ session: freshSession(), history, lastMessage: 'hm', flowOverride });
+  assert.deepStrictEqual(r.reply, [], 'repetição dupla deveria suprimir a reply');
+  assert.strictEqual(r.precisa_humano, false, 'supressão não escala pra humano');
+  assert.ok(r.stage, 'decisão de estágio preservada');
+
+  // 7) primeiras ~8 palavras iguais também conta como repetição
+  queue.push(llmJson('Consegui uma análise completa da sua clínica aqui mas agora com um final diferente'));
+  queue.push(llmJson('Vamos por outro caminho: te mando a prévia da página agora?'));
+  r = await callBrain({ session: freshSession(), history, lastMessage: 'hm', flowOverride });
+  assert.ok(/outro caminho/.test(r.reply[0]), 'head de 8 palavras igual deveria disparar re-geração');
+
+  // 8) unsafeReplyReason exportado (sanidade)
   assert.ok(unsafeReplyReason('{{X}}'));
   assert.strictEqual(unsafeReplyReason('texto limpo'), null);
 
   assert.strictEqual(queue.length, 0, 'stub: sobrou resposta na fila');
-  console.log('✓ guarda de saída (placeholder + literal de demo)');
+  console.log('✓ guarda de saída + anti-repetição rígida');
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error('✗', e.message); process.exit(1); });
