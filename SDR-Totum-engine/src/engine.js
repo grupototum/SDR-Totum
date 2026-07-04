@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
-const { callBrain } = require('./brain');
+const { callBrain, NO_RESPONSE_MARKER } = require('./brain');
 const { addMessage, getActiveFlow, touch } = require('./store');
-const { canSend } = require('./evolution');
+const { canSend, sendAudio } = require('./evolution');
 const senderState = require('./sender_state');
 const memory = require('./memory');
 
@@ -523,6 +523,48 @@ async function sendBrainReplies({ conversation, result, sendText }) {
   return outbound;
 }
 
+// BLOCO ÁUDIO (fix 3): lead/gatekeeper aceitou o áudio → envia os áudios NA ORDEM
+// (1→2→3) e depois o resumo em texto (MSG-45 + link) como acompanhamento/fallback.
+// Fontes: definition.globals.audio_block.{files,summary} do flow ativo; files pode
+// vir do env AUDIO_BLOCK_URLS (URLs separadas por vírgula).
+async function sendAudioBlock({ conversation, sendText }) {
+  let active;
+  try { active = await getActiveFlow(); } catch { active = null; }
+  const block = active?.definition?.globals?.audio_block || {};
+  const files = Array.isArray(block.files) && block.files.length
+    ? block.files
+    : String(process.env.AUDIO_BLOCK_URLS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const outbound = [];
+
+  if (!files.length) console.warn('[audio-block] sem arquivos configurados (globals.audio_block.files ou AUDIO_BLOCK_URLS) — enviando só o resumo');
+
+  for (const [index, url] of files.entries()) {
+    const msgId = `audio_block:${index + 1}`;
+    const label = `[áudio ${index + 1}/${files.length}]`;
+    if (!reserveForSend(conversation, msgId, label)) continue;
+    const transport = await sendAudio({ number: conversation.target.phone, audio: url, msgId, dedupReserved: true });
+    outbound.push(await addMessage(conversation, {
+      direction: 'out', sender: 'bot', text: label, msgId, nodeId: msgId, transport,
+    }));
+  }
+
+  const summary = Array.isArray(block.summary) ? block.summary : block.summary ? [block.summary] : [];
+  for (const [index, rawText] of summary.entries()) {
+    // guardrail 10: linha com variável não preenchida não vai pro lead
+    const text = renderTemplate(rawText, conversation.variables || {})
+      .split('\n').filter((line) => !/\{\{/.test(line)).join('\n').trim();
+    if (!text) continue;
+    const msgId = `audio_block:sum${index + 1}`;
+    if (!reserveForSend(conversation, msgId, text)) continue;
+    const transport = await sendText({ number: conversation.target.phone, text, msgId, dedupReserved: true });
+    outbound.push(await addMessage(conversation, {
+      direction: 'out', sender: 'bot', text, msgId, nodeId: msgId, transport,
+    }));
+  }
+
+  return outbound;
+}
+
 function getNodeText(node) {
   if (!node) return '';
   if (node.text || node.message || node.content) return node.text || node.message || node.content;
@@ -782,6 +824,17 @@ async function runBrainTurn({ conversation, lastMessage, sendText }) {
   }
 
   console.log('[brain] JSON antes do envio:', JSON.stringify(result, null, 2));
+
+  // notificar ≠ parar (fix 4): registra pro time e o fluxo SEGUE
+  if (result.notificar_humano && !result.precisa_humano) {
+    console.log('[engine] NOTIFICAR humano (fluxo continua):', {
+      conversationId: conversation.id,
+      phone: conversation.target?.phone,
+      stage: result.stage,
+      falando_com: result.falando_com,
+    });
+  }
+
   applyBrainResult(conversation, result);
 
   if (result.done) {
@@ -808,6 +861,12 @@ async function runBrainTurn({ conversation, lastMessage, sendText }) {
   }
 
   const outbound = await sendBrainReplies({ conversation, result, sendText });
+
+  if (result.send_audio) {
+    const audioOutbound = await sendAudioBlock({ conversation, sendText });
+    outbound.push(...audioOutbound);
+  }
+
   if (conversation.status === 'waiting_input') {
     let active;
     try { active = await getActiveFlow(); } catch { active = null; }
@@ -883,14 +942,14 @@ async function processNoResponseTimeout({ conversation, sendText }) {
   if (stage && !isWaitForReplyNode(node)) {
     return runBrainTurn({
       conversation,
-      lastMessage: '[SEM RESPOSTA DO LEAD NO PRAZO DO GATILHO]',
+      lastMessage: NO_RESPONSE_MARKER,
       sendText,
     });
   }
 
   return runNodeFlowTurn({
     conversation,
-    lastMessage: '[SEM RESPOSTA DO LEAD NO PRAZO DO GATILHO]',
+    lastMessage: NO_RESPONSE_MARKER,
     sendText,
     noResponseTimeout: true,
   });

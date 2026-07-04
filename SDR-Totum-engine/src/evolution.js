@@ -126,9 +126,60 @@ async function sendText({ number, text, msgId, dedupReserved = false }) {
   };
 }
 
+// Envia áudio (voice note) via Evolution API. `audio` = URL pública ou base64.
+async function sendAudio({ number, audio, msgId, dedupReserved = false }) {
+  if (!number) throw new Error('target number is required');
+  if (!audio) throw new Error('audio (url or base64) is required');
+  if (msgId && !dedupReserved) {
+    const reserved = senderState.reserveOutbound(number, msgId, `[audio] ${audio}`);
+    if (!reserved) {
+      console.log(`[DEDUP] Skipping ${msgId} for ${number} — already sent`);
+      return {
+        sent: false,
+        deduped: true,
+        blockedReason: 'msgId already present in sdr-state history',
+        payload: { number, audio, msgId },
+      };
+    }
+  }
+
+  if (!canSend()) {
+    return {
+      sent: false,
+      mode: config.mode,
+      blockedReason: 'shadow mode or ALLOW_AUTOSEND=false',
+      payload: { number, audio },
+    };
+  }
+
+  await sendPresence({ number, presence: 'recording' });
+  let result;
+  try {
+    result = await evolutionPost(`/message/sendWhatsAppAudio/${config.instance}`, {
+      number,
+      audio,
+      delay: Number(process.env.EVOLUTION_SEND_DELAY_MS || 1200),
+    });
+  } finally {
+    try {
+      await sendPresence({ number, presence: 'paused' });
+    } catch (error) {
+      console.warn('[evolution] failed to pause presence:', error.message);
+    }
+  }
+
+  return {
+    sent: true,
+    provider: 'evolution',
+    status: result.status,
+    body: result.body,
+  };
+}
+
 module.exports = {
   canSend,
   readingDelayMs,
   sendPresence,
   sendText,
+  sendAudio,
 };
