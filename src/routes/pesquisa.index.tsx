@@ -241,7 +241,7 @@ function PesquisaIndexPage() {
               ) : (
                 <>
                   Nenhuma ordem ainda.{" "}
-                  <Link to="/pesquisa/nova" className="text-[#da2128] hover:underline">
+                  <Link to="/pesquisa/nova" className="text-[#ef9a9a] hover:underline">
                     Criar primeira pesquisa
                   </Link>
                 </>
