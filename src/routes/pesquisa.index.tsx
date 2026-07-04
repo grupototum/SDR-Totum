@@ -186,6 +186,7 @@ function PesquisaIndexPage() {
               className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
               style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
               title="Filtrar por UF"
+              aria-label="Filtrar por UF"
             >
               <option value="">Todas UF</option>
               {ufOptions.map((uf) => (
@@ -200,6 +201,7 @@ function PesquisaIndexPage() {
               className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
               style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
               title="Ordenar"
+              aria-label="Ordenar"
             >
               <option value="date_desc">Mais recentes</option>
               <option value="date_asc">Mais antigas</option>
@@ -241,7 +243,7 @@ function PesquisaIndexPage() {
               ) : (
                 <>
                   Nenhuma ordem ainda.{" "}
-                  <Link to="/pesquisa/nova" className="text-[#da2128] hover:underline">
+                  <Link to="/pesquisa/nova" className="text-[#ef9a9a] hover:underline">
                     Criar primeira pesquisa
                   </Link>
                 </>

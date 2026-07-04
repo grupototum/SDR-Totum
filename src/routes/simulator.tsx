@@ -240,6 +240,7 @@ function SimulatorPage() {
             <Label className="text-xs text-[color:var(--color-text-muted)]">Flow</Label>
             <select
               value={source}
+              aria-label="Selecionar flow"
               onChange={(e) => {
                 setSource(e.target.value);
                 reset();
@@ -309,7 +310,7 @@ function SimulatorPage() {
             className="flex flex-col gap-2 rounded-xl p-3"
             style={{ background: "rgba(218,33,40,0.08)", border: "1px solid rgba(218,33,40,0.25)" }}
           >
-            <p className="text-[11px] font-medium text-[#e3433e]">Ativar em produção</p>
+            <p className="text-[11px] font-medium text-[#ef9a9a]">Ativar em produção</p>
 
             {!confirmingPublish ? (
               <>
@@ -421,6 +422,7 @@ function SimulatorPage() {
             onClick={() => setLeftOpen((v) => !v)}
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
+            aria-label={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
           >
             {leftOpen ? (
               <PanelLeftClose className="size-4" />
@@ -432,6 +434,7 @@ function SimulatorPage() {
             onClick={() => setRightOpen((v) => !v)}
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
+            aria-label={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
           >
             {rightOpen ? (
               <PanelRightClose className="size-4" />
@@ -642,6 +645,7 @@ function SimulatorPage() {
             size="sm"
             onClick={send}
             disabled={!activeFlow || pending || !input.trim()}
+            aria-label="Enviar mensagem"
           >
             <Send className="size-3.5" />
           </TotumButton>

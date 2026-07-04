@@ -54,24 +54,40 @@ export function NodeShell({
       {hasError && (
         <div
           className="absolute -right-1 -top-1 rounded-full p-1 text-white"
-          style={{ background: "#d91616" }}
+          style={{
+            background: "#d91616",
+            boxShadow: "0 0 0 2px #1b1728, inset 0 0 0 1px rgba(255,255,255,0.25)",
+          }}
           title={node.data.errorMsg || "Erro"}
+          aria-label={node.data.errorMsg || "Erro"}
+          role="status"
         >
           <AlertCircle className="size-3" />
         </div>
       )}
       {status === "running" && (
         <div
-          className="absolute -right-1 -top-1 animate-pulse rounded-full px-2 py-0.5 text-[10px] text-white"
-          style={{ background: "#077ac7" }}
+          className="absolute -right-1 -top-1 animate-pulse rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+          style={{
+            background: "#077ac7",
+            boxShadow: "0 0 0 2px #1b1728, inset 0 0 0 1px rgba(255,255,255,0.25)",
+          }}
+          role="status"
+          aria-label="Rodando"
         >
           Rodando…
         </div>
       )}
       {status === "ok" && (
         <div
-          className="absolute -right-1 -top-1 rounded-full px-2 py-0.5 text-[10px] text-white"
-          style={{ background: "#35a670" }}
+          className="absolute -right-1 -top-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          style={{
+            background: "#35a670",
+            color: "#0e0918",
+            boxShadow: "0 0 0 2px #1b1728, inset 0 0 0 1px rgba(0,0,0,0.2)",
+          }}
+          role="status"
+          aria-label="OK"
         >
           OK
         </div>
