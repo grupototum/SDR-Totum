@@ -256,15 +256,15 @@
     color: var(--lg-fg);
     font-family: var(--font-sans);
     font-weight: 400;
-    letter-spacing: -0.011em;
+    letter-spacing: 0em;
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 500;
-    letter-spacing: -0.022em;
-    color: var(--lg-fg);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #ffffff;
   }
-  strong, b { font-weight: 600; }
+  strong, b { font-weight: 400; }
   *:focus-visible {
     outline: 2px solid var(--lg-accent);
     outline-offset: 2px;
