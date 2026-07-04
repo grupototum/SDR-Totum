@@ -1,7 +1,7 @@
 {
   "flow_id": "odonto_stages_v2",
   "name": "SDR Odonto — Estágios v2 (híbrido)",
-  "version": "2.0",
+  "version": "2.1",
   "source": "consolida flow_odonto_sdr_v1.json (181 nós) em mapa de estágios. Determinístico no caminho, improvisado na palavra.",
   "niche": "odontologia",
   "channel": "whatsapp",
@@ -17,8 +17,30 @@
       "Nunca inventar dado nem diferencial sem evidência.",
       "Proibido marketingês (solução completa, presença digital, potencializar) e termos técnicos (SEO score, Lighthouse).",
       "Regra de ouro: nunca dado isolado — sempre Dado → Problema → Impacto → Oportunidade.",
-      "Ler a última resposta do lead e responder ao que ele realmente disse; nunca repetir pergunta já respondida."
-    ]
+      "Ler a última resposta do lead e responder ao que ele realmente disse; nunca repetir pergunta já respondida.",
+      "Regra de ouro do improviso: improvisar SOMENTE para conduzir o lead de volta ao script — o script é a espinha dorsal, não sugestão.",
+      "UMA mensagem por turno. Nunca juntar saudação + observação + pergunta no mesmo bloco.",
+      "Proibido pitch/venda antes da oferta da prévia: nada de 'ajudamos clínicas', 'presença digital', serviço, proposta ou preço."
+    ],
+    "send_preview_stage": "oferta_previa",
+    "gatekeeper": {
+      "instruction": "Quem responde não é o decisor (RK-03): nunca chamar a atendente pelo nome do decisor. Oferecer áudio curto pra encaminhar; se aceitar (G-05 SIM), o motor envia o BLOCO ÁUDIO e a conversa continua — não é handoff.",
+      "copy": [
+        "Ok...",
+        "Posso te mandar um áudio rápido para encaminhar pro {{NOME_DONO}}?",
+        "Tenho certeza que vai gostar do que encontrei sobre a clínica.",
+        "Tudo bem! Você sabe se teria alguma forma de eu falar diretamente com {{NOME_DONO}}?"
+      ]
+    },
+    "audio_block": {
+      "files": [],
+      "files_note": "preencher no publish com as URLs públicas dos 3 .opus do Rael (ordem 1→2→3); fallback: env AUDIO_BLOCK_URLS",
+      "summary": [
+        "Caso não consiga ouvir agora, eu vou resumir o áudio pra vc:\n\n- Pesquisei clínicas de {{ESPECIALIDADE}} na região. A {{NOME_EMPRESA}} foi a que mais me chamou atenção\n- {{CAUSA}}\n- {{CONSEQUENCIA}}\n- Criei uma página mostrando o impacto disso de forma visual e prática\n\nObs: trabalho com uma empresa por região. Ainda não conversei com nenhuma outra clínica daqui. Mas isso pode mudar.\n\nO áudio tem menos de 1 minuto e vale muito mais do que esse resumo.\n\nSegue o link da página:",
+        "lp.grupototum.com",
+        "A gente trabalha com uma empresa por região. Antes de conversar com outra clínica daqui, quero muito ouvir o retorno."
+      ]
+    }
   },
   "entry_stage": "abertura",
   "stages": [

@@ -1,24 +1,14 @@
-const fs = require('node:fs');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getActiveFlow } = require('./store');
 const llmProvider         = require('./llm_provider');
 
-// ───────────────────────── infra (mantida do v1) ─────────────────────────
-function readEnvValue(file, key) {
-  try {
-    const content = fs.readFileSync(file, 'utf8');
-    const line = content.split(/\r?\n/).find((item) => item.match(new RegExp(`^${key}\\s*=`)));
-    if (!line) return '';
-    return line.slice(line.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '');
-  } catch { return ''; }
-}
-function geminiApiKey() {
-  return process.env.GEMINI_API_KEY || readEnvValue('/home/totum/.pepper/.env', 'GEMINI_API_KEY');
-}
-const genAI = new GoogleGenerativeAI(geminiApiKey());
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+// (SDK Gemini removido daqui: a geração é 100% via llm_provider, que instancia o SDK
+//  lazy por chamada — o construtor no top-level quebrava o load do módulo no Node 26)
 const allowedTemperatures = new Set(['frio', 'morno', 'quente', 'fora_de_perfil']);
+
+// Marcador que o engine injeta quando o gatilho de no-response dispara (fix 6).
+const NO_RESPONSE_MARKER = '[SEM RESPOSTA DO LEAD NO PRAZO DO GATILHO]';
+// Follow-up nunca pode fingir que o lead respondeu.
+const FAKE_ACK_RE = /^\s*(entendi|perfeito|[óo]timo|que bom|legal|certo|show|combinado|beleza|boa)\b/i;
 
 function extractJson(text) {
   const clean = String(text || '').replace(/```json\n?/gi, '').replace(/```/g, '').trim();
@@ -94,15 +84,19 @@ function validateTransition({ def, current, proposed, raw, session }) {
 }
 
 // autoridade das ações por estágio
-function authorizeActions(stage, raw) {
+function authorizeActions(stage, raw, { falandoCom = 'desconhecido' } = {}) {
   const send_preview = Boolean(raw.send_preview) && (stage === 'previa' || stage === 'oferta_previa');
   const booked = Boolean(raw.booked) && (stage === 'agendamento');
-  return { send_preview, booked };
+  // BLOCO ÁUDIO é o caminho do gatekeeper (RK-03 → G-05 SIM) — nunca handoff (fix 4)
+  const send_audio = Boolean(raw.send_audio) && falandoCom === 'gatekeeper' && stage !== 'encerrado';
+  return { send_preview, booked, send_audio };
 }
 
-function buildV2Prompt({ def, stageId, session, history, lastMessage, classificacao, ragContext }) {
+function buildV2Prompt({ def, stageId, session, history, lastMessage, classificacao, ragContext, nextLine = null, falandoCom = 'desconhecido' }) {
   const vars = session.variables || {};
   const map = stageMap(def);
+  const gk = (def.globals && def.globals.gatekeeper) || {};
+  const gkCopy = (gk.copy || []).map((c) => renderTemplate(c, vars));
   const st = map[stageId] || map[def.entry_stage] || (def.stages || [])[0] || {};
   const _gr = (def.globals && def.globals.guardrails) || [];
   const guardrails = Array.isArray(_gr) ? _gr : typeof _gr === 'string' ? [_gr] : [];
@@ -116,6 +110,8 @@ function buildV2Prompt({ def, stageId, session, history, lastMessage, classifica
 
   return `Você é um SDR consultivo da Totum no WhatsApp (voz humana, BR, mensagens curtas estilo WhatsApp).
 
+REGRA DE OURO (inviolável): o improviso serve SOMENTE para conduzir o lead ao objetivo através do script — usando o script o máximo possível, da forma mais personalizada possível. O script NÃO é sugestão, é a espinha dorsal da conversa.
+
 OBJETIVO GERAL: ${def.objective || ''}
 
 GUARDRAILS (obrigatórios):
@@ -124,9 +120,17 @@ ${guardrails.map((g) => '- ' + g).join('\n')}
 ESTÁGIO ATUAL: "${stageId}"
 - META: ${st.goal || ''}
 - COMO AGIR: ${renderTemplate(st.instruction || '', vars)}
-${refCopy.length ? '- REFERÊNCIA DE FALA (adapte, não copie literal):\n' + refCopy.map((c) => '   • ' + c).join('\n') : ''}
+${refCopy.length ? '- SCRIPT DESTE ESTÁGIO (espinha dorsal — envie estas mensagens, NESTA ORDEM, personalizando o mínimo necessário):\n' + refCopy.map((c) => '   • ' + c).join('\n') : ''}
+${nextLine ? `- AÇÃO PADRÃO DESTE TURNO: envie a próxima mensagem do script ainda não enviada: «${nextLine}». Só deixe de enviá-la se a última mensagem do lead exigir outra coisa — nesse caso responda CURTO (1 frase) e volte pro script no turno seguinte.` : refCopy.length ? '- O script deste estágio já foi enviado: conduza o lead à condição de avanço com 1 mensagem curta, sem inventar pitch nem observação nova.' : ''}
+- PROIBIDO PITCH/VENDA antes da oferta da prévia: nada de "ajudamos clínicas...", "presença digital", falar de serviço, proposta ou preço.
 ${actions.length ? '- AÇÕES POSSÍVEIS NESTE ESTÁGIO: ' + actions.join(', ') : ''}
 PRÓXIMO ESTÁGIO no trilho: ${st.next || '(terminal)'} . Estágios válidos: ${stageIds}.
+
+INTERLOCUTOR ATUAL: ${falandoCom}. Classifique em todo turno no campo "falando_com": "decisor" (é quem decide), "gatekeeper" (secretária/atendente/recepção) ou "desconhecido".
+GATEKEEPER: se quem responde NÃO é o decisor, siga o caminho do script pra atendente: NUNCA a chame pelo nome do decisor (trate por "você", sem vocativo de nome), registre o nome do decisor se aparecer, e ofereça mandar um ÁUDIO curto pra ela encaminhar ao decisor.${gkCopy.length ? '\n- COPY DO CAMINHO GATEKEEPER (use nesta ordem):\n' + gkCopy.map((c) => '   • ' + c).join('\n') : ''}
+Quando a atendente ACEITAR receber o áudio, marque "send_audio": true — o motor envia os áudios e o resumo automaticamente e a conversa CONTINUA. Isso NÃO é caso de humano.
+
+HUMANO: "precisa_humano": true SOMENTE se a conversa não puder continuar sem um humano (lead exige falar com pessoa, recusa dura e definitiva, ou forneceu contato direto do decisor pra um humano assumir). Oferecer áudio, falar com secretária ou contornar objeção comum NUNCA é precisa_humano. Nos pontos de [NOTIFICAR HUMANO] do script em que a conversa continua, use "notificar_humano": true e siga o fluxo.
 
 OBJEÇÕES: se o lead levantar objeção real (${obj ? obj.categories.join(', ') : 'preço, tempo, já tem, não preciso, genérica'}), ACOLHA (nunca corrija), reintroduza como curiosidade, e devolva o campo "objecao" com a categoria. Preço: nunca revele valor, redirecione pra prévia/página.
 
@@ -140,7 +144,9 @@ CONTEXTO:
 VARIÁVEIS: ${JSON.stringify(vars)}
 HISTÓRICO (antigo→novo):
 ${histText || '(sem histórico ainda)'}
-ÚLTIMA MENSAGEM DO LEAD: ${lastMessage || ''}
+${lastMessage === NO_RESPONSE_MARKER
+    ? 'SITUAÇÃO: o lead NÃO respondeu à sua última mensagem (follow-up automático). Gere um NUDGE curto e neutro: retome a última pergunta que você fez, com outras palavras. PROIBIDO começar com "Entendi", "Perfeito", "Que bom" ou qualquer coisa que finja que o lead respondeu.'
+    : 'ÚLTIMA MENSAGEM DO LEAD: ' + (lastMessage || '')}
 ${classificacao ? 'CLASSIFICAÇÃO PRÉVIA: ' + classificacao : ''}
 
 Responda SOMENTE um JSON válido:
@@ -151,7 +157,10 @@ Responda SOMENTE um JSON válido:
   "score": 1,
   "send_preview": false,
   "booked": false,
+  "send_audio": false,
+  "falando_com": "decisor|gatekeeper|desconhecido",
   "precisa_humano": false,
+  "notificar_humano": false,
   "done": false,
   "objecao": null,
   "intent": null
@@ -196,6 +205,44 @@ function isRepeatOfHistory(text, history = []) {
     .some((b) => b && (b === n || (nWords.length >= 8 && b.split(' ').slice(0, 8).join(' ') === nHead)));
 }
 
+// ───────────────── aderência ao script (fix 1 — teste real 04/07) ─────────────────
+// O script é a ESPINHA DORSAL: a ação padrão de cada turno é enviar a próxima
+// mensagem do reference_copy do estágio que ainda não foi enviada.
+function nextScriptLine(refCopies = [], history = []) {
+  const sent = history.filter((m) => m && m.direction === 'out').map((m) => normalizeMsg(m.text));
+  for (const line of refCopies) {
+    if (/\{\{/.test(line)) continue; // variável não preenchida: não usar (guardrail 10)
+    const n = normalizeMsg(line);
+    if (!n) continue;
+    const head = n.split(' ').slice(0, 8).join(' ');
+    const already = sent.some((s) => s === n || (n.split(' ').length >= 8 && s.split(' ').slice(0, 8).join(' ') === head));
+    if (!already) return line;
+  }
+  return null;
+}
+
+// Pitch/venda antes da oferta da prévia é proibido (regras 2, 3 e 8 do script).
+const PITCH_PATTERNS = [
+  /ajud(?:o|amos)\s+(?:as?\s+)?cl[ií]nicas?/i,
+  /presen[çc]a digital/i,
+  /ser(?:em)?\s+encontrad[oa]s?\s+(?:online|no google|na internet)/i,
+  /marketing digital/i,
+  /nossa ag[eê]ncia/i,
+  /nossos?\s+servi[çc]os?/i,
+  /proposta comercial/i,
+  /transforma[çc][ãa]o digital/i,
+  /potencializar/i,
+];
+function prematurePitchReason(text, def, stageId) {
+  const map = stageMap(def);
+  const boundaryId = (def.globals && def.globals.send_preview_stage) || 'oferta_previa';
+  const boundary = map[boundaryId];
+  const cur = map[stageId];
+  if (!boundary || !cur || cur.__i >= boundary.__i) return null;
+  const hit = PITCH_PATTERNS.find((re) => re.test(String(text || '')));
+  return hit ? `pitch precoce (proibido antes de ${boundaryId})` : null;
+}
+
 // callBrain: contrato compatível com engine.js. flowOverride permite SHADOW sem ativar em prod.
 async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null, ragContext = null }) {
   const _kind = flowOverride ? 'sim' : 'prod'; // sim usa LLM_CHAIN_SIM, prod usa LLM_CHAIN_PROD
@@ -212,7 +259,13 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   }
 
   const current = session.currentNodeId || session.stage || def.entry_stage || 'abertura';
-  const prompt = buildV2Prompt({ def, stageId: current, session, history, lastMessage, classificacao, ragContext });
+  const vars = session.variables || (session.variables = {});
+  const map = stageMap(def);
+  const st = map[current] || map[def.entry_stage] || (def.stages || [])[0] || {};
+  const refCopy = (st.reference_copy || []).map((c) => renderTemplate(c, vars));
+  const scriptLine = nextScriptLine(refCopy, history);
+  const falandoComAtual = vars.__falando_com || 'desconhecido';
+  const prompt = buildV2Prompt({ def, stageId: current, session, history, lastMessage, classificacao, ragContext, nextLine: scriptLine, falandoCom: falandoComAtual });
 
   let raw;
   try { raw = extractJson(await generate(prompt, _kind)); }
@@ -220,7 +273,8 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
     return {
       reply: ['Já te respondo em instantes 😊'], stage: current, stage_proposto: current, stage_anterior: current,
       temperatura: 'morno', temperature: 'morno', score: session.score || 1,
-      send_preview: false, booked: false, precisa_humano: true, done: false, objecao: null, intent: null,
+      send_preview: false, booked: false, send_audio: false, falando_com: falandoComAtual,
+      notificar_humano: false, precisa_humano: true, done: false, objecao: null, intent: null,
     };
   }
 
@@ -228,21 +282,31 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   const firstReply = (r) => (Array.isArray(r.reply) ? r.reply.map(String).filter(Boolean).slice(0, 1) : []);
   let reply = firstReply(raw);
 
-  // anti-repetição rígida: 1 re-geração; se ainda repetir, suprime (nunca manda a mesma frase 2x)
+  // guarda unificada (anti-repetição rígida + anti-pitch precoce): 1 re-geração;
+  // se ainda falhar, fallback = próxima MSG do script (determinístico); sem script, suprime.
+  const replyProblem = (text) =>
+    (isRepeatOfHistory(text, history) ? 'você JÁ ENVIOU essa mensagem nesta conversa' : null)
+    || prematurePitchReason(text, def, current)
+    || (lastMessage === NO_RESPONSE_MARKER && FAKE_ACK_RE.test(text)
+      ? 'o lead NÃO respondeu — proibido fingir resposta ("Entendi...")' : null);
   let suppressedRepeat = false;
-  if (reply.length && isRepeatOfHistory(reply[0], history)) {
+  const problem = reply.length ? replyProblem(reply[0]) : null;
+  if (problem) {
     let second = null;
     try {
       second = extractJson(await generate(
-        prompt + '\n\nATENÇÃO: você JÁ ENVIOU essa mensagem nesta conversa. Reformule com outras palavras ou avance a conversa dentro das regras do estágio. NUNCA repita a mesma frase.',
+        prompt + `\n\nATENÇÃO: sua resposta foi rejeitada (${problem}). Reformule dentro das regras: use a próxima mensagem do script do estágio, NUNCA repita frase já enviada e NUNCA faça pitch antes da oferta da prévia.`,
         _kind,
       ));
     } catch { second = null; }
     const secondReply = second ? firstReply(second) : [];
-    if (secondReply.length && !isRepeatOfHistory(secondReply[0], history)) {
+    if (secondReply.length && !replyProblem(secondReply[0])) {
       raw = second; reply = secondReply;
+    } else if (scriptLine && !replyProblem(scriptLine)) {
+      console.error(`[brain] reply rejeitada 2x (${problem}) — fallback pra próxima MSG do script`);
+      reply = [scriptLine];
     } else {
-      console.error('[brain] anti-repetição: reply idêntica às últimas mensagens do bot — suprimida, estágio mantido/decidido pelo motor');
+      console.error(`[brain] reply rejeitada 2x (${problem}) — suprimida, estágio mantido/decidido pelo motor`);
       suppressedRepeat = true; reply = [];
     }
   }
@@ -251,7 +315,13 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   const stage = decision.stage;
   const temperatura = decision.forceTemp || (allowedTemperatures.has(raw.temperatura) ? raw.temperatura : 'morno');
   const score = Math.max(1, Math.min(10, Number.parseInt(raw.score, 10) || session.score || 1));
-  const { send_preview, booked } = authorizeActions(stage, raw);
+
+  // interlocutor: persiste na sessão (fix 5 — nunca chamar gatekeeper pelo nome do decisor)
+  const falandoComRaw = String(raw.falando_com || '').toLowerCase();
+  const falandoCom = ['decisor', 'gatekeeper', 'desconhecido'].includes(falandoComRaw) ? falandoComRaw : falandoComAtual;
+  if (falandoCom !== 'desconhecido') vars.__falando_com = falandoCom;
+
+  const { send_preview, booked, send_audio } = authorizeActions(stage, raw, { falandoCom });
   const done = Boolean(raw.done) || decision.done || booked || stage === 'encerrado';
 
   // guarda de saída: placeholder/demo bloqueia envio e escala pra humano.
@@ -262,14 +332,21 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
     if (blocked) console.error(`[brain] guarda de saída: reply bloqueada (${blocked}):`, reply[0]);
   }
 
+  // notificar ≠ parar (fix 4): oferta/aceite de áudio segue o fluxo — nunca handoff.
+  let precisa_humano = Boolean(raw.precisa_humano) || Boolean(blocked);
+  const notificar_humano = Boolean(raw.notificar_humano) || (precisa_humano && send_audio);
+  if (send_audio) precisa_humano = false;
+
   return {
     reply: blocked || suppressedRepeat ? [] : reply.length ? reply : ['(sem resposta gerada)'],
     stage,                       // AUTORITATIVO (engine persiste isto)
     stage_proposto: proposed,    // p/ shadow / auditoria
     stage_anterior: current,
     temperatura, temperature: temperatura, score,
-    send_preview, booked,
-    precisa_humano: Boolean(raw.precisa_humano) || Boolean(blocked),
+    send_preview, booked, send_audio,
+    falando_com: falandoCom,
+    notificar_humano,
+    precisa_humano,
     done,
     objecao: decision.flags.objecao,
     objecao_count: decision.flags.objecao_count,
@@ -282,5 +359,6 @@ module.exports = {
   callBrain,
   callGemini: (session, history, lastMessage) => callBrain({ session, history, lastMessage }),
   extractJson, renderTemplate, validateTransition, authorizeActions, buildV2Prompt, stageMap,
-  unsafeReplyReason,
+  unsafeReplyReason, nextScriptLine, prematurePitchReason,
+  NO_RESPONSE_MARKER,
 };

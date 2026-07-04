@@ -35,7 +35,10 @@ const MAX_TURNS = 12;
 const DELAY_MS = Number(process.env.SIM_DELAY_MS || 1500);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const flowId = process.argv[2] || 'sdr-odonto-stages-v2';
+// flowId OU caminho de um .json com a definição (testa rascunho local sem tocar o DB)
+const flowArg = process.argv[2] || 'sdr-odonto-stages-v2';
+const flowInline = flowArg.endsWith('.json') ? JSON.parse(fs.readFileSync(flowArg, 'utf8')) : null;
+const flowId = flowInline ? null : flowArg;
 const varsFile = process.argv[3];
 
 // VARIÁVEIS REAIS de 1 clínica — para a validação oficial passe um JSON via argv[3].
@@ -100,17 +103,19 @@ const SCENARIOS = [
   },
   {
     id: 'secretaria_gatekeeper',
-    desc: 'Secretária ("quem decide é o doutor") → muda abordagem, não repete pitch',
+    desc: 'Secretária ("quem decide é o doutor") → oferece áudio, NÃO marca humano, bloco áudio continua',
     open: 'Oi, aqui é a secretária da clínica. A doutora tá em atendimento',
     by_stage: {
-      abertura: ['Sou só a secretária, quem decide essas coisas é a doutora', 'Ela não costuma atender ligação de venda não'],
+      abertura: ['Sou só a secretária, quem decide essas coisas é a doutora', 'Pode mandar o áudio sim, eu encaminho pra ela'],
+      observacao: ['Sou só a secretária, isso é com a doutora', 'Pode mandar o áudio sim, eu encaminho'],
+      qualificacao: ['Quem cuida disso é a doutora', 'Pode mandar o áudio sim, eu encaminho'],
       diagnostico: ['Isso aí só a doutora sabe responder'],
       implicacao: ['Olha, posso anotar um recado'],
       oferta_previa: ['Tá, posso mostrar pra ela depois'],
     },
-    fallback: ['Vou ver com ela', 'Anoto aqui'],
-    success: (log) => log.length >= 3, // sem repetição (checada nos critérios) + tratou a conversa sem travar
-    successDesc: 'conversa fluiu sem repetir pitch (critério anti-repetição cobre o resto)',
+    fallback: ['Pode mandar o áudio sim, eu encaminho pra ela', 'Vou ver com ela'],
+    success: (log) => log.length >= 3 && !log.some((t) => t.precisa_humano),
+    successDesc: 'fluiu sem travar em humano (precisa_humano nunca true no caminho gatekeeper)',
   },
 ];
 
@@ -144,15 +149,19 @@ async function runScenario(sc) {
   let msg = sc.open;
   for (let i = 0; i < MAX_TURNS; i++) {
     history.push({ direction: 'in', text: msg });
-    const r = await turn({ flowId, stage, variables, history: history.slice(0, -1), lastMessage: msg });
+    const r = await turn({ ...(flowInline ? { flow: flowInline } : { flowId }), stage, variables, history: history.slice(0, -1), lastMessage: msg });
     log.push(r);
     const replyText = (r.reply || []).join(' ');
     console.log(`  [LEAD] ${msg}`);
-    console.log(`  [BOT ${r.stage_anterior}→${r.stage_novo}${r.precisa_humano ? ' ⚠humano' : ''}] ${replyText || '(vazio)'}`);
+    console.log(`  [BOT ${r.stage_anterior}→${r.stage_novo}${r.precisa_humano ? ' ⚠humano' : ''}${r.send_audio ? ' 🎧bloco-áudio' : ''}${r.notificar_humano ? ' 🔔notifica' : ''}] ${replyText || '(vazio)'}`);
 
     // critérios hard
     const low = replyText.toLowerCase();
     for (const d of DEMO_LITERALS) if (low.includes(d)) problems.push(`turno ${i + 1}: literal proibido "${d}" em: ${replyText}`);
+    // pitch precoce: proibido antes da oferta da prévia (regras 2, 3, 8 do script)
+    const PITCH = [/ajud(?:o|amos)\s+(?:as?\s+)?cl[ií]nicas?/i, /presen[çc]a digital/i, /ser(?:em)?\s+encontrad[oa]s?\s+(?:online|no google|na internet)/i, /marketing digital/i, /nossos?\s+servi[çc]os?/i, /proposta comercial/i];
+    const preOferta = !['oferta_previa', 'previa', 'agendamento', 'encerrado', 'COMPLEX_REDIRECT'].includes(r.stage_novo);
+    if (preOferta) for (const re of PITCH) if (re.test(replyText)) problems.push(`turno ${i + 1}: pitch precoce em: ${replyText}`);
     const n = norm(replyText);
     if (n) {
       const head8 = n.split(' ').slice(0, 8).join(' ');
@@ -193,7 +202,7 @@ async function runScenario(sc) {
 }
 
 async function main() {
-  console.log(`Simulador: ${ENDPOINT} | flow: ${flowId} | vars: ${varsFile || '(defaults de smoke — use JSON real p/ validação oficial)'}`);
+  console.log(`Simulador: ${ENDPOINT} | flow: ${flowInline ? flowArg + ' (inline)' : flowId} | vars: ${varsFile || '(defaults de smoke — use JSON real p/ validação oficial)'}`);
   const results = [];
   for (const sc of SCENARIOS) {
     console.log(`\n━━ ${sc.id}: ${sc.desc}`);
