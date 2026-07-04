@@ -594,21 +594,26 @@ async function handler(req, res) {
   }
 }
 
-const server = http.createServer(handler);
+// exportado p/ testes (test/*.test.cjs); o boot só roda quando executado direto
+module.exports = { handler };
 
-ensureSchema()
-  .then(() => {
-    server.listen(port, host, () => {
-      console.log(`SDR Totum engine listening on http://${host}:${port}`);
-    });
-    const intervalMs = Number(process.env.NO_RESPONSE_TICK_MS || 5000);
-    setInterval(() => {
-      runNoResponseTimeoutTick().catch((error) => {
-        console.error('[no-response-tick] failed', error);
+if (require.main === module) {
+  const server = http.createServer(handler);
+
+  ensureSchema()
+    .then(() => {
+      server.listen(port, host, () => {
+        console.log(`SDR Totum engine listening on http://${host}:${port}`);
       });
-    }, Math.max(1000, intervalMs)).unref();
-  })
-  .catch((error) => {
-    console.error('Failed to initialize SDR schema:', error);
-    process.exit(1);
-  });
+      const intervalMs = Number(process.env.NO_RESPONSE_TICK_MS || 5000);
+      setInterval(() => {
+        runNoResponseTimeoutTick().catch((error) => {
+          console.error('[no-response-tick] failed', error);
+        });
+      }, Math.max(1000, intervalMs)).unref();
+    })
+    .catch((error) => {
+      console.error('Failed to initialize SDR schema:', error);
+      process.exit(1);
+    });
+}
