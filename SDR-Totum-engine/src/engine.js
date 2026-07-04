@@ -48,7 +48,9 @@ function defaultDemoVariables() {
 }
 
 function mergeVariables(...sources) {
-  return Object.assign({}, defaultDemoVariables(), ...sources);
+  // Conversa REAL usa somente variáveis do lead — demo NUNCA entra aqui.
+  // defaultDemoVariables() é exclusivo do /api/sim/turn (server.js).
+  return Object.assign({}, ...sources);
 }
 
 function renderTemplate(text, variables = {}) {

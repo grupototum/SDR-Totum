@@ -241,6 +241,20 @@ async function handler(req, res) {
       const target = body.target || body.phone || body.number;
       if (!target) return sendJson(res, 400, { error: 'target or phone is required' });
 
+      // Variáveis obrigatórias: todo {{TOKEN}} usado no flow precisa vir preenchido.
+      // Faltou → 400 e o disparo é abortado; placeholder nunca chega no lead.
+      const flowRecord = await getFlow(String(body.flowId));
+      if (!flowRecord) return sendJson(res, 404, { error: 'flow not found', flowId: body.flowId });
+      const requiredVars = [...new Set(
+        (JSON.stringify(flowRecord.definition || {}).match(/\{\{\s*[\w.-]+\s*\}\}/g) || [])
+          .map((t) => t.replace(/[{}\s]/g, '')),
+      )];
+      const startVars = body.variables || {};
+      const missingVars = requiredVars.filter((k) => startVars[k] === undefined || startVars[k] === null || String(startVars[k]).trim() === '');
+      if (missingVars.length) {
+        return sendJson(res, 400, { error: 'variáveis obrigatórias do flow ausentes — disparo abortado', missing: missingVars });
+      }
+
       const conversation = await createConversation({
         flowId: body.flowId,
         target,

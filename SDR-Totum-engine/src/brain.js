@@ -162,6 +162,20 @@ async function generate(prompt, kind = 'prod') {
   return llmProvider.generate(prompt, kind);
 }
 
+// ───────────────────── guarda de saída (produção) ─────────────────────
+// Mensagem com placeholder não resolvido ou literal de demo NUNCA vai pro lead.
+const DEMO_LITERALS = ['clínica exemplo', 'clinica exemplo', 'dr. exemplo', 'dr exemplo', 'clínica odontosorriso', 'clinica odontosorriso'];
+function unsafeReplyReason(text, { checkDemo = true } = {}) {
+  const t = String(text || '');
+  if (/\{\{\s*[\w.-]+\s*\}\}/.test(t)) return 'placeholder não resolvido';
+  if (checkDemo) {
+    const low = t.toLowerCase();
+    const hit = DEMO_LITERALS.find((d) => low.includes(d));
+    if (hit) return `literal de demo "${hit}"`;
+  }
+  return null;
+}
+
 // callBrain: contrato compatível com engine.js. flowOverride permite SHADOW sem ativar em prod.
 async function callBrain({ session, history = [], lastMessage, classificacao = '', flowOverride = null, ragContext = null }) {
   const _kind = flowOverride ? 'sim' : 'prod'; // sim usa LLM_CHAIN_SIM, prod usa LLM_CHAIN_PROD
@@ -200,14 +214,22 @@ async function callBrain({ session, history = [], lastMessage, classificacao = '
   const { send_preview, booked } = authorizeActions(stage, raw);
   const done = Boolean(raw.done) || decision.done || booked || stage === 'encerrado';
 
+  // guarda de saída: placeholder/demo bloqueia envio e escala pra humano.
+  // No sim (session.id === 'sim') as variáveis demo são intencionais — só checa placeholder.
+  let blocked = null;
+  if (reply.length) {
+    blocked = unsafeReplyReason(reply[0], { checkDemo: session.id !== 'sim' });
+    if (blocked) console.error(`[brain] guarda de saída: reply bloqueada (${blocked}):`, reply[0]);
+  }
+
   return {
-    reply: reply.length ? reply : ['(sem resposta gerada)'],
+    reply: blocked ? [] : reply.length ? reply : ['(sem resposta gerada)'],
     stage,                       // AUTORITATIVO (engine persiste isto)
     stage_proposto: proposed,    // p/ shadow / auditoria
     stage_anterior: current,
     temperatura, temperature: temperatura, score,
     send_preview, booked,
-    precisa_humano: Boolean(raw.precisa_humano),
+    precisa_humano: Boolean(raw.precisa_humano) || Boolean(blocked),
     done,
     objecao: decision.flags.objecao,
     objecao_count: decision.flags.objecao_count,
@@ -220,4 +242,5 @@ module.exports = {
   callBrain,
   callGemini: (session, history, lastMessage) => callBrain({ session, history, lastMessage }),
   extractJson, renderTemplate, validateTransition, authorizeActions, buildV2Prompt, stageMap,
+  unsafeReplyReason,
 };
