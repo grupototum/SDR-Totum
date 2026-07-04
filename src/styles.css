@@ -36,7 +36,7 @@
   --color-muted-foreground: var(--lg-muted-fg);
   --color-accent: var(--lg-card-hover);
   --color-accent-foreground: var(--lg-fg);
-  --color-destructive: #f43f5e;
+  --color-destructive: #d91616;
   --color-destructive-foreground: #ffffff;
   --color-border: var(--lg-border);
   --color-input: var(--lg-card);
