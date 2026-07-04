@@ -266,8 +266,19 @@
   }
   strong, b { font-weight: 400; }
   *:focus-visible {
-    outline: 2px solid var(--lg-accent);
+    outline: 2px solid #da2128;
     outline-offset: 2px;
+    border-radius: inherit;
+  }
+  /* Global pill: any <button> without an explicit border-radius utility becomes a pill.
+     Tailwind utilities live in @layer utilities and override this. */
+  button {
+    border-radius: 9999px;
+  }
+  /* Halo vermelho no hover de qualquer CTA primário marcado */
+  [data-cta="primary"]:hover,
+  .btn-primary-cta:hover {
+    box-shadow: var(--shadow-halo-red);
   }
   ::selection {
     background: color-mix(in oklab, var(--lg-accent) 40%, transparent);
