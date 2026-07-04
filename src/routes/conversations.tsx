@@ -234,16 +234,24 @@ function ConversationsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white truncate">{c.empresa}</span>
                 <span
-                  className="ml-2 shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
-                  style={{ background: statusColor(c.status), color: "#fff" }}
+                  className="ml-2 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    background: statusColor(c.status),
+                    color: statusFg(c.status),
+                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                  }}
                 >
                   {c.status}
                 </span>
               </div>
               <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[color:var(--color-text-muted)]">
                 <span
-                  className="rounded-full px-1.5 py-0.5"
-                  style={{ background: tempColor(c.temperatura), color: "#fff" }}
+                  className="rounded-full px-1.5 py-0.5 font-semibold"
+                  style={{
+                    background: tempColor(c.temperatura),
+                    color: tempFg(c.temperatura),
+                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                  }}
                 >
                   {c.temperatura}
                 </span>
