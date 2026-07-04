@@ -310,7 +310,7 @@ function SimulatorPage() {
             className="flex flex-col gap-2 rounded-xl p-3"
             style={{ background: "rgba(218,33,40,0.08)", border: "1px solid rgba(218,33,40,0.25)" }}
           >
-            <p className="text-[11px] font-medium text-[#e3433e]">Ativar em produção</p>
+            <p className="text-[11px] font-medium text-[#ef9a9a]">Ativar em produção</p>
 
             {!confirmingPublish ? (
               <>
