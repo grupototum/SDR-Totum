@@ -19,12 +19,21 @@ function statusColor(status: string) {
   if (status === "aguardando") return "#077ac7";
   return "#9ca3af";
 }
+function statusFg(status: string) {
+  // dark ink for light-mid greens/grays so text passes WCAG on liquid glass
+  if (status === "aguardando") return "#ffffff";
+  return "#0e0918";
+}
 
 function tempColor(t: string) {
-  if (t === "quente") return "#da2128";
+  if (t === "quente") return "#d91616";
   if (t === "morno") return "#f59e0b";
   if (t === "frio") return "#077ac7";
   return "#9ca3af";
+}
+function tempFg(t: string) {
+  if (t === "quente" || t === "frio") return "#ffffff";
+  return "#0e0918";
 }
 
 function senderIcon(msg: Message) {
