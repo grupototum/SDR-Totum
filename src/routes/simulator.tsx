@@ -645,6 +645,7 @@ function SimulatorPage() {
             size="sm"
             onClick={send}
             disabled={!activeFlow || pending || !input.trim()}
+            aria-label="Enviar mensagem"
           >
             <Send className="size-3.5" />
           </TotumButton>
