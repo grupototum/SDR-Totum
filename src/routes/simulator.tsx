@@ -240,6 +240,7 @@ function SimulatorPage() {
             <Label className="text-xs text-[color:var(--color-text-muted)]">Flow</Label>
             <select
               value={source}
+              aria-label="Selecionar flow"
               onChange={(e) => {
                 setSource(e.target.value);
                 reset();
