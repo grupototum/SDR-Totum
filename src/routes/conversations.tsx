@@ -95,8 +95,8 @@ function ConversationView({ conv, onClose }: { conv: ConversationDetail; onClose
         </div>
         <div className="flex items-center gap-2">
           <span
-            className="rounded-full px-2 py-0.5 text-[10px]"
-            style={{ background: tempColor(conv.temperatura), color: "#fff" }}
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            style={{ background: tempColor(conv.temperatura), color: tempFg(conv.temperatura) }}
           >
             {conv.temperatura}
           </span>
