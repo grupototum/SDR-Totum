@@ -36,7 +36,7 @@
   --color-muted-foreground: var(--lg-muted-fg);
   --color-accent: var(--lg-card-hover);
   --color-accent-foreground: var(--lg-fg);
-  --color-destructive: #f43f5e;
+  --color-destructive: #d91616;
   --color-destructive-foreground: #ffffff;
   --color-border: var(--lg-border);
   --color-input: var(--lg-card);
@@ -81,40 +81,59 @@
   --radius-pill: 9999px;
 }
 
-/* ====== Dark (only theme) ====== */
+/* ====== Totum Red Theme (dark, único) ====== */
 :root,
 .dark,
 .light {
   color-scheme: dark;
-  --lg-bg: #0b0b14;
-  --lg-fg: #ffffff;
-  --lg-muted: rgba(255, 255, 255, 0.06);
-  --lg-muted-fg: rgba(255, 255, 255, 0.78);
-  --lg-card: rgba(255, 255, 255, 0.06);
-  --lg-card-hover: rgba(255, 255, 255, 0.12);
-  --lg-border: rgba(255, 255, 255, 0.08);
-  --lg-accent: #b91c1c;
+  /* Totum surface palette */
+  --lg-bg: #0e0918;
+  --lg-fg: #d1cece;
+  --lg-muted: #191422;
+  --lg-muted-fg: #9ca3af;
+  --lg-card: #1b1728;
+  --lg-card-hover: #272333;
+  --lg-border: #1f192a;
+  --lg-accent: #da2128;
 
-  --gradient-primary: linear-gradient(135deg, #a01a1a, #7f1414);
-  --gradient-secondary: linear-gradient(135deg, #7f1414, #4a0d0d);
-  --gradient-iris: linear-gradient(
-    135deg,
-    rgba(120, 20, 20, 0.55),
-    rgba(80, 12, 12, 0.55)
-  );
-  --gradient-aurora: radial-gradient(60% 60% at 15% 10%, rgba(110, 22, 22, 0.16), transparent 60%),
-    radial-gradient(50% 50% at 85% 0%, rgba(90, 18, 18, 0.12), transparent 60%),
-    radial-gradient(60% 60% at 80% 90%, rgba(70, 14, 14, 0.10), transparent 60%),
-    radial-gradient(50% 50% at 10% 95%, rgba(100, 20, 20, 0.08), transparent 60%);
+  /* Totum brand tokens (exposto para uso semântico) */
+  --totum-primary: #da2128;
+  --totum-primary-bright: #e3433e;
+  --totum-primary-light: #ef9a9a;
+  --totum-secondary: #077ac7;
+  --totum-tertiary: #6b21ef;
+  --totum-purple-bright: #a06ff6;
+  --totum-warm-rust: #432d33;
+  --totum-elevated: #1f192a;
+  --totum-white: #ffffff;
+
+  --gradient-primary: linear-gradient(135deg, #e3433e 0%, #da2128 100%);
+  --gradient-secondary: linear-gradient(135deg, #077ac7 0%, #6b21ef 100%);
+  --gradient-iris: linear-gradient(135deg, #e3433e 0%, #da2128 100%);
+  --gradient-aurora:
+    radial-gradient(60% 60% at 15% 10%, rgba(218, 33, 40, 0.10), transparent 60%),
+    radial-gradient(50% 50% at 85% 0%, rgba(107, 33, 239, 0.06), transparent 60%),
+    radial-gradient(60% 60% at 80% 90%, rgba(218, 33, 40, 0.08), transparent 60%),
+    radial-gradient(50% 50% at 10% 95%, rgba(7, 122, 199, 0.05), transparent 60%);
 
   --shadow-inset-border: inset 0 0 0 1px var(--lg-border);
-  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.10),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 60px -20px rgba(0, 0, 0, 0.7);
-  --shadow-brand-card: var(--shadow-card);
-  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px -8px rgba(120, 20, 20, 0.5);
-  --shadow-halo-red: 0 0 60px -10px rgba(120, 20, 20, 0.55);
+  --shadow-card:
+    inset 0 0 0 1px hsla(0, 0%, 100%, 0.10),
+    inset 0 1px 0 0 hsla(0, 0%, 100%, 0.10),
+    0 1px 2px rgba(8, 8, 8, 0.2),
+    0 4px 4px rgba(8, 8, 8, 0.08);
+  --shadow-brand-card:
+    inset 0 0 0 1px hsla(0, 0%, 100%, 0.10),
+    inset 0 1px 0 0 rgba(218, 33, 40, 0.30);
+  --shadow-btn-primary:
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 6px 12px rgba(255, 255, 255, 0.12),
+    0 1px 2px rgba(8, 8, 8, 0.2),
+    0 4px 4px rgba(8, 8, 8, 0.08);
+  --shadow-halo-red: 0 7px 80px -12px #da2128;
+  --shadow-halo-blue: 0 7px 80px -12px #077ac7;
   --shadow-node-selected: inset 0 0 0 2px var(--lg-accent);
-  --shadow-node-error: inset 0 0 0 2px #f43f5e;
+  --shadow-node-error: inset 0 0 0 2px #d91616;
 }
 
 
@@ -237,15 +256,15 @@
     color: var(--lg-fg);
     font-family: var(--font-sans);
     font-weight: 400;
-    letter-spacing: -0.011em;
+    letter-spacing: 0em;
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 500;
-    letter-spacing: -0.022em;
-    color: var(--lg-fg);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #ffffff;
   }
-  strong, b { font-weight: 600; }
+  strong, b { font-weight: 400; }
   *:focus-visible {
     outline: 2px solid var(--lg-accent);
     outline-offset: 2px;
