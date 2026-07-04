@@ -201,6 +201,7 @@ function PesquisaIndexPage() {
               className="rounded-xl bg-[#1b1728] px-3 py-2.5 text-xs text-white outline-none"
               style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
               title="Ordenar"
+              aria-label="Ordenar"
             >
               <option value="date_desc">Mais recentes</option>
               <option value="date_asc">Mais antigas</option>
