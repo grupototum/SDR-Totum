@@ -128,8 +128,8 @@ export const httpApi: ApiClient = {
       method: "POST",
     }),
 
-  // Simulator — motor V3. Enquanto o V3 não expõe /api/sim/turn e /api/sim/report,
-  // os consumidores caem no fallback mock (simTurnWithFallback) / estado vazio.
+  // Simulator — motor V3. /api/sim/turn = turno avulso stateless (InlineTestChat);
+  // /api/sim/report = bateria mock das personas (healthRate; mock=true, não vale p/ GO).
   simTurn: (payload: SimTurnRequest) =>
     v3<SimTurnResponse>("/api/sim/turn", {
       method: "POST",

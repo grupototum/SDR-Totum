@@ -2,7 +2,7 @@
  * InlineTestChat — teste de UMA conversa do flow ABERTO no canvas.
  *
  * Compartilha o flow-store (exporta o envelope atual via exportToJSON) e POSTa
- * em /api/sim/turn (api.simTurn → proxy same-origin /api/engine/api/sim/turn),
+ * em /api/sim/turn (httpApi.simTurn → proxy same-origin /api/engine-v3, motor V3),
  * com fallback no mock local quando o motor está indisponível.
  *
  * NÃO é o laboratório: a bateria/scorecard continua sendo o /simulator.
