@@ -85,11 +85,13 @@ async function proxyEngine(request: Request): Promise<Response> {
  * Same-origin proxy para o motor v3 (engine/ — flow-driven, distinto do motor
  * legado atrás de `/api/engine`/ENGINE_URL). Motor OFICIAL: serve o simulador
  * do builder (`/api/sim/*`) e os flows (`/api/flows*` — o builder publica no
- * arquivo que o bot lê). Não injeta Bearer porque o serviço não valida nenhum.
+ * arquivo que o bot lê). Injeta a ENGINE_V3_KEY server-side (Bearer) — a chave
+ * NUNCA vai ao bundle (nada de VITE_*); o browser só vê o same-origin.
  * O `/webhook/evolution` do V3 NUNCA passa por aqui — fica interno na VPS.
  */
 async function proxyEngineV3(request: Request): Promise<Response> {
   const ENGINE_V3_URL = process.env.ENGINE_V3_URL;
+  const ENGINE_V3_KEY = process.env.ENGINE_V3_KEY;
   const jsonHeaders = { "content-type": "application/json" };
 
   if (!ENGINE_V3_URL) {
@@ -111,7 +113,10 @@ async function proxyEngineV3(request: Request): Promise<Response> {
 
   const init: RequestInit = {
     method: request.method,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(ENGINE_V3_KEY ? { Authorization: `Bearer ${ENGINE_V3_KEY}` } : {}),
+    },
   };
   if (!["GET", "HEAD"].includes(request.method)) {
     init.body = await request.text();

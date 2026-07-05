@@ -47,6 +47,19 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdr-totum' }));
 
+  // Auth (Opção A): ENGINE_V3_KEY protege todo /api/*. Sem a env → liberado
+  // (dev/local/testes). ⚠️ Em PRODUÇÃO a env TEM que estar setada, senão /api/*
+  // fica aberto. /health (inócuo) e /webhook/evolution ficam fora do prefixo de
+  // propósito — o webhook é protegido por NÃO ser exposto no Traefik, não por esta chave.
+  app.use('/api', (req, res, next) => {
+    const key = process.env.ENGINE_V3_KEY;
+    if (!key) return next();
+    const auth = req.get('authorization') || '';
+    const given = auth.startsWith('Bearer ') ? auth.slice(7) : req.get('x-engine-key');
+    if (given === key) return next();
+    res.status(401).json({ error: { message: 'unauthorized' } });
+  });
+
   // ── Flows do builder: o "banco" é o arquivo em FLOW_PATH (flow único, sempre ativo).
   // GET lista / GET :id / POST / PUT :id — shape que a página /flows do frontend espera.
   const apiError = (res, status, message) => res.status(status).json({ error: { message } });
