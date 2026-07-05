@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/api";
 import type { SimMessage, SimTurnResponse } from "@/api";
 import { httpApi } from "@/api/http";
-import { simTurnWithFallback, engineErrorOf, engineHealth } from "@/lib/sim-turn";
-import { runBattery, type BatterySummary } from "@/lib/sim-harness";
+import { mockSimTurn } from "@/lib/sim-turn";
+import { type BatterySummary } from "@/lib/sim-harness";
 import { useFlowV2Store } from "@/stores/flow-v2-store";
 import { TotumButton } from "@/components/ui/totum-button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,14 @@ import {
 } from "lucide-react";
 
 const ANALYSIS_KEY = "totum:simulator-analysis-collapsed";
+
+async function simTurnWithFallback(payload: Parameters<typeof httpApi.simTurn>[0]) {
+  try {
+    return await httpApi.simTurn(payload);
+  } catch {
+    return mockSimTurn(payload);
+  }
+}
 
 export const Route = createFileRoute("/simulator")({
   head: () => ({
@@ -69,9 +77,6 @@ function SimulatorPage() {
   const [confirmingPublish, setConfirmingPublish] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  /** Motivo da última queda pro mock (null = último turno veio do motor real). */
-  const [engineError, setEngineError] = useState<string | null>(null);
-  const autoSelectedFlow = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [analysisCollapsed, setAnalysisCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -99,17 +104,6 @@ function SimulatorPage() {
   const reportQuery = useQuery({ queryKey: ["sim-report"], queryFn: () => httpApi.getSimReport() });
   const report = reportQuery.data;
 
-  // Ping do motor (GET /api/engine/health) — indicador "Motor: OK" no topo.
-  const healthQuery = useQuery({
-    queryKey: ["engine-health"],
-    queryFn: engineHealth,
-    refetchInterval: 60_000,
-  });
-  // Prioridade: falha real no último turno > ping. null = OK, undefined = verificando.
-  const engineDown: string | null | undefined =
-    engineError ??
-    (healthQuery.data ? (healthQuery.data.ok ? null : (healthQuery.data.reason ?? "sem resposta")) : undefined);
-
   const activeFlow: Record<string, unknown> | null =
     source === DRAFT
       ? (draftFlow as unknown as Record<string, unknown> | null)
@@ -124,19 +118,6 @@ function SimulatorPage() {
   );
   const entryStage = String(activeFlow?.entry_stage ?? "");
   const currentStage = turns.length ? turns[turns.length - 1].stage_to : entryStage;
-
-  // Sem rascunho aberto no builder: seleciona por padrão o flow stages-v2 do
-  // motor (copy real do SCRIPT_SDR_v2) — uma vez só, sem brigar com o usuário.
-  useEffect(() => {
-    if (autoSelectedFlow.current || source !== DRAFT || draftFlow || flowList.length === 0) return;
-    const stagesFlow =
-      flowList.find((f) => f.id === "odonto_stages_v2") ??
-      flowList.find((f) => /stages/i.test(f.id));
-    if (stagesFlow) {
-      autoSelectedFlow.current = true;
-      setSource(stagesFlow.id);
-    }
-  }, [flowList, draftFlow, source]);
 
   // Garante uma chave por variável requerida (sem apagar valores já digitados).
   useEffect(() => {
@@ -170,12 +151,9 @@ function SimulatorPage() {
     try {
       const res: SimTurnResponse = await simTurnWithFallback(payload);
       const mock = res.raw.mock === true;
-      const engineErr = engineErrorOf(res);
-      setEngineError(engineErr);
       setTurns((t) => [...t, { lead: text, mock, ...res }]);
       setSessionState(res.sessionState); // encadeia o estado pro próximo turno
-      if (engineErr) toast.warning(`Motor inacessível (${engineErr}) — turno via MOCK`);
-      else if (mock) toast.info("Turno via MOCK — não validado pelo motor real");
+      if (mock) toast.info("Turno via MOCK — não validado pelo motor real");
     } catch (e) {
       toast.error(`Erro no turno: ${(e as Error).message}`);
     } finally {
@@ -212,17 +190,34 @@ function SimulatorPage() {
     if (!activeFlow || batteryRunning) return;
     setBatteryRunning(true);
     try {
-      let lastEngineErr: string | null = null;
-      const summary = await runBattery(activeFlow, async (req) => {
-        const res = await simTurnWithFallback(req);
-        lastEngineErr = engineErrorOf(res) ?? lastEngineErr;
-        return res;
-      });
-      setEngineError(lastEngineErr);
+      // Bateria roda no MOTOR V3 (/api/sim/run): personas reais do motor, sem
+      // harness local. Erro = toast — nada de cair no mock em silêncio.
+      const [status, res] = await Promise.all([
+        api.getSimV3Status().catch(() => null),
+        api.runSimulationV3({ flow: activeFlow }),
+      ]);
+      const mock = !(status?.realLlmConfigured ?? false);
+      const results = res.results.map((r) => ({
+        persona: r.label,
+        booked: r.status === "ganho",
+        guardrail_violation: !r.passed,
+        turns: r.trocas,
+        finalStage: r.stage,
+        // passed = expectativas da persona cumpridas sem violação (a secretária
+        // "passa" pelo bloco áudio, não por booking).
+        healthy: r.passed,
+        mock,
+      }));
+      const healthy = results.filter((r) => r.healthy).length;
+      const summary: BatterySummary = {
+        results,
+        total: results.length,
+        healthy,
+        healthRate: results.length ? healthy / results.length : 0,
+        mock,
+      };
       setBattery(summary);
-      if (lastEngineErr)
-        toast.warning(`Bateria caiu no MOCK (${lastEngineErr}) — não vale para GO`);
-      else toast.success(`Bateria: ${Math.round(summary.healthRate * 100)}% saudável`);
+      toast.success(`Bateria: ${Math.round(summary.healthRate * 100)}% saudável`);
     } catch (e) {
       toast.error(`Erro na bateria: ${(e as Error).message}`);
     } finally {
@@ -270,7 +265,6 @@ function SimulatorPage() {
             <Label className="text-xs text-[color:var(--color-text-muted)]">Flow</Label>
             <select
               value={source}
-              aria-label="Selecionar flow"
               onChange={(e) => {
                 setSource(e.target.value);
                 reset();
@@ -340,7 +334,7 @@ function SimulatorPage() {
             className="flex flex-col gap-2 rounded-xl p-3"
             style={{ background: "rgba(218,33,40,0.08)", border: "1px solid rgba(218,33,40,0.25)" }}
           >
-            <p className="text-[11px] font-medium text-[#ef9a9a]">Ativar em produção</p>
+            <p className="text-[11px] font-medium text-[#e3433e]">Ativar em produção</p>
 
             {!confirmingPublish ? (
               <>
@@ -386,8 +380,8 @@ function SimulatorPage() {
                                 : "#da2128",
                         }}
                       >
-                        Bateria local: {Math.round(battery.healthRate * 100)}% ({battery.healthy}/
-                        {battery.total}){battery.mock && " · mock"}
+                        Bateria (motor V3): {Math.round(battery.healthRate * 100)}% (
+                        {battery.healthy}/{battery.total}){battery.mock && " · mock"}
                       </span>
                     )}
                     {report && (
@@ -452,7 +446,6 @@ function SimulatorPage() {
             onClick={() => setLeftOpen((v) => !v)}
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
-            aria-label={leftOpen ? "Retrair painel esquerdo" : "Expandir painel esquerdo"}
           >
             {leftOpen ? (
               <PanelLeftClose className="size-4" />
@@ -460,33 +453,10 @@ function SimulatorPage() {
               <PanelLeftOpen className="size-4" />
             )}
           </button>
-          {/* Indicador do motor: verde = respondendo; âmbar = inacessível (motivo visível) */}
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium"
-            style={
-              engineDown === undefined
-                ? { background: "#1f192a", color: "#9ca3af" }
-                : engineDown
-                  ? { background: "rgba(245,158,11,0.2)", color: "#f59e0b" }
-                  : { background: "rgba(53,166,112,0.18)", color: "#35a670" }
-            }
-            title={engineDown ? engineDown : "Motor real respondendo via /api/engine"}
-          >
-            {engineDown === undefined ? (
-              "Motor: verificando…"
-            ) : engineDown ? (
-              <>
-                <AlertTriangle className="size-3" /> Motor inacessível: {engineDown}
-              </>
-            ) : (
-              "Motor: OK"
-            )}
-          </span>
           <button
             onClick={() => setRightOpen((v) => !v)}
             className="text-[color:var(--color-text-muted)] hover:text-white"
             title={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
-            aria-label={rightOpen ? "Retrair painel direito" : "Expandir painel direito"}
           >
             {rightOpen ? (
               <PanelRightClose className="size-4" />
@@ -576,7 +546,7 @@ function SimulatorPage() {
                 {Math.round(battery.healthRate * 100)}%
               </span>
               <span className="text-xs text-[color:var(--color-text-muted)]">
-                {battery.healthy}/{battery.total} booked sem violar guard-rail
+                {battery.healthy}/{battery.total} personas OK sem violar guard-rail
               </span>
               {battery.mock && (
                 <span
@@ -697,7 +667,6 @@ function SimulatorPage() {
             size="sm"
             onClick={send}
             disabled={!activeFlow || pending || !input.trim()}
-            aria-label="Enviar mensagem"
           >
             <Send className="size-3.5" />
           </TotumButton>

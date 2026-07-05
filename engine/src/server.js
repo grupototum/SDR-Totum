@@ -4,6 +4,8 @@ import { openDb, STATUS, getLeadByPhone, addMessage, markProcessed, normPhone, g
 import { respondToLead } from './pipeline.js';
 import { makeEvolutionTransport } from './evolution.js';
 import { runPersona, personas } from '../sim/run.js';
+import { flowPath, resetFlowCache } from './flow.js';
+import { readFileSync, writeFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -44,6 +46,102 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
   }
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdr-totum' }));
+
+  // Auth (Opção A): ENGINE_V3_KEY protege todo /api/*. Sem a env → liberado
+  // (dev/local/testes). ⚠️ Em PRODUÇÃO a env TEM que estar setada, senão /api/*
+  // fica aberto. /health (inócuo) e /webhook/evolution ficam fora do prefixo de
+  // propósito — o webhook é protegido por NÃO ser exposto no Traefik, não por esta chave.
+  app.use('/api', (req, res, next) => {
+    const key = process.env.ENGINE_V3_KEY;
+    if (!key) return next();
+    const auth = req.get('authorization') || '';
+    const given = auth.startsWith('Bearer ') ? auth.slice(7) : req.get('x-engine-key');
+    if (given === key) return next();
+    res.status(401).json({ error: { message: 'unauthorized' } });
+  });
+
+  // ── Flows do builder: o "banco" é o arquivo em FLOW_PATH (flow único, sempre ativo).
+  // GET lista / GET :id / POST / PUT :id — shape que a página /flows do frontend espera.
+  const apiError = (res, status, message) => res.status(status).json({ error: { message } });
+
+  function readFlowFile() {
+    const p = flowPath();
+    const raw = JSON.parse(readFileSync(p, 'utf8'));
+    return { def: raw.definition || raw, mtime: statSync(p).mtime };
+  }
+
+  function flowSummary(def, mtime) {
+    return {
+      id: def.id || 'flow',
+      name: def.nome || def.name || def.id || 'Flow',
+      version: String(def.version || ''),
+      niche: def.nicho || def.niche || '',
+      updatedAt: mtime.toISOString(),
+      active: true, // arquivo único = flow ativo
+      definition: def,
+    };
+  }
+
+  // Valida flow v2 do builder; retorna a definition ou null.
+  function extractFlowDef(body) {
+    const def = body?.definition || body?.flow || body;
+    if (!def || !Array.isArray(def.stages) || !def.stages.length || !def.entry_stage) return null;
+    return def;
+  }
+
+  app.get('/api/flows', (_req, res) => {
+    try {
+      const { def, mtime } = readFlowFile();
+      res.json([flowSummary(def, mtime)]);
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao ler o flow');
+    }
+  });
+
+  app.get('/api/flows/:id', (req, res) => {
+    try {
+      const { def } = readFlowFile();
+      if (req.params.id !== (def.id || 'flow')) return apiError(res, 404, 'flow not found');
+      res.json(def); // definition pura: builder.edit exige stages/entry_stage no topo
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao ler o flow');
+    }
+  });
+
+  // Publicar do builder: grava o arquivo e derruba o cache — o bot usa na hora.
+  app.post('/api/flows', (req, res) => {
+    const def = extractFlowDef(req.body);
+    if (!def) return apiError(res, 400, 'flow inválido: precisa de stages[] e entry_stage');
+    try {
+      writeFileSync(flowPath(), JSON.stringify(def, null, 2));
+      resetFlowCache();
+      log.info?.(`[flows] publicado: ${def.id || 'flow'}`);
+      res.status(201).json({ id: def.id || 'flow' });
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao gravar o flow');
+    }
+  });
+
+  // PUT: update com definition grava; {active:true} puro (publishFlow) é no-op — arquivo já é o ativo.
+  app.put('/api/flows/:id', (req, res) => {
+    const hasDef = Boolean(req.body?.definition || req.body?.flow || req.body?.stages);
+    if (hasDef) {
+      const def = extractFlowDef(req.body);
+      if (!def) return apiError(res, 400, 'flow inválido: precisa de stages[] e entry_stage');
+      try {
+        writeFileSync(flowPath(), JSON.stringify(def, null, 2));
+        resetFlowCache();
+        log.info?.(`[flows] atualizado: ${def.id || 'flow'}`);
+      } catch (e) {
+        log.error?.(`[flows] ERRO: ${e.message}`);
+        return apiError(res, 500, 'falha ao gravar o flow');
+      }
+    }
+    res.json({ id: req.params.id, active: true, updatedAt: new Date().toISOString() });
+  });
 
   // Simulador do builder: roda 1+ personas contra o flow do canvas (não o arquivo em disco).
   app.get('/api/sim/status', (_req, res) => {

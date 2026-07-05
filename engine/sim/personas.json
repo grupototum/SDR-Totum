@@ -1,71 +1,71 @@
 [
-  {
-    "id": "interessado",
-    "label": "Decisor interessado (dono que responde e topa a prévia)",
-    "desfecho_esperado": "ganho",
-    "lead": {
-      "whatsapp": "5533900000001",
-      "nome_empresa": "OdontoVida Sorriso",
-      "nome_dono": "Marcos",
-      "especialidade": "implantes",
-      "cidade": "Ipatinga",
-      "qtd_avaliacoes": "214",
-      "conteudo_recente": "enxerto ósseo",
-      "concorrentes": "Clínica Sorria Mais, OdontoTop",
-      "nota_seo": "31",
-      "tem_site": "nao"
-    },
-    "turns": [
-      "sou eu sim, pode falar",
-      "não temos site não, só o instagram mesmo",
-      "sou eu mesmo que cuido dessa parte",
-      "faz sentido sim, nunca tinha pensado por esse lado",
-      "pode mandar sim, quero ver",
-      "tenho sim, quinta de manhã fica ótimo pra mim"
-    ]
+ {
+  "id": "interessado",
+  "label": "Decisor interessado (dono que responde e topa a prévia)",
+  "desfecho_esperado": "ganho",
+  "lead": {
+   "whatsapp": "5533900000001",
+   "nome_empresa": "OdontoVida Sorriso",
+   "nome_dono": "Marcos",
+   "especialidade": "implantes",
+   "cidade": "Ipatinga",
+   "qtd_avaliacoes": "214",
+   "conteudo_recente": "enxerto ósseo",
+   "concorrentes": "Clínica Sorria Mais, OdontoTop",
+   "nota_seo": "31",
+   "tem_site": "nao"
   },
-  {
-    "id": "cetico",
-    "label": "Cético (quem é você? o que quer?) antes da hora",
-    "desfecho_esperado": "ganho|encerrado|humano",
-    "lead": {
-      "whatsapp": "5533900000002",
-      "nome_empresa": "Clínica Bela Face",
-      "nome_dono": "Renata",
-      "especialidade": "odontologia estética",
-      "cidade": "Governador Valadares",
-      "qtd_avaliacoes": "89",
-      "conteudo_recente": "",
-      "concorrentes": "Sorriso Perfeito",
-      "nota_seo": "",
-      "tem_site": ""
-    },
-    "turns": [
-      "quem é você? o que você quer?",
-      "hmm sei... e quanto custa isso?",
-      "tá, manda essa prévia então pra eu ver",
-      "pode ser, sexta à tarde eu consigo"
-    ]
+  "turns": [
+   "sou eu sim, pode falar",
+   "não temos site não, só o instagram mesmo",
+   "sou eu mesmo que cuido dessa parte",
+   "faz sentido sim, nunca tinha pensado por esse lado",
+   "pode mandar sim, quero ver",
+   "tenho sim, quinta de manhã fica ótimo pra mim"
+  ]
+ },
+ {
+  "id": "cetico",
+  "label": "Cético (quem é você? o que quer?) antes da hora",
+  "desfecho_esperado": "ganho|encerrado|humano",
+  "lead": {
+   "whatsapp": "5533900000002",
+   "nome_empresa": "Clínica Bela Face",
+   "nome_dono": "Renata",
+   "especialidade": "odontologia estética",
+   "cidade": "Governador Valadares",
+   "qtd_avaliacoes": "89",
+   "conteudo_recente": "",
+   "concorrentes": "Sorriso Perfeito",
+   "nota_seo": "",
+   "tem_site": ""
   },
-  {
-    "id": "secretaria",
-    "label": "Secretária que barra (quem decide é o doutor)",
-    "desfecho_esperado": "humano",
-    "lead": {
-      "whatsapp": "5533900000003",
-      "nome_empresa": "Instituto Dente Sao",
-      "nome_dono": "",
-      "especialidade": "ortodontia",
-      "cidade": "Coronel Fabriciano",
-      "qtd_avaliacoes": "142",
-      "conteudo_recente": "",
-      "concorrentes": "",
-      "nota_seo": "",
-      "tem_site": ""
-    },
-    "turns": [
-      "oi, aqui é a secretária da clínica, quem decide essas coisas é o doutor",
-      "pode mandar o áudio sim que eu encaminho pra ele"
-    ]
-  }
+  "turns": [
+   "quem é você? o que você quer?",
+   "hmm sei... e quanto custa isso?",
+   "tá, manda essa prévia então pra eu ver",
+   "pode ser, sexta à tarde eu consigo"
+  ]
+ },
+ {
+  "id": "secretaria",
+  "label": "Secretária que barra (quem decide é o doutor)",
+  "desfecho_esperado": "em_conversa|humano",
+  "lead": {
+   "whatsapp": "5533900000003",
+   "nome_empresa": "Instituto Dente Sao",
+   "nome_dono": "",
+   "especialidade": "ortodontia",
+   "cidade": "Coronel Fabriciano",
+   "qtd_avaliacoes": "142",
+   "conteudo_recente": "",
+   "concorrentes": "",
+   "nota_seo": "",
+   "tem_site": ""
+  },
+  "turns": [
+   "oi, aqui é a secretária da clínica, quem decide essas coisas é o doutor",
+   "pode mandar o áudio sim que eu encaminho pra ele"
+  ]
+ }
 ]

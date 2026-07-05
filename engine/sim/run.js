@@ -21,7 +21,12 @@ async function waitBotReply(db, leadId, prevOutCount, timeoutMs = 90000) {
   while (Date.now() - t0 < timeoutMs) {
     const hist = getHistory(db, leadId);
     const outs = hist.filter(m => m.direction === 'out');
-    if (outs.length > prevOutCount) return outs[outs.length - 1].text;
+    if (outs.length > prevOutCount) {
+      // Deixa o turno assentar (bloco áudio manda várias msgs em sequência) e devolve TODAS as novas.
+      await sleep(250);
+      const settled = getHistory(db, leadId).filter(m => m.direction === 'out');
+      return settled.slice(prevOutCount).map(m => m.text);
+    }
     const lead = db.prepare('SELECT status FROM leads WHERE id=?').get(leadId);
     if (lead.status !== 'em_conversa') return null; // travou por guardrail -> humano
     await sleep(80);
@@ -70,8 +75,8 @@ export async function runPersona(p, { flow, llm } = {}) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event: 'messages.upsert', data: { key: { fromMe: false, remoteJid: `${p.lead.whatsapp}@s.whatsapp.net`, id: `SIM-${p.id}-${++msgSeq}` }, message: { conversation: turn } } }),
       });
-      const reply = await waitBotReply(db, lead.id, prevOut);
-      if (reply) say('bot', reply);
+      const replies = await waitBotReply(db, lead.id, prevOut);
+      for (const reply of replies || []) say('bot', reply);
       trocas++;
     }
 
@@ -95,6 +100,8 @@ export async function runPersona(p, { flow, llm } = {}) {
       if (!/(encaminh|áudio|audio|canal|e-mail|email|whatsapp)/.test(posGk)) violations.push('secretária: bot não mudou de abordagem');
       const pitch = /uma cl[ií]nica por regi[aã]o|oportunidade que enxerguei/i;
       if (bots.slice(1).some(b => pitch.test(b))) violations.push('secretária: bot despejou o pitch no gatekeeper');
+      // BLOCO ÁUDIO: aceite do áudio tem que disparar os áudios (labels no histórico) ou o resumo MSG-45.
+      if (!bots.some(b => /\[áudio 1\/|resumir o áudio/i.test(b))) violations.push('secretária: bloco áudio não disparou');
     }
 
     return { id: p.id, label: p.label, status: fin.status, stage: fin.stage, temperatura: fin.temperatura, trocas, log, violations };

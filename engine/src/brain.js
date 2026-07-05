@@ -80,7 +80,10 @@ Se um dado necessário faltar (vazio acima), fale de forma natural sem ele
 ("a clínica de vocês"). NUNCA escreva placeholder, colchete ou chave {{}}. NUNCA invente nome de pessoa.
 Gatekeeper (secretária/recepção): mude de abordagem, apresente-se, ofereça áudio/resumo pra
 encaminhar ao decisor ou peça o canal dele. NUNCA despeje o pitch em quem não decide;
-conseguiu canal/encaminhamento => precisa_humano=true. Todo encerramento deixa o link ${linkLp}.
+NUNCA chame o gatekeeper pelo nome do decisor. Se aceitar receber o áudio, marque
+send_audio=true e falando_com="gatekeeper" (o sistema envia os áudios; NÃO é handoff, a
+conversa segue). Conseguiu canal/encaminhamento => precisa_humano=true.
+Todo encerramento deixa o link ${linkLp}.
 
 # FRASES JÁ ENVIADAS (PROIBIDO repetir qualquer uma, nem parecido)
 ${sentTexts.length ? sentTexts.map(t => `- ${t}`).join('\n') : '(nenhuma ainda)'}
@@ -91,7 +94,9 @@ ${retryNote ? `\n# ATENÇÃO\n${retryNote}` : ''}
  "stage": "<${stageIds(def).join('|')}>",
  "temperatura": "<frio|morno|quente>",
  "objetivo_atingido": <true|false quando a reunião/horário for confirmado>,
- "precisa_humano": <true|false>}`;
+ "precisa_humano": <true|false>,
+ "falando_com": "<decisor|gatekeeper|desconhecido>",
+ "send_audio": <true SÓ quando o gatekeeper aceitou receber o áudio>}`;
 }
 
 // Converte o array de mensagens estilo OpenAI (system/user/assistant) pro formato Gemini
@@ -149,7 +154,7 @@ async function callLlm(provider, messages) {
   }
 }
 
-function parseBrainOutput(raw, fallback = {}, validIds = []) {
+export function parseBrainOutput(raw, fallback = {}, validIds = []) {
   // Parse robusto: aceita cercas ```json e texto em volta; pega do primeiro { ao último }.
   let s = String(raw).replace(/```json|```/g, '').trim();
   const a = s.indexOf('{'), b = s.lastIndexOf('}');
@@ -169,6 +174,8 @@ function parseBrainOutput(raw, fallback = {}, validIds = []) {
     stage, temperatura,
     objetivo_atingido: j.objetivo_atingido === true,
     precisa_humano: j.precisa_humano === true,
+    falando_com: typeof j.falando_com === 'string' ? j.falando_com : null,
+    send_audio: j.send_audio === true,
   };
 }
 
