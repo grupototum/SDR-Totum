@@ -2,7 +2,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb, upsertLead, incrementDispatchCount, dispatchDayOfLife, dispatchSentToday } from '../src/db.js';
-import { makeFakeTransport } from '../src/evolution.js';
+import { makeFakeTransport, normalizeOutboundText } from '../src/evolution.js';
 import { dispatchNewLeads, dailyCap, isWithinDispatchWindow, isTooSimilarToRecent, planToday } from '../src/dispatch.js';
 
 before(() => { process.env.SDR_LLM = 'mock'; });
@@ -103,4 +103,14 @@ test('anti-template: abertura parecida com as últimas enviadas é sinalizada', 
   const diferente = 'E aí, tudo certo? Passando pra comentar sobre um problema que identifiquei na divulgação de vocês.';
   assert.equal(isTooSimilarToRecent(parecida, recent), true);
   assert.equal(isTooSimilarToRecent(diferente, recent), false);
+});
+
+test('Evolution recebe texto UTF-8 puro mesmo se a origem vier com mojibake Latin-1', async () => {
+  const broken = 'ClÃ­nica OdontoSorriso Ã©️ referencia em implantes e ortodontia em Foz do IguaÃ§u\nVocÃªs tÃªm 187 avaliaÃ§Ãµes 🤔';
+  const fixed = 'Clínica OdontoSorriso é️ referencia em implantes e ortodontia em Foz do Iguaçu\nVocês têm 187 avaliações 🤔';
+  assert.equal(normalizeOutboundText(broken), fixed);
+
+  const transport = makeFakeTransport();
+  await transport.sendText('5533999999999', Buffer.from(broken, 'utf8'));
+  assert.equal(transport.sent[0].text, fixed);
 });
