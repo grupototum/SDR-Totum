@@ -210,14 +210,19 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
   return app;
 }
 
-// Execução direta (produção)
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+// Execução direta (produção). PM2 em fork pode trocar process.argv[1];
+// pm_exec_path aponta para o script real configurado no app.
+const entrypoint = process.env.pm_exec_path || process.argv[1];
+const runningAsEntrypoint = entrypoint && fileURLToPath(import.meta.url) === resolve(entrypoint);
+const runningUnderPm2 = process.env.pm_id !== undefined;
+if (runningUnderPm2 || runningAsEntrypoint) {
   const db = openDb();
   const transport = makeEvolutionTransport();
   const app = createApp({ db, transport });
   const port = Number(process.env.PORT || 3010);
-  app.listen(port, '127.0.0.1', () => {
-    console.log(`SDR Totum ouvindo em 127.0.0.1:${port}`);
+  const host = process.env.HOST || '127.0.0.1';
+  app.listen(port, host, () => {
+    console.log(`SDR Totum ouvindo em ${host}:${port}`);
     app.resumePending();
   });
 }
