@@ -106,7 +106,16 @@
     "send_preview_stage": "oferta_previa",
     "booked_stage": "agendamento",
     "max_objecoes": 2,
-    "encerramento_link": "https://lp.grupototum.com/"
+    "encerramento_link": "https://lp.grupototum.com/",
+    "audio_block": {
+      "files": [],
+      "files_note": "preencher no publish com as URLs públicas dos 3 .opus do Rael (ordem 1→2→3); fallback: env AUDIO_BLOCK_URLS",
+      "summary": [
+        "Caso não consiga ouvir agora, eu vou resumir o áudio pra vc:\n\n- Pesquisei clínicas de {{ESPECIALIDADE}} na região. A {{NOME_EMPRESA}} foi a que mais me chamou atenção\n- {{CAUSA}}\n- {{CONSEQUENCIA}}\n- Criei uma página mostrando o impacto disso de forma visual e prática\n\nObs: trabalho com uma empresa por região. Ainda não conversei com nenhuma outra clínica daqui. Mas isso pode mudar.\n\nO áudio tem menos de 1 minuto e vale muito mais do que esse resumo.\n\nSegue o link da página:",
+        "lp.grupototum.com",
+        "A gente trabalha com uma empresa por região. Antes de conversar com outra clínica daqui, quero muito ouvir o retorno."
+      ]
+    }
   },
   "variables": {
     "NOME_EMPRESA": "",

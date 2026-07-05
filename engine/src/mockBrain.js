@@ -117,7 +117,16 @@ function step(st, inText, lead, def) {
   }
   if (st.mode === 'gk') {
     if (st.gkStep === 1) {
-      if (RE.channel.test(t) || (RE.accept.test(t) && !RE.refuse.test(t))) {
+      // Aceitou o áudio: send_audio + notificar — NUNCA handoff (o pipeline segue o fluxo).
+      if (RE.accept.test(t) && !RE.refuse.test(t)) {
+        st.gkStep = 2;
+        return {
+          ...out(`Perfeito, obrigado! Vou te mandar o áudio aqui, é rapidinho — daí você encaminha.`, { stage: 'qualificacao', human: true, temp: 'morno' }),
+          send_audio: true,
+          falando_com: 'gatekeeper',
+        };
+      }
+      if (RE.channel.test(t)) {
         st.human = true; st.gkStep = 2;
         return out(`Perfeito, obrigado! Já preparo e te mando aqui pra você repassar. Qualquer coisa, o material de amostra fica em ${LP()}`, { stage: 'qualificacao', human: true, temp: 'morno' });
       }

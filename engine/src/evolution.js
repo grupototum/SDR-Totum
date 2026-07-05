@@ -16,6 +16,16 @@ export function makeEvolutionTransport(env = process.env) {
       if (!res.ok) throw new Error(`Evolution HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
       return res.json();
     },
+    // Voice note (BLOCO ÁUDIO). `audio` = URL pública ou base64.
+    async sendAudio(number, audio) {
+      const res = await fetch(`${url.replace(/\/$/, '')}/message/sendWhatsAppAudio/${instance}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: key },
+        body: JSON.stringify({ number, audio }),
+      });
+      if (!res.ok) throw new Error(`Evolution HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      return res.json();
+    },
   };
 }
 
@@ -26,5 +36,6 @@ export function makeFakeTransport() {
     name: 'fake',
     sent,
     async sendText(number, text) { sent.push({ number, text }); return { ok: true }; },
+    async sendAudio(number, audio) { sent.push({ number, audio, type: 'audio' }); return { ok: true }; },
   };
 }

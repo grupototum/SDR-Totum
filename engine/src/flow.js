@@ -9,8 +9,12 @@ import { dirname, join, isAbsolute } from 'node:path';
 const __dir = dirname(fileURLToPath(import.meta.url));
 let _cache = null;
 
-export function loadFlow(path = process.env.FLOW_PATH || join(__dir, '..', 'flows', 'flow_odonto_v2.6.json')) {
-  const p = isAbsolute(path) ? path : join(process.cwd(), path);
+export function flowPath(path = process.env.FLOW_PATH || join(__dir, '..', 'flows', 'flow_odonto_v2.6.json')) {
+  return isAbsolute(path) ? path : join(process.cwd(), path);
+}
+
+export function loadFlow(path) {
+  const p = flowPath(path);
   const raw = JSON.parse(readFileSync(p, 'utf8'));
   const def = raw.definition || raw; // aceita {definition:{...}} (API /api/flows) ou o JSON puro
   if (!Array.isArray(def.stages) || !def.stages.length) throw new Error(`flow sem stages: ${p}`);
@@ -86,5 +90,7 @@ export function authorizeActions(stage, current, raw) {
   return {
     send_preview: Boolean(raw.send_preview) && inPreview,
     booked: Boolean(raw.objetivo_atingido || raw.booked) && inBooking,
+    // BLOCO ÁUDIO (portado do engine antigo): só no caminho gatekeeper.
+    send_audio: Boolean(raw.send_audio) && raw.falando_com === 'gatekeeper',
   };
 }
