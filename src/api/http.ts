@@ -42,9 +42,18 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Rotas do motor: prefixadas pela base (proxy /api/engine). */
+/**
+ * Rotas do motor legado: prefixadas pela base (proxy /api/engine).
+ * @deprecated Motor antigo em aposentadoria — flows e simulador já batem no V3
+ * (`v3()`). Não adicionar rota nova aqui.
+ */
 function req<T>(path: string, init?: RequestInit): Promise<T> {
   return call<T>(`${BASE}${path}`, init);
+}
+
+/** Rotas do motor V3 (oficial) — SEMPRE same-origin via proxy /api/engine-v3. */
+function v3<T>(path: string, init?: RequestInit): Promise<T> {
+  return call<T>(`/api/engine-v3${path}`, init);
 }
 
 /**
@@ -58,17 +67,18 @@ function n8nReq<T>(path: string, init?: RequestInit): Promise<T> {
 export const httpApi: ApiClient = {
   getHealth: () => req("/health"),
 
-  listFlows: () => req<FlowSummary[]>("/api/flows"),
-  getFlow: (id) => req<Record<string, unknown>>(`/api/flows/${id}`),
+  // Flows — motor V3: o builder publica no arquivo que o bot lê (loop fechado).
+  listFlows: () => v3<FlowSummary[]>("/api/flows"),
+  getFlow: (id) => v3<Record<string, unknown>>(`/api/flows/${encodeURIComponent(id)}`),
   createFlow: (flow) =>
-    req<{ id: string }>("/api/flows", { method: "POST", body: JSON.stringify(flow) }),
+    v3<{ id: string }>("/api/flows", { method: "POST", body: JSON.stringify(flow) }),
   updateFlow: (id, flow) =>
-    req<{ id: string; updatedAt: string }>(`/api/flows/${id}`, {
+    v3<{ id: string; updatedAt: string }>(`/api/flows/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(flow),
     }),
   publishFlow: (id) =>
-    req<{ id: string; active: boolean; updatedAt: string }>(`/api/flows/${id}`, {
+    v3<{ id: string; active: boolean; updatedAt: string }>(`/api/flows/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify({ active: true }),
     }),
@@ -118,17 +128,17 @@ export const httpApi: ApiClient = {
       method: "POST",
     }),
 
-  // Simulator — SEMPRE via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
-  // Independente de VITE_API_BASE_URL: o proxy existe em server.ts e injeta o Bearer.
+  // Simulator — motor V3. /api/sim/turn = turno avulso stateless (InlineTestChat);
+  // /api/sim/report = bateria mock das personas (healthRate; mock=true, não vale p/ GO).
   simTurn: (payload: SimTurnRequest) =>
-    call<SimTurnResponse>("/api/engine/api/sim/turn", {
+    v3<SimTurnResponse>("/api/sim/turn", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  // Report de GO — via proxy (não via BASE). Métrica oficial de decisão.
-  getSimReport: () => call<SimReport>("/api/engine/api/sim/report"),
+  getSimReport: () => v3<SimReport>("/api/sim/report"),
 
-  // Script↔Flow — via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
+  // Script↔Flow — ÚNICA feature ainda no motor legado (/api/engine); o V3 não
+  // tem /api/script/*. @deprecated — migrar ou aposentar junto com o motor antigo.
   importScript: (scriptMd) =>
     call<{ flow: Record<string, unknown> }>("/api/engine/api/script/import", {
       method: "POST",
@@ -141,11 +151,11 @@ export const httpApi: ApiClient = {
       body: JSON.stringify({ flow }),
     }),
 
-  // Simulador do builder — motor v3, proxy same-origin /api/engine-v3.
+  // Simulador do builder — motor V3.
   runSimulationV3: (payload: SimV3RunRequest) =>
-    call<SimV3RunResponse>("/api/engine-v3/api/sim/run", {
+    v3<SimV3RunResponse>("/api/sim/run", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  getSimV3Status: () => call<SimV3Status>("/api/engine-v3/api/sim/status"),
+  getSimV3Status: () => v3<SimV3Status>("/api/sim/status"),
 };

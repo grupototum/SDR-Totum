@@ -1,9 +1,11 @@
 // Serviço único: webhook Evolution + debounce + retomada pós-restart.
 import express from 'express';
-import { openDb, STATUS, getLeadByPhone, addMessage, markProcessed, normPhone, getLeadsAwaitingReply } from './db.js';
+import { openDb, STATUS, getLeadByPhone, addMessage, markProcessed, normPhone, getLeadsAwaitingReply, upsertLead, setLeadState } from './db.js';
 import { respondToLead } from './pipeline.js';
-import { makeEvolutionTransport } from './evolution.js';
+import { makeEvolutionTransport, makeFakeTransport } from './evolution.js';
 import { runPersona, personas } from '../sim/run.js';
+import { flowPath, resetFlowCache, setFlowOverride, getFlow, entryStage } from './flow.js';
+import { readFileSync, writeFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -45,6 +47,89 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdr-totum' }));
 
+  // ── Flows do builder: o "banco" é o arquivo em FLOW_PATH (flow único, sempre ativo).
+  // GET lista / GET :id / POST / PUT :id — shape que a página /flows do frontend espera.
+  const apiError = (res, status, message) => res.status(status).json({ error: { message } });
+
+  function readFlowFile() {
+    const p = flowPath();
+    const raw = JSON.parse(readFileSync(p, 'utf8'));
+    return { def: raw.definition || raw, mtime: statSync(p).mtime };
+  }
+
+  function flowSummary(def, mtime) {
+    return {
+      id: def.id || 'flow',
+      name: def.nome || def.name || def.id || 'Flow',
+      version: String(def.version || ''),
+      niche: def.nicho || def.niche || '',
+      updatedAt: mtime.toISOString(),
+      active: true, // arquivo único = flow ativo
+      definition: def,
+    };
+  }
+
+  // Valida flow v2 do builder; retorna a definition ou null.
+  function extractFlowDef(body) {
+    const def = body?.definition || body?.flow || body;
+    if (!def || !Array.isArray(def.stages) || !def.stages.length || !def.entry_stage) return null;
+    return def;
+  }
+
+  app.get('/api/flows', (_req, res) => {
+    try {
+      const { def, mtime } = readFlowFile();
+      res.json([flowSummary(def, mtime)]);
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao ler o flow');
+    }
+  });
+
+  app.get('/api/flows/:id', (req, res) => {
+    try {
+      const { def } = readFlowFile();
+      if (req.params.id !== (def.id || 'flow')) return apiError(res, 404, 'flow not found');
+      res.json(def); // definition pura: builder.edit exige stages/entry_stage no topo
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao ler o flow');
+    }
+  });
+
+  // Publicar do builder: grava o arquivo e derruba o cache — o bot usa na hora.
+  app.post('/api/flows', (req, res) => {
+    const def = extractFlowDef(req.body);
+    if (!def) return apiError(res, 400, 'flow inválido: precisa de stages[] e entry_stage');
+    try {
+      writeFileSync(flowPath(), JSON.stringify(def, null, 2));
+      resetFlowCache();
+      log.info?.(`[flows] publicado: ${def.id || 'flow'}`);
+      res.status(201).json({ id: def.id || 'flow' });
+    } catch (e) {
+      log.error?.(`[flows] ERRO: ${e.message}`);
+      apiError(res, 500, 'falha ao gravar o flow');
+    }
+  });
+
+  // PUT: update com definition grava; {active:true} puro (publishFlow) é no-op — arquivo já é o ativo.
+  app.put('/api/flows/:id', (req, res) => {
+    const hasDef = Boolean(req.body?.definition || req.body?.flow || req.body?.stages);
+    if (hasDef) {
+      const def = extractFlowDef(req.body);
+      if (!def) return apiError(res, 400, 'flow inválido: precisa de stages[] e entry_stage');
+      try {
+        writeFileSync(flowPath(), JSON.stringify(def, null, 2));
+        resetFlowCache();
+        log.info?.(`[flows] atualizado: ${def.id || 'flow'}`);
+      } catch (e) {
+        log.error?.(`[flows] ERRO: ${e.message}`);
+        return apiError(res, 500, 'falha ao gravar o flow');
+      }
+    }
+    res.json({ id: req.params.id, active: true, updatedAt: new Date().toISOString() });
+  });
+
   // Simulador do builder: roda 1+ personas contra o flow do canvas (não o arquivo em disco).
   app.get('/api/sim/status', (_req, res) => {
     res.json({ ok: true, realLlmConfigured: Boolean(process.env.GROQ_API_KEY || process.env.NVIDIA_API_KEY) });
@@ -78,6 +163,96 @@ export function createApp({ db, transport, debounceMs = Number(process.env.DEBOU
     } catch (e) {
       log.error?.(`[sim] ERRO: ${e.message}`);
       res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  // Turno avulso do builder (InlineTestChat) — STATELESS: reconstrói o mundo por request
+  // no mesmo truque do runPersona (SQLite :memory: + transporte fake), reusando respondToLead
+  // intacto. Nada toca o banco real. Contrato: SimTurnRequest/Response do frontend.
+  const VAR2COL = {
+    NOME_EMPRESA: 'nome_empresa', NOME_DONO: 'nome_dono', NOME_DECISOR: 'nome_dono',
+    ESPECIALIDADE: 'especialidade', CIDADE: 'cidade', QTD_AVALIACOES: 'qtd_avaliacoes',
+    CONTEUDO_RECENTE: 'conteudo_recente', NOTA_SEO: 'nota_seo', TEM_SITE: 'tem_site',
+  };
+  const isLeadMsg = (m) => /lead|in|user|cliente/i.test(String(m?.role || m?.direction || ''));
+
+  app.post('/api/sim/turn', async (req, res) => {
+    const { flow: rawFlow, variables = {}, history = [], currentStage, sessionState = {} } = req.body || {};
+    const def = rawFlow ? (rawFlow.definition || rawFlow) : null;
+    if (!history.length || !isLeadMsg(history[history.length - 1])) {
+      return apiError(res, 400, 'history deve terminar com mensagem do lead');
+    }
+    if (!process.env.SDR_LLM) process.env.SDR_LLM = process.env.GROQ_API_KEY ? 'groq' : 'mock';
+    const simDb = openDb(':memory:');
+    const transport = makeFakeTransport();
+    if (def) setFlowOverride(def); // override global ao processo — mesmo tradeoff documentado do /api/sim/run
+    try {
+      const leadRow = { whatsapp: '5500000000000' };
+      for (const [k, v] of Object.entries(variables)) if (VAR2COL[k] && v) leadRow[VAR2COL[k]] = String(v);
+      const conc = [variables.CONCORRENTE_1, variables.CONCORRENTE_2, variables.CONCORRENTE_3].filter(Boolean);
+      if (conc.length) leadRow.concorrentes = conc.join(';');
+      const lead = upsertLead(simDb, leadRow);
+      const stageFrom = currentStage || entryStage(getFlow());
+      setLeadState(simDb, lead.id, {
+        status: STATUS.EM_CONVERSA, stage: stageFrom,
+        temperatura: String(sessionState.temperatura || 'morno'),
+      });
+      for (const m of history) addMessage(simDb, lead.id, isLeadMsg(m) ? 'in' : 'out', String(m.text || ''));
+
+      const r = await respondToLead(simDb, transport, lead, log);
+      const fin = simDb.prepare('SELECT * FROM leads WHERE id=?').get(lead.id);
+      const reply = transport.sent.map((s) => s.text || `[áudio] ${s.audio}`).join('\n\n');
+      const state = r.state || {};
+      res.json({
+        reply,
+        stage_from: stageFrom,
+        stage_to: fin.stage,
+        temperatura: fin.temperatura,
+        // score não existe no V3 — derivado da temperatura só pra UI; o raw carrega a verdade
+        score: { quente: 8, morno: 5, frio: 2 }[fin.temperatura] ?? 5,
+        flags: {
+          send_preview: Boolean(state.send_preview),
+          booked: fin.status === STATUS.GANHO,
+          precisa_humano: fin.status === STATUS.HUMANO,
+          done: [STATUS.GANHO, STATUS.ENCERRADO].includes(fin.status),
+        },
+        objecao_count: Number(sessionState.objecao_count || 0),
+        guardrail_violation: !r.sent,
+        sessionState: { ...sessionState, temperatura: fin.temperatura, status: fin.status },
+        raw: { mock: process.env.SDR_LLM === 'mock', motor: 'v3', status: fin.status, reason: r.reason ?? null, state },
+      });
+    } catch (e) {
+      log.error?.(`[sim/turn] ERRO: ${e.message}`);
+      apiError(res, 500, e.message);
+    } finally {
+      if (def) resetFlowCache();
+    }
+  });
+
+  // Report de saúde: bateria das personas com cérebro MOCK (determinístico, ~segundos).
+  // mock=true sempre — a decisão de GO continua exigindo bateria com LLM real (npm run sim).
+  let reportCache = null; // ponytail: cache TTL 60s; bateria real por request seria cara demais
+  app.get('/api/sim/report', async (_req, res) => {
+    try {
+      if (reportCache && Date.now() - reportCache.at < 60_000) return res.json(reportCache.data);
+      const results = [];
+      for (const p of personas) results.push(await runPersona(p, { llm: 'mock' })); // sequencial: override global
+      const healthy = results.filter((r) => !r.violations.length).length;
+      const data = {
+        healthRate: healthy / results.length,
+        healthy,
+        total: results.length,
+        guardrail_violations: results.reduce((n, r) => n + r.violations.length, 0),
+        generatedAt: new Date().toISOString(),
+        mock: true,
+        motor: 'v3',
+        results: results.map((r) => ({ id: r.id, label: r.label, status: r.status, violations: r.violations })),
+      };
+      reportCache = { at: Date.now(), data };
+      res.json(data);
+    } catch (e) {
+      log.error?.(`[sim/report] ERRO: ${e.message}`);
+      apiError(res, 500, e.message);
     }
   });
 

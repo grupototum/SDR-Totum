@@ -186,8 +186,8 @@ export interface SimReport {
   [k: string]: unknown;
 }
 
-// ── Simulador do builder (motor v3 — engine/, distinto do simTurn/getSimReport
-//    acima, que falam com o motor legado) ─────────────────────────────────────
+// ── Bateria de personas do builder (motor v3 — engine/; simTurn/getSimReport
+//    acima também falam com o V3 desde o fechamento do gap sim/turn+report) ───
 
 export interface SimV3RunRequest {
   /** Flow v2 (lossless) do canvas atual, tal como exportado pelo store. */
