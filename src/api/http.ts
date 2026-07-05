@@ -36,26 +36,24 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
-    // O motor responde {error: "msg"} (string); o proxy também. Alguns handlers
-    // usam {error: {message}}. Aceitar ambos e carregar o status HTTP no erro,
-    // pra diagnóstico visível (nada de cair no mock em silêncio).
-    const bodyText = await res.text().catch(() => "");
-    let message = res.statusText;
-    try {
-      const err = (JSON.parse(bodyText) as { error?: string | { message?: string } }).error;
-      message = (typeof err === "string" ? err : err?.message) ?? message;
-    } catch {
-      /* corpo não-JSON: mantém statusText */
-    }
-    console.error(`[api] ${init?.method ?? "GET"} ${url} → ${res.status}`, bodyText.slice(0, 300));
-    throw new Error(`HTTP ${res.status}: ${message}`);
+    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
+    throw new Error((err as { error?: { message?: string } }).error?.message ?? res.statusText);
   }
   return res.json() as Promise<T>;
 }
 
-/** Rotas do motor: prefixadas pela base (proxy /api/engine). */
+/**
+ * Rotas do motor legado: prefixadas pela base (proxy /api/engine).
+ * @deprecated Motor antigo em aposentadoria — flows e simulador já batem no V3
+ * (`v3()`). Não adicionar rota nova aqui.
+ */
 function req<T>(path: string, init?: RequestInit): Promise<T> {
   return call<T>(`${BASE}${path}`, init);
+}
+
+/** Rotas do motor V3 (oficial) — SEMPRE same-origin via proxy /api/engine-v3. */
+function v3<T>(path: string, init?: RequestInit): Promise<T> {
+  return call<T>(`/api/engine-v3${path}`, init);
 }
 
 /**
@@ -69,37 +67,18 @@ function n8nReq<T>(path: string, init?: RequestInit): Promise<T> {
 export const httpApi: ApiClient = {
   getHealth: () => req("/health"),
 
-  // O motor embrulha as respostas ({flows}, {flow:{definition}}); o front (e o
-  // mock) trabalham com o array/envelope puro — desembrulhar aqui, aceitando
-  // os dois shapes.
-  listFlows: async () => {
-    const res = await req<FlowSummary[] | { flows?: FlowSummary[] }>("/api/flows");
-    return Array.isArray(res) ? res : (res.flows ?? []);
-  },
-  getFlow: async (id) => {
-    const res = await req<Record<string, unknown>>(`/api/flows/${id}`);
-    const rec = (res.flow ?? res) as Record<string, unknown>;
-    return (rec.definition ?? rec) as Record<string, unknown>;
-  },
-  // O motor exige {id, definition}; o front manda o envelope (flow_id, stages…).
+  // Flows — motor V3: o builder publica no arquivo que o bot lê (loop fechado).
+  listFlows: () => v3<FlowSummary[]>("/api/flows"),
+  getFlow: (id) => v3<Record<string, unknown>>(`/api/flows/${encodeURIComponent(id)}`),
   createFlow: (flow) =>
-    req<{ id: string }>("/api/flows", {
-      method: "POST",
-      body: JSON.stringify({
-        id: flow.flow_id ?? flow.id,
-        name: flow.name,
-        niche: flow.niche,
-        version: flow.version,
-        definition: flow,
-      }),
-    }),
+    v3<{ id: string }>("/api/flows", { method: "POST", body: JSON.stringify(flow) }),
   updateFlow: (id, flow) =>
-    req<{ id: string; updatedAt: string }>(`/api/flows/${id}`, {
+    v3<{ id: string; updatedAt: string }>(`/api/flows/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(flow),
     }),
   publishFlow: (id) =>
-    req<{ id: string; active: boolean; updatedAt: string }>(`/api/flows/${id}`, {
+    v3<{ id: string; active: boolean; updatedAt: string }>(`/api/flows/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify({ active: true }),
     }),
@@ -149,63 +128,17 @@ export const httpApi: ApiClient = {
       method: "POST",
     }),
 
-  // Simulator — SEMPRE via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
-  // Independente de VITE_API_BASE_URL: o proxy existe em server.ts e injeta o Bearer.
-  // Adaptador: o motor fala {stage, lastMessage, variables} e devolve
-  // {stage_anterior, stage_novo, …, variables}; o front fala
-  // {currentStage, sessionState} e espera {stage_from, stage_to, flags, sessionState}.
-  simTurn: async (payload: SimTurnRequest) => {
-    const lastLead = [...payload.history].reverse().find((m) => m.role === "lead")?.text ?? "";
-    const j = await call<Record<string, unknown>>("/api/engine/api/sim/turn", {
+  // Simulator — motor V3. Enquanto o V3 não expõe /api/sim/turn e /api/sim/report,
+  // os consumidores caem no fallback mock (simTurnWithFallback) / estado vazio.
+  simTurn: (payload: SimTurnRequest) =>
+    v3<SimTurnResponse>("/api/sim/turn", {
       method: "POST",
-      body: JSON.stringify({
-        flow: payload.flow,
-        // sessionState = "variables" devolvidas pelo turno anterior (statelessness
-        // do motor: __stage/__score/__objecao_count). Valores digitados vencem.
-        variables: { ...(payload.sessionState ?? {}), ...payload.variables },
-        history: payload.history,
-        stage: payload.currentStage || undefined,
-        lastMessage: lastLead,
-      }),
-    });
-    const stageFrom = String(j.stage_anterior ?? payload.currentStage ?? "");
-    return {
-      reply: String(j.reply ?? ""),
-      stage_from: stageFrom,
-      stage_to: String(j.stage_novo ?? stageFrom),
-      temperatura: String(j.temperatura ?? "morno"),
-      score: Number(j.score) || 0,
-      flags: {
-        send_preview: Boolean(j.send_preview),
-        booked: Boolean(j.booked),
-        precisa_humano: Boolean(j.precisa_humano),
-        done: Boolean(j.done),
-      },
-      objecao_count: Number(j.objecao_count) || 0,
-      // clamped = o cérebro propôs transição ilegal e o motor travou → violação.
-      guardrail_violation: Boolean(j.clamped),
-      sessionState: (j.variables ?? {}) as Record<string, unknown>,
-      raw: j,
-    } satisfies SimTurnResponse;
-  },
-  // Report de GO — via proxy (não via BASE). Métrica oficial de decisão.
-  // O motor devolve {flowId, ts, runs, health(0..1), personas[]} — adaptar.
-  getSimReport: async () => {
-    const j = await call<Record<string, unknown>>("/api/engine/api/sim/report");
-    if (typeof j.healthRate === "number") return j as SimReport;
-    const personas = Array.isArray(j.personas) ? j.personas : [];
-    const health = Number(j.health) || 0;
-    const healthRate = health > 1 ? health / 100 : health;
-    return {
-      ...j,
-      healthRate,
-      total: personas.length,
-      healthy: Math.round(healthRate * personas.length),
-      generatedAt: typeof j.ts === "string" ? j.ts : undefined,
-    } satisfies SimReport;
-  },
+      body: JSON.stringify(payload),
+    }),
+  getSimReport: () => v3<SimReport>("/api/sim/report"),
 
-  // Script↔Flow — via proxy same-origin /api/engine (SDR_API_KEY nunca vai ao bundle).
+  // Script↔Flow — ÚNICA feature ainda no motor legado (/api/engine); o V3 não
+  // tem /api/script/*. @deprecated — migrar ou aposentar junto com o motor antigo.
   importScript: (scriptMd) =>
     call<{ flow: Record<string, unknown> }>("/api/engine/api/script/import", {
       method: "POST",
@@ -218,11 +151,11 @@ export const httpApi: ApiClient = {
       body: JSON.stringify({ flow }),
     }),
 
-  // Simulador do builder — motor v3, proxy same-origin /api/engine-v3.
+  // Simulador do builder — motor V3.
   runSimulationV3: (payload: SimV3RunRequest) =>
-    call<SimV3RunResponse>("/api/engine-v3/api/sim/run", {
+    v3<SimV3RunResponse>("/api/sim/run", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  getSimV3Status: () => call<SimV3Status>("/api/engine-v3/api/sim/status"),
+  getSimV3Status: () => v3<SimV3Status>("/api/sim/status"),
 };

@@ -133,9 +133,9 @@ function DiagnosticsPage() {
   const runProbes = useCallback(async () => {
     setProbing(true);
     const targets = [
-      ["GET", "/api/engine/health"],
-      ["GET", "/api/flows"],
-      ["GET", "/api/engine/api/sim/report"],
+      ["GET", "/api/engine-v3/health"],
+      ["GET", "/api/engine-v3/api/flows"],
+      ["GET", "/api/engine-v3/api/sim/status"],
       ["GET", "/api/n8n/workflows"],
     ] as const;
     await Promise.allSettled(

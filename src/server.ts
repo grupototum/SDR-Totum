@@ -19,7 +19,10 @@ async function getServerEntry(): Promise<ServerEntry> {
 }
 
 /**
- * Same-origin proxy para o motor SDR.
+ * Same-origin proxy para o motor SDR LEGADO.
+ * @deprecated Motor antigo em aposentadoria — flows e simulador já batem no V3
+ * (`/api/engine-v3`). Mantido só na transição (script/import, conversations,
+ * reports); não apontar nada novo pra cá. Remoção em etapa futura.
  * O cliente chama `/api/engine/<path>` (same-origin); aqui — e SÓ aqui, no
  * servidor — injetamos o Bearer com a `SDR_API_KEY` lida de `process.env`.
  * A chave NUNCA vai pro bundle do browser (não é VITE_*) e NUNCA é logada.
@@ -80,9 +83,10 @@ async function proxyEngine(request: Request): Promise<Response> {
 
 /**
  * Same-origin proxy para o motor v3 (engine/ — flow-driven, distinto do motor
- * legado atrás de `/api/engine`/ENGINE_URL). Hoje só serve o simulador do
- * builder (`/api/sim/run`, `/api/sim/status`). O motor v3 não expõe rota
- * pública além dessas — não injeta Bearer porque o serviço não valida nenhum.
+ * legado atrás de `/api/engine`/ENGINE_URL). Motor OFICIAL: serve o simulador
+ * do builder (`/api/sim/*`) e os flows (`/api/flows*` — o builder publica no
+ * arquivo que o bot lê). Não injeta Bearer porque o serviço não valida nenhum.
+ * O `/webhook/evolution` do V3 NUNCA passa por aqui — fica interno na VPS.
  */
 async function proxyEngineV3(request: Request): Promise<Response> {
   const ENGINE_V3_URL = process.env.ENGINE_V3_URL;
