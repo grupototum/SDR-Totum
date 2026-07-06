@@ -134,8 +134,15 @@ export async function dispatchNewLeads(db, transport, {
         results.push({ lead: lead.whatsapp, ok: true, dryRun: true, mensagem: out.mensagem });
         continue;
       }
-      await transport.sendText(lead.whatsapp, out.mensagem);
-      addMessage(db, lead.id, 'out', out.mensagem);
+      // Envia em blocos separados (parágrafos) com delay de digitando entre eles.
+      const blocos = out.mensagem.split(/\n\n+/).map(b => b.trim()).filter(Boolean);
+      for (let i = 0; i < blocos.length; i++) {
+        await transport.sendText(lead.whatsapp, blocos[i]);
+        addMessage(db, lead.id, 'out', blocos[i]);
+        if (i < blocos.length - 1) {
+          await sleep(humanize ? Math.min(4000, 1200 + blocos[i].length * 50) : 800);
+        }
+      }
       setLeadState(db, lead.id, { status: STATUS.EM_CONVERSA, stage: out.stage, temperatura: out.temperatura });
       if (humanize) incrementDispatchCount(db, instanceId, dateStr);
       log.info?.(`[dispatch] enviado p/ ${lead.whatsapp}`);
