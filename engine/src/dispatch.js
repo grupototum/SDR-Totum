@@ -7,7 +7,7 @@
 //   WINDOW_START/END janela comercial (horário local); fora dela, disparo é adiado
 //   INSTANCE_ID     identifica a instância p/ ramp-up e teto diário (default 'default')
 // `--plan` imprime o cronograma do dia sem enviar nada.
-import { openDb, STATUS, getLeadsByStatus, setLeadState, addMessage,
+import { openDb, STATUS, getLeadsByStatus, setLeadState, addMessage, addFollowups,
          dispatchDayOfLife, dispatchSentToday, incrementDispatchCount, getRecentOpenings } from './db.js';
 import { think } from './brain.js';
 import { missingRequired, validateOutbound, normalizeText } from './guardrails.js';
@@ -134,14 +134,13 @@ export async function dispatchNewLeads(db, transport, {
         results.push({ lead: lead.whatsapp, ok: true, dryRun: true, mensagem: out.mensagem });
         continue;
       }
-      // Envia em blocos separados (parágrafos) com delay de digitando entre eles.
       const blocos = out.mensagem.split(/\n\n+/).map(b => b.trim()).filter(Boolean);
-      for (let i = 0; i < blocos.length; i++) {
-        await transport.sendText(lead.whatsapp, blocos[i]);
-        addMessage(db, lead.id, 'out', blocos[i]);
-        if (i < blocos.length - 1) {
-          await sleep(humanize ? Math.min(4000, 1200 + blocos[i].length * 50) : 800);
-        }
+      // Envia APENAS o primeiro bloco imediatamente; o restante entra na fila de follow-up.
+      await transport.sendText(lead.whatsapp, blocos[0]);
+      addMessage(db, lead.id, 'out', blocos[0]);
+      if (blocos.length > 1) {
+        addFollowups(db, lead.id, blocos.slice(1));
+        log.info?.(`[dispatch] ${blocos.length - 1} follow-up(s) agendado(s) p/ ${lead.whatsapp}`);
       }
       setLeadState(db, lead.id, { status: STATUS.EM_CONVERSA, stage: out.stage, temperatura: out.temperatura });
       if (humanize) incrementDispatchCount(db, instanceId, dateStr);

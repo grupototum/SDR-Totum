@@ -3,6 +3,7 @@ import express from 'express';
 import { openDb, STATUS, getLeadByPhone, addMessage, markProcessed, normPhone, getLeadsAwaitingReply } from './db.js';
 import { respondToLead } from './pipeline.js';
 import { makeEvolutionTransport } from './evolution.js';
+import { processFollowups } from './followup.js';
 import { runPersona, personas } from '../sim/run.js';
 import { flowPath, resetFlowCache } from './flow.js';
 import { readFileSync, writeFileSync, statSync } from 'node:fs';
@@ -225,4 +226,14 @@ if (runningUnderPm2 || runningAsEntrypoint) {
     console.log(`SDR Totum ouvindo em ${host}:${port}`);
     app.resumePending();
   });
+
+  // Fila de follow-up: verifica a cada 60s e envia só blocos ainda pendentes.
+  setInterval(async () => {
+    try {
+      const followupTransport = makeEvolutionTransport();
+      await processFollowups(db, followupTransport);
+    } catch (e) {
+      console.error('[followup-cron] erro:', e.message);
+    }
+  }, 60_000);
 }

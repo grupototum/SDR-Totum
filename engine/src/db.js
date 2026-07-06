@@ -48,6 +48,15 @@ export function openDb(path = process.env.DB_PATH || './data/sdr.db') {
       sent_count INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (instance_id, date)
     );
+    CREATE TABLE IF NOT EXISTS followup_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL REFERENCES leads(id),
+      text TEXT NOT NULL,
+      send_after TEXT NOT NULL,
+      sent INTEGER NOT NULL DEFAULT 0,
+      cancelled INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
     CREATE INDEX IF NOT EXISTS idx_msgs_lead ON messages(lead_id, id);
   `);
   return db;
@@ -104,6 +113,31 @@ export function setLeadState(db, id, { status, stage, temperatura, abort_reason 
 
 export function addMessage(db, leadId, direction, text) {
   db.prepare('INSERT INTO messages (lead_id, direction, text) VALUES (?,?,?)').run(leadId, direction, text);
+}
+
+export function addFollowups(db, leadId, texts, firstDelayMs = 360000, intervalMs = 360000) {
+  const now = Date.now();
+  for (let i = 0; i < texts.length; i++) {
+    const sendAfter = new Date(now + firstDelayMs + i * intervalMs).toISOString();
+    db.prepare('INSERT INTO followup_queue (lead_id, text, send_after) VALUES (?, ?, ?)').run(leadId, texts[i], sendAfter);
+  }
+}
+
+export function getPendingFollowups(db, now = new Date()) {
+  return db.prepare(`
+    SELECT fq.*, l.whatsapp FROM followup_queue fq
+    JOIN leads l ON fq.lead_id = l.id
+    WHERE fq.sent = 0 AND fq.cancelled = 0 AND fq.send_after <= ?
+    ORDER BY fq.lead_id, fq.id
+  `).all(now.toISOString());
+}
+
+export function markFollowupSent(db, id) {
+  db.prepare('UPDATE followup_queue SET sent = 1 WHERE id = ?').run(id);
+}
+
+export function cancelFollowups(db, leadId) {
+  db.prepare('UPDATE followup_queue SET cancelled = 1 WHERE lead_id = ? AND sent = 0').run(leadId);
 }
 
 export const getHistory = (db, leadId) =>

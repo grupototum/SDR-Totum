@@ -1,5 +1,5 @@
 // Orquestra: inbound salvo -> cérebro -> guardrails -> envio -> estado.
-import { STATUS, addMessage, getHistory, getSentTexts, setLeadState, getLeadByPhone } from './db.js';
+import { STATUS, addMessage, getHistory, getSentTexts, setLeadState, getLeadByPhone, cancelFollowups } from './db.js';
 import { think } from './brain.js';
 import { validateOutbound } from './guardrails.js';
 import { getFlow, validateTransition, authorizeActions, leadVars, renderTemplate } from './flow.js';
@@ -43,6 +43,9 @@ export async function respondToLead(db, transport, lead, log = console) {
   if (!fresh || fresh.status !== STATUS.EM_CONVERSA) {
     return { sent: false, reason: `status=${fresh?.status}` };
   }
+  // Cancela follow-ups pendentes da abertura: o lead respondeu.
+  cancelFollowups(db, fresh.id);
+
   const history = getHistory(db, fresh.id);
   const sentTexts = getSentTexts(db, fresh.id);
 
