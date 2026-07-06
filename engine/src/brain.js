@@ -28,7 +28,7 @@ const PROVIDERS = {
   },
 };
 
-export function buildSystemPrompt(lead, { sentTexts = [], retryNote = '', flow = null, stageId = null } = {}) {
+export function buildSystemPrompt(lead, { sentTexts = [], retryNote = '', flow = null, stageId = null, isOpener = false } = {}) {
   const def = flow || getFlow();
   const map = stageMap(def);
   const stId = map[stageId] ? stageId : (map[lead.stage] ? lead.stage : entryStage(def));
@@ -61,7 +61,7 @@ ${refCopy.length ? `- REFERÊNCIA DE FALA (adapte à conversa, não copie litera
 ${obj ? `\n# OBJEÇÕES (${obj.categories?.join(', ')}): ACOLHA (nunca corrija), reintroduza como curiosidade e permaneça no estágio; preço nunca revela valor, redireciona pra prévia.` : ''}
 
 # REGRAS DE ESTILO (invioláveis, valem sobre qualquer copy)
-- Uma mensagem por vez. Nunca dois blocos juntos.
+${isOpener ? '- ABERTURA (primeira mensagem): envie CADA ideia da reference_copy como bloco separado por \\n\\n. Cada bloco = uma bolha WhatsApp. Mínimo 4 blocos, máximo 6.' : '- Uma mensagem por vez. Nunca dois blocos juntos.'}
 - Mensagens curtas, diretas, humanas. Tom neutro, curioso, confiante, nunca animado demais.
 - Nunca vender no primeiro contato. Nunca falar preço/serviço/proposta antes do "posso mandar a prévia?".
 - Proibido: "estratégia inovadora", "potencializar", "presença digital", "transformação digital",
@@ -90,7 +90,7 @@ ${sentTexts.length ? sentTexts.map(t => `- ${t}`).join('\n') : '(nenhuma ainda)'
 ${retryNote ? `\n# ATENÇÃO\n${retryNote}` : ''}
 
 # SAÍDA (obrigatório: JSON válido, nada além do JSON)
-{"mensagem": "<texto único a enviar no WhatsApp, sem aspas extras, sem colchetes>",
+{"mensagem": "${isOpener ? '<blocos separados por \\n\\n — cada bloco = 1 bolha WhatsApp>' : '<texto único a enviar no WhatsApp, sem aspas extras, sem colchetes>'}",
  "stage": "<${stageIds(def).join('|')}>",
  "temperatura": "<frio|morno|quente>",
  "objetivo_atingido": <true|false quando a reunião/horário for confirmado>,
@@ -193,7 +193,8 @@ export async function think(lead, history, opts = {}) {
   const def = opts.flow || getFlow();
   const map = stageMap(def);
   const curStage = map[lead.stage] ? lead.stage : entryStage(def);
-  const system = buildSystemPrompt(lead, { ...opts, flow: def, stageId: curStage });
+  const isOpener = history.length === 0;
+  const system = buildSystemPrompt(lead, { ...opts, flow: def, stageId: curStage, isOpener });
   const chat = history.map(m => ({
     role: m.direction === 'out' ? 'assistant' : 'user',
     content: m.text,
