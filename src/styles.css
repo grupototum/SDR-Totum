@@ -325,3 +325,30 @@
   border-radius: 12px;
 }
 .react-flow__attribution { display: none; }
+
+/* Tema claro operacional (dashboard, agentes, builder Manychat) — define a
+   cor-base herdada por inputs/textareas (Tailwind preflight) e as vars dos
+   TotumButton ghost/outline. */
+.totum-light {
+  color: #111827;
+  --tbtn-fg: #475467;
+  --tbtn-hover-bg: #f2f4f7;
+}
+.totum-light .react-flow__minimap {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+.totum-light .react-flow__controls {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+.totum-light .react-flow__controls button {
+  color: #475467;
+  border-bottom: 1px solid #e5e7eb;
+}
+.totum-light .react-flow__controls button:hover {
+  background: #f2f4f7;
+}
+.totum-light .react-flow__handle {
+  background: #ffffff;
+}

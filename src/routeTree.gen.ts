@@ -16,6 +16,7 @@ import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as BuilderLegacyRouteImport } from './routes/builder-legacy'
 import { Route as BuilderRouteImport } from './routes/builder'
+import { Route as AgentesRouteImport } from './routes/agentes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PesquisaIndexRouteImport } from './routes/pesquisa.index'
 import { Route as BuilderIndexRouteImport } from './routes/builder.index'
@@ -57,6 +58,11 @@ const BuilderRoute = BuilderRouteImport.update({
   path: '/builder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentesRoute = AgentesRouteImport.update({
+  id: '/agentes',
+  path: '/agentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -85,6 +91,7 @@ const BuilderEditRoute = BuilderEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agentes': typeof AgentesRoute
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agentes': typeof AgentesRoute
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
   '/diagnostics': typeof DiagnosticsRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agentes': typeof AgentesRoute
   '/builder': typeof BuilderRouteWithChildren
   '/builder-legacy': typeof BuilderLegacyRoute
   '/conversations': typeof ConversationsRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agentes'
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agentes'
     | '/builder-legacy'
     | '/conversations'
     | '/diagnostics'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/agentes'
     | '/builder'
     | '/builder-legacy'
     | '/conversations'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentesRoute: typeof AgentesRoute
   BuilderRoute: typeof BuilderRouteWithChildren
   BuilderLegacyRoute: typeof BuilderLegacyRoute
   ConversationsRoute: typeof ConversationsRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/builder'
       fullPath: '/builder'
       preLoaderRoute: typeof BuilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agentes': {
+      id: '/agentes'
+      path: '/agentes'
+      fullPath: '/agentes'
+      preLoaderRoute: typeof AgentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -296,6 +316,7 @@ const PesquisaRouteWithChildren = PesquisaRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentesRoute: AgentesRoute,
   BuilderRoute: BuilderRouteWithChildren,
   BuilderLegacyRoute: BuilderLegacyRoute,
   ConversationsRoute: ConversationsRoute,
@@ -307,3 +328,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
