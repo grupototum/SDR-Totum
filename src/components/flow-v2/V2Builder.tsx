@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -31,116 +31,58 @@ import {
 import { api } from "@/api";
 import { useFlowV2Store } from "@/stores/flow-v2-store";
 import { detectFormat, summarizeV1, type V1LegacySummary, type V2Stage } from "@/lib/flow-v2";
-import flowV2Default from "../../../docs/flow_odonto_stages_v2.json";
 import { TotumButton } from "@/components/ui/totum-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { FlowV2 } from "@/lib/flow-v2";
-import { WizardMode } from "./WizardMode";
 import { FlowCanvasV2 } from "./FlowCanvasV2";
 import { extractPlaceholders, registeredVariableNames } from "@/lib/flow-v2";
 
 type View = "stage" | "interrupts" | "globals" | "pesquisa";
-type Mode = "wizard" | "canvas" | "builder";
+/** Modos de autoria do editor. O estado do modo vive em builder.edit.tsx. */
+export type AuthoringMode = "wizard" | "canvas";
 
-const MODE_KEY = "totum:builder-mode";
-
-export function V2Builder({ flowId }: { flowId?: string } = {}) {
+/**
+ * Canvas + painéis (rail de estágios à esquerda, editor à direita).
+ * Toolbar, modo e carregamento remoto do flow vivem em builder.edit.tsx.
+ * Os editores do antigo modo "Formulário" (interrupções, globals) continuam
+ * acessíveis pelo rail — renderizados no painel direito.
+ */
+export function V2Builder() {
   const flow = useFlowV2Store((s) => s.flow);
-  const setFlow = useFlowV2Store((s) => s.setFlow);
-  const setCurrentFlow = useFlowV2Store((s) => s.setCurrentFlow);
-  const currentFlowId = useFlowV2Store((s) => s.currentFlowId);
   const [view, setView] = useState<View>("stage");
-  const [legacy, setLegacy] = useState<V1LegacySummary | null>(null);
-  const [simOpen, setSimOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>(() => {
-    if (typeof window === "undefined") return "canvas";
-    return (window.localStorage.getItem(MODE_KEY) as Mode) || "canvas";
-  });
-
-  // Carrega flow por id quando vier da URL. Sem id → mantém o draft do store,
-  // ou carrega o flow v2 padrão como rascunho inicial.
-  const remoteQuery = useQuery({
-    queryKey: ["flow", flowId],
-    queryFn: () => api.getFlow(flowId!),
-    enabled: !!flowId && flowId !== currentFlowId,
-  });
-
-  useEffect(() => {
-    if (flowId && remoteQuery.data) {
-      // Guard: se o flowId já está no store, não re-setar — sem isso,
-      // setFlow altera `flow` (que está nos deps) causando loop infinito.
-      if (flowId === currentFlowId) return;
-      setFlow(remoteQuery.data as unknown as FlowV2);
-      setCurrentFlow(flowId);
-    } else if (!flowId && !flow) {
-      setFlow(flowV2Default as unknown as FlowV2);
-    }
-  }, [flowId, remoteQuery.data, currentFlowId, flow, setFlow, setCurrentFlow]);
-
-  const setModeAndStore = (m: Mode) => {
-    setMode(m);
-    if (typeof window !== "undefined") window.localStorage.setItem(MODE_KEY, m);
-  };
 
   if (!flow) {
     return <div className="p-6 text-sm text-[color:var(--color-text-muted)]">Carregando…</div>;
   }
 
   return (
-    <div
-      className="flex h-screen w-full flex-col overflow-hidden"
-      style={{ background: "#0e0918" }}
-    >
-      <V2Toolbar
-        onLegacy={setLegacy}
-        mode={mode}
-        setMode={setModeAndStore}
-        onSimulate={() => setSimOpen(true)}
-      />
-      {mode === "wizard" && <WizardMode />}
-      {mode === "canvas" && (
-        <div
-          className="grid flex-1 overflow-hidden"
-          style={{ gridTemplateColumns: "300px 1fr 360px" }}
-        >
-          <StageRail view={view} setView={setView} />
-          <FlowCanvasV2 onSelectStage={() => setView("stage")} />
-          <div className="overflow-y-auto" style={{ boxShadow: "inset 1px 0 0 0 #1f192a" }}>
-            {view === "pesquisa" ? <PesquisaPanel /> : <StageEditor />}
-          </div>
-        </div>
-      )}
-      {mode === "builder" && (
-        <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr" }}>
-          <StageRail view={view} setView={setView} />
-          <div className="overflow-y-auto">
-            {view === "stage" && <StageEditor />}
-            {view === "interrupts" && <InterruptsEditor />}
-            {view === "globals" && <GlobalsPanel />}
-          </div>
-        </div>
-      )}
-      {legacy && <LegacyOverlay summary={legacy} onClose={() => setLegacy(null)} />}
-      {simOpen && <SimulationOverlay onClose={() => setSimOpen(false)} />}
+    <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr 360px" }}>
+      <StageRail view={view} setView={setView} />
+      <FlowCanvasV2 onSelectStage={() => setView("stage")} />
+      <div className="overflow-y-auto" style={{ boxShadow: "inset 1px 0 0 0 #1f192a" }}>
+        {view === "pesquisa" && <PesquisaPanel />}
+        {view === "interrupts" && <InterruptsEditor />}
+        {view === "globals" && <GlobalsPanel />}
+        {view === "stage" && <StageEditor />}
+      </div>
     </div>
   );
 }
 
 // ─── Toolbar ─────────────────────────────────────────────────────────────────
 
-function V2Toolbar({
+export function V2Toolbar({
   onLegacy,
   mode,
   setMode,
   onSimulate,
 }: {
   onLegacy: (s: V1LegacySummary) => void;
-  mode: Mode;
-  setMode: (m: Mode) => void;
+  mode: AuthoringMode;
+  setMode: (m: AuthoringMode) => void;
   onSimulate: () => void;
 }) {
   const flow = useFlowV2Store((s) => s.flow)!;
@@ -299,18 +241,6 @@ function V2Toolbar({
         >
           <Workflow className="size-3.5" /> Canvas
         </button>
-        <button
-          onClick={() => setMode("builder")}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
-          style={{
-            background: mode === "builder" ? "#da2128" : "transparent",
-            color: mode === "builder" ? "#fff" : "#9ca3af",
-          }}
-          aria-selected={mode === "builder"}
-          role="tab"
-        >
-          <Layers className="size-3.5" /> Formulário
-        </button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -326,11 +256,6 @@ function V2Toolbar({
         </TotumButton>
         <TotumButton variant="ghost" size="sm" onClick={handleExport}>
           <Download className="size-3.5" /> Exportar
-        </TotumButton>
-        <TotumButton variant="ghost" size="sm" asChild>
-          <Link to="/builder-legacy">
-            <Layers className="size-3.5" /> Flow Builder
-          </Link>
         </TotumButton>
         <TotumButton variant="ghost" size="sm" onClick={onSimulate}>
           <PlayCircle className="size-3.5" /> Simular
@@ -1060,7 +985,7 @@ function PesquisaPanel() {
 
 // ─── Simulação (motor v3) ─────────────────────────────────────────────────────
 
-function SimulationOverlay({ onClose }: { onClose: () => void }) {
+export function SimulationOverlay({ onClose }: { onClose: () => void }) {
   const flow = useFlowV2Store((s) => s.flow)!;
   const exportToJSON = useFlowV2Store((s) => s.exportToJSON);
   const [llm, setLlm] = useState<"mock" | "real">("mock");
@@ -1199,7 +1124,13 @@ function SimulationOverlay({ onClose }: { onClose: () => void }) {
 
 // ─── Legacy v1 (read-only) ───────────────────────────────────────────────────
 
-function LegacyOverlay({ summary, onClose }: { summary: V1LegacySummary; onClose: () => void }) {
+export function LegacyOverlay({
+  summary,
+  onClose,
+}: {
+  summary: V1LegacySummary;
+  onClose: () => void;
+}) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
