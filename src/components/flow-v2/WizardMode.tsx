@@ -24,14 +24,14 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           <div
             className="flex size-6 items-center justify-center rounded-full text-[11px] font-medium"
             style={{
-              background: i < current ? "#35a670" : i === current ? "#da2128" : "#272333",
-              color: i <= current ? "#fff" : "#9ca3af",
+              background: i < current ? "#35a670" : i === current ? "#da2128" : "#eef0f3",
+              color: i <= current ? "#fff" : "#6b7280",
             }}
           >
             {i < current ? <Check className="size-3" /> : i + 1}
           </div>
           {i < total - 1 && (
-            <div className="h-px w-8" style={{ background: i < current ? "#35a670" : "#272333" }} />
+            <div className="h-px w-8" style={{ background: i < current ? "#35a670" : "#eef0f3" }} />
           )}
         </div>
       ))}
@@ -63,13 +63,13 @@ function Step1({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg text-white">Identidade do flow</h2>
-        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+        <h2 className="text-lg text-[#111827]">Identidade do flow</h2>
+        <p className="mt-1 text-sm text-[#6b7280]">
           Nome, nicho e objetivo. O Builder edita os detalhes finos depois.
         </p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">Nome do flow *</Label>
+        <Label className="text-xs text-[#6b7280]">Nome do flow *</Label>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -77,7 +77,7 @@ function Step1({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">Nicho</Label>
+        <Label className="text-xs text-[#6b7280]">Nicho</Label>
         <Input
           value={niche}
           onChange={(e) => setNiche(e.target.value)}
@@ -85,7 +85,7 @@ function Step1({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">Objetivo do flow</Label>
+        <Label className="text-xs text-[#6b7280]">Objetivo do flow</Label>
         <Textarea
           value={objective}
           onChange={(e) => setObjective(e.target.value)}
@@ -94,9 +94,7 @@ function Step1({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-[color:var(--color-text-muted)]">
-          Guardrails globais (uma regra por linha)
-        </Label>
+        <Label className="text-xs text-[#6b7280]">Guardrails globais (uma regra por linha)</Label>
         <Textarea
           value={guardrails}
           onChange={(e) => setGuardrails(e.target.value)}
@@ -135,8 +133,8 @@ function Step2({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg text-white">Estágios do flow</h2>
-          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          <h2 className="text-lg text-[#111827]">Estágios do flow</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">
             Cada estágio é um objetivo de conversa. Adicione o suficiente para cobrir o fluxo.
           </p>
         </div>
@@ -145,7 +143,7 @@ function Step2({
         </TotumButton>
       </div>
       {stages.length === 0 && (
-        <p className="text-sm text-[color:var(--color-text-muted)]">
+        <p className="text-sm text-[#6b7280]">
           Nenhum estágio ainda. Clique em "Adicionar" para começar.
         </p>
       )}
@@ -154,10 +152,10 @@ function Step2({
           <div
             key={s.id}
             className="flex flex-col gap-3 rounded-xl p-4"
-            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[color:var(--color-text-muted)] w-5">{i + 1}</span>
+              <span className="text-xs text-[#6b7280] w-5">{i + 1}</span>
               <Input
                 value={s.id}
                 onChange={(e) => patch(i, { id: e.target.value })}
@@ -166,7 +164,7 @@ function Step2({
               />
               <button
                 onClick={() => remove(i)}
-                className="text-[color:var(--color-text-muted)] hover:text-white"
+                className="text-[#6b7280] hover:text-[#111827]"
                 title="Remover"
                 disabled={stages.length <= 1}
               >
@@ -174,7 +172,7 @@ function Step2({
               </button>
             </div>
             <div className="flex flex-col gap-1.5 pl-7">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">Objetivo</Label>
+              <Label className="text-[10px] text-[#6b7280]">Objetivo</Label>
               <Input
                 value={s.goal}
                 onChange={(e) => patch(i, { goal: e.target.value })}
@@ -182,9 +180,7 @@ function Step2({
               />
             </div>
             <div className="flex flex-col gap-1.5 pl-7">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
-                Instrução (como conduzir)
-              </Label>
+              <Label className="text-[10px] text-[#6b7280]">Instrução (como conduzir)</Label>
               <Textarea
                 value={s.instruction}
                 onChange={(e) => patch(i, { instruction: e.target.value })}
@@ -193,7 +189,7 @@ function Step2({
               />
             </div>
             <div className="flex flex-col gap-1.5 pl-7">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
+              <Label className="text-[10px] text-[#6b7280]">
                 Advance when (condição para avançar)
               </Label>
               <Input
@@ -224,8 +220,8 @@ function Step3({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg text-white">Conteúdo de referência</h2>
-        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+        <h2 className="text-lg text-[#111827]">Conteúdo de referência</h2>
+        <p className="mt-1 text-sm text-[#6b7280]">
           Exemplos de mensagem / copy para cada estágio. Opcional — pode preencher depois no
           Builder.
         </p>
@@ -235,9 +231,9 @@ function Step3({
           <div
             key={s.id}
             className="flex flex-col gap-2 rounded-xl p-4"
-            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
           >
-            <Label className="text-xs text-[color:var(--color-text-muted)]">
+            <Label className="text-xs text-[#6b7280]">
               {i + 1}. {s.id}
               {s.goal && <span className="ml-1 opacity-60">— {s.goal}</span>}
             </Label>
@@ -278,8 +274,8 @@ function Step4({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg text-white">Interrupções</h2>
-          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          <h2 className="text-lg text-[#111827]">Interrupções</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">
             Situações que desviam do fluxo normal (ex: objeção de preço, "já tenho dentista").
             Opcional.
           </p>
@@ -289,7 +285,7 @@ function Step4({
         </TotumButton>
       </div>
       {interrupts.length === 0 && (
-        <p className="text-sm text-[color:var(--color-text-muted)]">
+        <p className="text-sm text-[#6b7280]">
           Nenhuma interrupção. Você pode adicionar depois no Builder.
         </p>
       )}
@@ -298,7 +294,7 @@ function Step4({
           <div
             key={i}
             className="flex flex-col gap-3 rounded-xl p-4"
-            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
           >
             <div className="flex items-center gap-2">
               <Input
@@ -307,17 +303,12 @@ function Step4({
                 placeholder="ID da interrupção"
                 className="flex-1"
               />
-              <button
-                onClick={() => remove(i)}
-                className="text-[color:var(--color-text-muted)] hover:text-white"
-              >
+              <button onClick={() => remove(i)} className="text-[#6b7280] hover:text-[#111827]">
                 <Trash2 className="size-3.5" />
               </button>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
-                Gatilho (quando ativar)
-              </Label>
+              <Label className="text-[10px] text-[#6b7280]">Gatilho (quando ativar)</Label>
               <Input
                 value={v.trigger}
                 onChange={(e) => patch(i, { trigger: e.target.value })}
@@ -325,9 +316,7 @@ function Step4({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-[10px] text-[color:var(--color-text-muted)]">
-                Instrução de tratamento
-              </Label>
+              <Label className="text-[10px] text-[#6b7280]">Instrução de tratamento</Label>
               <Textarea
                 value={v.handler_instruction}
                 onChange={(e) => patch(i, { handler_instruction: e.target.value })}
@@ -360,61 +349,53 @@ function Step5({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg text-white">Revisão</h2>
-        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+        <h2 className="text-lg text-[#111827]">Revisão</h2>
+        <p className="mt-1 text-sm text-[#6b7280]">
           Confirme e crie o flow. Você pode editar tudo no Builder depois.
         </p>
       </div>
       <div
         className="flex flex-col gap-3 rounded-2xl p-5"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
       >
         <div>
-          <p className="text-xs text-[color:var(--color-text-muted)]">Nome</p>
-          <p className="text-sm text-white">{name || "—"}</p>
+          <p className="text-xs text-[#6b7280]">Nome</p>
+          <p className="text-sm text-[#111827]">{name || "—"}</p>
         </div>
         {niche && (
           <div>
-            <p className="text-xs text-[color:var(--color-text-muted)]">Nicho</p>
-            <p className="text-sm text-white">{niche}</p>
+            <p className="text-xs text-[#6b7280]">Nicho</p>
+            <p className="text-sm text-[#111827]">{niche}</p>
           </div>
         )}
         {objective && (
           <div>
-            <p className="text-xs text-[color:var(--color-text-muted)]">Objetivo</p>
-            <p className="text-sm text-white">{objective}</p>
+            <p className="text-xs text-[#6b7280]">Objetivo</p>
+            <p className="text-sm text-[#111827]">{objective}</p>
           </div>
         )}
         <div>
-          <p className="text-xs text-[color:var(--color-text-muted)]">Estágios ({stages.length})</p>
+          <p className="text-xs text-[#6b7280]">Estágios ({stages.length})</p>
           <ul className="mt-1 flex flex-col gap-1">
             {stages.map((s, i) => (
               <li key={i} className="flex items-baseline gap-2 text-sm">
-                <span className="text-[10px] text-[color:var(--color-text-muted)]">{i + 1}.</span>
-                <span className="text-white">{s.id}</span>
-                {s.goal && (
-                  <span className="text-[11px] text-[color:var(--color-text-muted)] truncate">
-                    — {s.goal}
-                  </span>
-                )}
+                <span className="text-[10px] text-[#6b7280]">{i + 1}.</span>
+                <span className="text-[#111827]">{s.id}</span>
+                {s.goal && <span className="text-[11px] text-[#6b7280] truncate">— {s.goal}</span>}
               </li>
             ))}
           </ul>
         </div>
         {interrupts.length > 0 && (
           <div>
-            <p className="text-xs text-[color:var(--color-text-muted)]">
-              Interrupções ({interrupts.length})
-            </p>
+            <p className="text-xs text-[#6b7280]">Interrupções ({interrupts.length})</p>
             <ul className="mt-1 flex flex-col gap-1">
               {interrupts.map((v, i) => (
                 <li key={i} className="flex items-baseline gap-2 text-sm">
-                  <span className="text-[10px] text-[color:var(--color-text-muted)]">{i + 1}.</span>
-                  <span className="text-white">{v.id}</span>
+                  <span className="text-[10px] text-[#6b7280]">{i + 1}.</span>
+                  <span className="text-[#111827]">{v.id}</span>
                   {v.trigger && (
-                    <span className="text-[11px] text-[color:var(--color-text-muted)] truncate">
-                      — {v.trigger}
-                    </span>
+                    <span className="text-[11px] text-[#6b7280] truncate">— {v.trigger}</span>
                   )}
                 </li>
               ))}
@@ -517,11 +498,11 @@ export function WizardMode() {
   return (
     <div
       className="flex flex-col"
-      style={{ background: "#0e0918", minHeight: "calc(100vh - 56px)" }}
+      style={{ background: "#f6f7f9", minHeight: "calc(100vh - 56px)" }}
     >
-      <div className="border-b border-[#1f192a] px-6 py-4">
+      <div className="border-b border-[#e5e7eb] px-6 py-4">
         <StepIndicator current={step} total={STEP_LABELS.length} />
-        <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+        <p className="mt-2 text-xs text-[#6b7280]">
           Passo {step + 1} de {STEP_LABELS.length}: {STEP_LABELS[step]}
         </p>
       </div>
@@ -555,7 +536,7 @@ export function WizardMode() {
       </div>
       <div
         className="flex items-center justify-between px-6 py-4"
-        style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}
+        style={{ boxShadow: "inset 0 1px 0 0 #e5e7eb" }}
       >
         <TotumButton
           variant="ghost"

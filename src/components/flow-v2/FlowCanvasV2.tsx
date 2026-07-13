@@ -16,7 +16,7 @@ import { extractPlaceholders, findOrphanStageIds, registeredVariableNames } from
 import { StageNode, type StageNodeData } from "./StageNode";
 
 const nodeTypes: NodeTypes = { stage: StageNode };
-const CANVAS_STYLE: React.CSSProperties = { background: "#0e0918" };
+const CANVAS_STYLE: React.CSSProperties = { background: "#f6f7f9" };
 const COL_WIDTH = 300;
 const ROW_HEIGHT = 180;
 
@@ -135,12 +135,13 @@ function FlowCanvasV2Inner({ onSelectStage }: { onSelectStage?: () => void }) {
         proOptions={{ hideAttribution: true }}
         style={CANVAS_STYLE}
       >
-        <Background variant={BackgroundVariant.Dots} gap={32} size={1.5} color="#272333" />
+        <Background variant={BackgroundVariant.Dots} gap={32} size={1.5} color="#eef0f3" />
         <Controls position="bottom-right" />
         <MiniMap
           position="bottom-left"
-          nodeColor="#272333"
-          maskColor="rgba(14,9,24,0.7)"
+          nodeColor="#d7dade"
+          maskColor="rgba(246,247,249,0.75)"
+          bgColor="#ffffff"
           pannable
           zoomable
         />

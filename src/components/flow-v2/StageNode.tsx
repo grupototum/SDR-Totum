@@ -13,17 +13,17 @@ export function StageNode({ data, selected }: NodeProps & { data: StageNodeData 
   const { stage, isEntry, isOrphan, hasUnregisteredPlaceholder } = data;
 
   const shadow = isOrphan
-    ? "0 0 0 2px #f59e0b, var(--shadow-card)"
+    ? "0 0 0 2px #f59e0b, 0 1px 3px rgba(16,24,40,0.12)"
     : selected
-      ? "var(--shadow-node-selected)"
+      ? "0 0 0 2px #da2128, 0 4px 12px rgba(16,24,40,0.18)"
       : isEntry
-        ? "0 0 0 2px #35a670, var(--shadow-card)"
-        : "var(--shadow-card)";
+        ? "0 0 0 2px #35a670, 0 1px 3px rgba(16,24,40,0.12)"
+        : "0 1px 3px rgba(16,24,40,0.12)";
 
   return (
     <div
       className="relative w-[240px] rounded-2xl p-4 transition-all"
-      style={{ background: "#1b1728", boxShadow: shadow, borderRadius: 16 }}
+      style={{ background: "#ffffff", boxShadow: shadow, borderRadius: 16 }}
     >
       {isEntry && (
         <div
@@ -54,7 +54,7 @@ export function StageNode({ data, selected }: NodeProps & { data: StageNodeData 
         {stage.terminal && <Flag className="size-3.5 text-[#35a670]" />}
       </div>
 
-      <p className="line-clamp-3 text-xs text-white/70">{stage.goal || "(sem goal)"}</p>
+      <p className="line-clamp-3 text-xs text-[#4b5563]">{stage.goal || "(sem goal)"}</p>
 
       {hasUnregisteredPlaceholder && (
         <p className="mt-2 flex items-center gap-1 text-[10px] text-[#f59e0b]">

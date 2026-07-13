@@ -13,18 +13,18 @@ export const Route = createFileRoute("/builder/")({
 function BuilderIndexPage() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen" style={{ background: "#0e0918" }}>
+    <div className="totum-light min-h-screen" style={{ background: "#f6f7f9" }}>
       <header
         className="sticky top-0 z-10 flex h-14 items-center justify-between px-6"
         style={{
-          background: "rgba(27,23,40,0.85)",
+          background: "rgba(255,255,255,0.92)",
           backdropFilter: "blur(24px)",
-          boxShadow: "inset 0 -1px 0 0 #1f192a",
+          boxShadow: "inset 0 -1px 0 0 #e5e7eb",
         }}
       >
         <div className="flex items-center gap-2">
           <Workflow className="size-4 text-[#e3433e]" />
-          <span className="text-sm text-white">Flows</span>
+          <span className="text-sm text-[#111827]">Flows</span>
         </div>
         <TotumButton
           variant="primary"

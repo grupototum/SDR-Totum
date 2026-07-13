@@ -38,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { FlowCanvasV2 } from "./FlowCanvasV2";
+import { StepLibraryPanel } from "./StepLibraryPanel";
 import { extractPlaceholders, registeredVariableNames } from "@/lib/flow-v2";
 
 type View = "stage" | "interrupts" | "globals" | "pesquisa";
@@ -52,21 +53,30 @@ export type AuthoringMode = "wizard" | "canvas";
  */
 export function V2Builder() {
   const flow = useFlowV2Store((s) => s.flow);
+  const selectedStageId = useFlowV2Store((s) => s.selectedStageId);
   const [view, setView] = useState<View>("stage");
 
   if (!flow) {
-    return <div className="p-6 text-sm text-[color:var(--color-text-muted)]">Carregando…</div>;
+    return <div className="p-6 text-sm text-[#6b7280]">Carregando…</div>;
   }
 
   return (
-    <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "300px 1fr 360px" }}>
-      <StageRail view={view} setView={setView} />
-      <FlowCanvasV2 onSelectStage={() => setView("stage")} />
-      <div className="overflow-y-auto" style={{ boxShadow: "inset 1px 0 0 0 #1f192a" }}>
+    <div
+      className="grid flex-1 grid-cols-1 overflow-hidden lg:[grid-template-columns:280px_1fr_340px]"
+      style={{ background: "#f6f7f9" }}
+    >
+      <div className="hidden lg:block">
+        <StageRail view={view} setView={setView} />
+      </div>
+      <div className="min-h-[45vh]">
+        <FlowCanvasV2 onSelectStage={() => setView("stage")} />
+      </div>
+      <div className="overflow-y-auto bg-white" style={{ boxShadow: "inset 1px 0 0 0 #e5e7eb" }}>
         {view === "pesquisa" && <PesquisaPanel />}
         {view === "interrupts" && <InterruptsEditor />}
         {view === "globals" && <GlobalsPanel />}
-        {view === "stage" && <StageEditor />}
+        {/* Manychat-style: sem estágio selecionado → biblioteca de etapas */}
+        {view === "stage" && (selectedStageId ? <StageEditor /> : <StepLibraryPanel />)}
       </div>
     </div>
   );
@@ -176,33 +186,33 @@ export function V2Toolbar({
 
   return (
     <header
-      className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 px-5"
+      className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-1.5"
       style={{
-        background: "rgba(27, 23, 40, 0.85)",
+        background: "rgba(255,255,255,0.92)",
         backdropFilter: "blur(24px)",
-        boxShadow: "inset 0 -1px 0 0 #1f192a",
+        boxShadow: "inset 0 -1px 0 0 #e5e7eb",
       }}
     >
       <div className="flex items-center gap-2 text-sm">
         <Link
           to="/builder"
-          className="flex items-center gap-1 text-[color:var(--color-text-muted)] hover:text-white"
+          className="flex items-center gap-1 text-[#6b7280] hover:text-[#111827]"
           title="Voltar para fluxos"
         >
           <ArrowLeft className="size-3.5" /> Fluxos
         </Link>
-        <ChevronRight className="size-3.5 text-[color:var(--color-text-muted)]" />
+        <ChevronRight className="size-3.5 text-[#6b7280]" />
         <input
           value={flow.name}
           onChange={(e) => patchMeta({ name: e.target.value })}
-          className="rounded-md bg-transparent text-white outline-none focus:bg-[#1f192a] focus:px-2 focus:py-1"
+          className="rounded-md bg-transparent text-[#111827] outline-none focus:bg-[#e5e7eb] focus:px-2 focus:py-1"
           style={{ minWidth: 200 }}
         />
         <span
           className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
           style={{
-            background: published ? "rgba(53,166,112,0.15)" : "#1f192a",
-            color: published ? "#35a670" : "#9ca3af",
+            background: published ? "rgba(53,166,112,0.15)" : "#e5e7eb",
+            color: published ? "#35a670" : "#6b7280",
           }}
         >
           {published && <CheckCircle2 className="size-3" />}
@@ -213,7 +223,7 @@ export function V2Toolbar({
       {/* Toggle Wizard | Builder — mesmo fluxo, vistas diferentes */}
       <div
         className="flex items-center gap-1 rounded-full p-1"
-        style={{ background: "#1f192a" }}
+        style={{ background: "#e5e7eb" }}
         role="tablist"
         aria-label="Modo de edição"
       >
@@ -222,7 +232,7 @@ export function V2Toolbar({
           className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
           style={{
             background: mode === "wizard" ? "#da2128" : "transparent",
-            color: mode === "wizard" ? "#fff" : "#9ca3af",
+            color: mode === "wizard" ? "#fff" : "#6b7280",
           }}
           aria-selected={mode === "wizard"}
           role="tab"
@@ -234,7 +244,7 @@ export function V2Toolbar({
           className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors"
           style={{
             background: mode === "canvas" ? "#da2128" : "transparent",
-            color: mode === "canvas" ? "#fff" : "#9ca3af",
+            color: mode === "canvas" ? "#fff" : "#6b7280",
           }}
           aria-selected={mode === "canvas"}
           role="tab"
@@ -296,19 +306,19 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "var(--color-card-totum)", boxShadow: "inset -1px 0 0 0 #1f192a" }}
+      style={{ background: "#ffffff", boxShadow: "inset -1px 0 0 0 #e5e7eb" }}
     >
       <div
         className="flex items-center justify-between px-4 py-3"
-        style={{ boxShadow: "inset 0 -1px 0 0 #1f192a" }}
+        style={{ boxShadow: "inset 0 -1px 0 0 #e5e7eb" }}
       >
-        <span className="flex items-center gap-2 text-sm text-white">
+        <span className="flex items-center gap-2 text-sm text-[#111827]">
           <Layers className="size-4 text-[#e3433e]" /> Estágios
         </span>
         <button
           onClick={addStage}
           title="Adicionar estágio"
-          className="text-[color:var(--color-text-muted)] hover:text-white"
+          className="text-[#6b7280] hover:text-[#111827]"
         >
           <Plus className="size-4" />
         </button>
@@ -327,7 +337,7 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
                 }}
                 className={cn(
                   "flex flex-1 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
-                  selected ? "text-white" : "text-[color:var(--color-text-muted)] hover:text-white",
+                  selected ? "text-[#111827]" : "text-[#6b7280] hover:text-[#111827]",
                 )}
                 style={
                   selected
@@ -340,7 +350,7 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
                 }
               >
                 <span className="flex items-center gap-2 truncate">
-                  <span className="text-[10px] text-[color:var(--color-text-muted)]">{i + 1}</span>
+                  <span className="text-[10px] text-[#6b7280]">{i + 1}</span>
                   <span className="truncate">{st.id}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
@@ -355,13 +365,13 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
               <div className="flex flex-col opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   onClick={() => moveStage(st.id, -1)}
-                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                  className="text-[#6b7280] hover:text-[#111827]"
                 >
                   <ArrowUp className="size-3" />
                 </button>
                 <button
                   onClick={() => moveStage(st.id, 1)}
-                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                  className="text-[#6b7280] hover:text-[#111827]"
                 >
                   <ArrowDown className="size-3" />
                 </button>
@@ -371,7 +381,7 @@ function StageRail({ view, setView }: { view: View; setView: (v: View) => void }
         })}
       </div>
 
-      <div className="flex flex-col gap-1 p-2" style={{ boxShadow: "inset 0 1px 0 0 #1f192a" }}>
+      <div className="flex flex-col gap-1 p-2" style={{ boxShadow: "inset 0 1px 0 0 #e5e7eb" }}>
         <RailNav
           active={view === "pesquisa"}
           onClick={() => setView("pesquisa")}
@@ -411,9 +421,7 @@ function RailNav({
       onClick={onClick}
       className={cn(
         "flex items-center gap-2 rounded-md px-3 py-2 text-left text-xs transition-colors",
-        active
-          ? "bg-[#1f192a] text-white"
-          : "text-[color:var(--color-text-muted)] hover:text-white",
+        active ? "bg-[#e5e7eb] text-[#111827]" : "text-[#6b7280] hover:text-[#111827]",
       )}
     >
       {icon}
@@ -463,7 +471,7 @@ function PlaceholderPicker({ onInsert }: { onInsert: (name: string) => void }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="text-[11px] text-[color:var(--color-text-muted)] hover:text-white"
+        className="text-[11px] text-[#6b7280] hover:text-[#111827]"
         title="Inserir placeholder"
       >
         + placeholder
@@ -471,20 +479,18 @@ function PlaceholderPicker({ onInsert }: { onInsert: (name: string) => void }) {
       {open && (
         <div
           className="absolute right-0 top-5 z-30 flex w-56 flex-col gap-1 rounded-lg p-2"
-          style={{ background: "#1f192a", boxShadow: "var(--shadow-card)" }}
+          style={{ background: "#e5e7eb", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
         >
           <div className="max-h-40 overflow-y-auto">
             {names.length === 0 && (
-              <p className="px-2 py-1 text-[11px] text-[color:var(--color-text-muted)]">
-                Nenhuma variável registrada.
-              </p>
+              <p className="px-2 py-1 text-[11px] text-[#6b7280]">Nenhuma variável registrada.</p>
             )}
             {names.map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => pick(n)}
-                className="block w-full rounded px-2 py-1 text-left text-xs text-white hover:bg-[#272333]"
+                className="block w-full rounded px-2 py-1 text-left text-xs text-[#111827] hover:bg-[#eef0f3]"
               >
                 {`{{${n}}}`}
               </button>
@@ -501,13 +507,13 @@ function PlaceholderPicker({ onInsert }: { onInsert: (name: string) => void }) {
                 }
               }}
               placeholder="NOVA_VAR"
-              className="min-w-0 flex-1 rounded bg-transparent px-2 py-1 text-xs text-white outline-none"
-              style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }}
+              className="min-w-0 flex-1 rounded bg-transparent px-2 py-1 text-xs text-[#111827] outline-none"
+              style={{ boxShadow: "inset 0 0 0 1px rgba(16,24,40,0.1)" }}
             />
             <button
               type="button"
               onClick={createAndPick}
-              className="rounded px-2 text-xs text-white"
+              className="rounded px-2 text-xs text-[#111827]"
               style={{ background: "#da2128" }}
             >
               +
@@ -538,11 +544,7 @@ function StageEditor() {
   );
 
   if (!stage) {
-    return (
-      <div className="p-6 text-sm text-[color:var(--color-text-muted)]">
-        Selecione um estágio à esquerda.
-      </div>
-    );
+    return <div className="p-6 text-sm text-[#6b7280]">Selecione um estágio à esquerda.</div>;
   }
 
   const patch = (p: Partial<V2Stage>) => updateStage(stage.id, p);
@@ -550,7 +552,7 @@ function StageEditor() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg text-white">Estágio</h2>
+        <h2 className="text-lg text-[#111827]">Estágio</h2>
         <TotumButton
           variant="ghost"
           size="sm"
@@ -631,7 +633,7 @@ function StageEditor() {
           <select
             value={stage.next ?? ""}
             onChange={(e) => patch({ next: e.target.value || undefined })}
-            className="h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[#1f192a] px-2 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
+            className="h-9 rounded-md border border-[#d0d5dd] bg-[#e5e7eb] px-2 text-sm text-[#111827] outline-none focus:ring-1 focus:ring-[#da2128]"
           >
             <option value="">— (nenhum)</option>
             {stageIds.map((id) => (
@@ -643,9 +645,9 @@ function StageEditor() {
         </Field>
         <div
           className="flex items-end justify-between gap-2 rounded-xl px-4 py-2"
-          style={{ background: "#1f192a", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
+          style={{ background: "#e5e7eb", boxShadow: "inset 0 0 0 1px rgba(16,24,40,0.08)" }}
         >
-          <span className="text-sm text-white">Terminal</span>
+          <span className="text-sm text-[#111827]">Terminal</span>
           <Switch
             checked={Boolean(stage.terminal)}
             onCheckedChange={(v) => patch({ terminal: v || undefined })}
@@ -675,21 +677,19 @@ function InterruptsEditor() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg text-white">Interrupções</h2>
+        <h2 className="text-lg text-[#111827]">Interrupções</h2>
         <TotumButton variant="outline" size="sm" onClick={addInterrupt}>
           <Plus className="size-3.5" /> Nova
         </TotumButton>
       </div>
 
-      {interrupts.length === 0 && (
-        <p className="text-sm text-[color:var(--color-text-muted)]">Nenhuma interrupção.</p>
-      )}
+      {interrupts.length === 0 && <p className="text-sm text-[#6b7280]">Nenhuma interrupção.</p>}
 
       {interrupts.map((it) => (
         <div
           key={it.id}
           className="flex flex-col gap-4 rounded-2xl p-5"
-          style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+          style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
         >
           <div className="flex items-center justify-between">
             <Input
@@ -745,7 +745,7 @@ function InterruptsEditor() {
                   on_exceed: { ...(it.on_exceed ?? {}), goto: e.target.value || undefined },
                 })
               }
-              className="h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[#1f192a] px-2 text-sm text-white outline-none focus:ring-1 focus:ring-[#da2128]"
+              className="h-9 rounded-md border border-[#d0d5dd] bg-[#e5e7eb] px-2 text-sm text-[#111827] outline-none focus:ring-1 focus:ring-[#da2128]"
             >
               <option value="">— (nenhum)</option>
               {stageIds.map((id) => (
@@ -756,7 +756,7 @@ function InterruptsEditor() {
             </select>
           </Field>
           {it.on_exceed?.set && (
-            <p className="text-[11px] text-[color:var(--color-text-muted)]">
+            <p className="text-[11px] text-[#6b7280]">
               on_exceed.set preservado: <code>{JSON.stringify(it.on_exceed.set)}</code>
             </p>
           )}
@@ -780,7 +780,7 @@ function GlobalsPanel() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-      <h2 className="text-lg text-white">Configurações globais</h2>
+      <h2 className="text-lg text-[#111827]">Configurações globais</h2>
 
       <Field label="Objetivo do flow">
         <Textarea
@@ -792,9 +792,9 @@ function GlobalsPanel() {
 
       <section
         className="flex flex-col gap-4 rounded-2xl p-5"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
       >
-        <h3 className="text-sm text-white">Humanização</h3>
+        <h3 className="text-sm text-[#111827]">Humanização</h3>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Typing wpm">
             <Input
@@ -843,9 +843,9 @@ function GlobalsPanel() {
 
       <section
         className="flex flex-col gap-4 rounded-2xl p-5"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
       >
-        <h3 className="text-sm text-white">Modelos padrão</h3>
+        <h3 className="text-sm text-[#111827]">Modelos padrão</h3>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Generator">
             <Input value={md.generator} onChange={(e) => setMd({ generator: e.target.value })} />
@@ -858,9 +858,9 @@ function GlobalsPanel() {
 
       <section
         className="flex flex-col gap-3 rounded-2xl p-5"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
       >
-        <h3 className="text-sm text-white">Guardrails globais</h3>
+        <h3 className="text-sm text-[#111827]">Guardrails globais</h3>
         <StringListField
           label=""
           values={g.guardrails ?? []}
@@ -905,8 +905,8 @@ function PesquisaPanel() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
       <div>
-        <h2 className="text-lg text-white">Pesquisa</h2>
-        <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+        <h2 className="text-lg text-[#111827]">Pesquisa</h2>
+        <p className="mt-1 text-xs text-[#6b7280]">
           Variáveis de pesquisa do lead que o flow exige (ex: QTD_AVALIACOES, CONCORRENTE_1). Não
           vira estágio de conversa — o motor aborta o disparo se uma variável obrigatória faltar.
         </p>
@@ -930,12 +930,12 @@ function PesquisaPanel() {
           <div
             key={name}
             className="flex flex-col gap-2 rounded-xl p-4"
-            style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+            style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
           >
             <div className="flex items-center justify-between gap-2">
-              <code className="text-sm text-white">{`{{${name}}}`}</code>
+              <code className="text-sm text-[#111827]">{`{{${name}}}`}</code>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-xs text-[color:var(--color-text-muted)]">
+                <label className="flex items-center gap-1.5 text-xs text-[#6b7280]">
                   <Switch
                     checked={required.has(name)}
                     onCheckedChange={(v) => setRequiredVariable(name, v)}
@@ -944,7 +944,7 @@ function PesquisaPanel() {
                 </label>
                 <button
                   onClick={() => removeVariable(name)}
-                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                  className="text-[#6b7280] hover:text-[#111827]"
                   title="Remover"
                 >
                   <Trash2 className="size-3.5" />
@@ -958,9 +958,7 @@ function PesquisaPanel() {
             />
           </div>
         ))}
-        {names.size === 0 && (
-          <p className="text-sm text-[color:var(--color-text-muted)]">Nenhuma variável ainda.</p>
-        )}
+        {names.size === 0 && <p className="text-sm text-[#6b7280]">Nenhuma variável ainda.</p>}
       </div>
 
       <div className="flex gap-2">
@@ -1010,20 +1008,17 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
     >
       <div
         className="flex max-h-[85vh] w-full max-w-3xl flex-col gap-4 overflow-hidden rounded-2xl p-6"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg text-white">Simular</h2>
-            <p className="text-xs text-[color:var(--color-text-muted)]">
+            <h2 className="text-lg text-[#111827]">Simular</h2>
+            <p className="text-xs text-[#6b7280]">
               Roda as 3 personas (interessado, cético, secretária) contra o flow atual do canvas.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[color:var(--color-text-muted)] hover:text-white"
-          >
+          <button onClick={onClose} className="text-[#6b7280] hover:text-[#111827]">
             <X className="size-5" />
           </button>
         </div>
@@ -1031,14 +1026,14 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-3">
           <div
             className="flex items-center gap-1 rounded-full p-1"
-            style={{ background: "#1f192a" }}
+            style={{ background: "#e5e7eb" }}
           >
             <button
               onClick={() => setLlm("mock")}
               className="rounded-full px-3 py-1 text-xs"
               style={{
                 background: llm === "mock" ? "#da2128" : "transparent",
-                color: llm === "mock" ? "#fff" : "#9ca3af",
+                color: llm === "mock" ? "#fff" : "#6b7280",
               }}
             >
               Modo A · Mock
@@ -1050,7 +1045,7 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
               className="rounded-full px-3 py-1 text-xs disabled:opacity-40"
               style={{
                 background: llm === "real" ? "#da2128" : "transparent",
-                color: llm === "real" ? "#fff" : "#9ca3af",
+                color: llm === "real" ? "#fff" : "#6b7280",
               }}
             >
               Modo B · LLM real
@@ -1073,7 +1068,7 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
             </p>
           )}
           {!runMut.data && !runMut.isPending && (
-            <p className="text-sm text-[color:var(--color-text-muted)]">
+            <p className="text-sm text-[#6b7280]">
               Flow atual: {flow.stages.length} estágios. Clique em "Rodar simulação".
             </p>
           )}
@@ -1081,10 +1076,10 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
             <div
               key={r.id}
               className="mb-3 flex flex-col gap-2 rounded-xl p-4"
-              style={{ background: "#0e0918", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
+              style={{ background: "#f6f7f9", boxShadow: "inset 0 0 0 1px rgba(16,24,40,0.08)" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white">{r.label}</span>
+                <span className="text-sm text-[#111827]">{r.label}</span>
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
                   style={{
@@ -1096,12 +1091,12 @@ export function SimulationOverlay({ onClose }: { onClose: () => void }) {
                   {r.passed ? "PASSOU" : "FALHOU"}
                 </span>
               </div>
-              <p className="text-[11px] text-[color:var(--color-text-muted)]">
+              <p className="text-[11px] text-[#6b7280]">
                 desfecho={r.status} stage={r.stage} temp={r.temperatura} trocas={r.trocas}
               </p>
               <div
-                className="max-h-40 overflow-y-auto rounded-lg p-3 text-xs leading-relaxed text-[#d1cece]"
-                style={{ background: "#1f192a", fontFamily: "ui-monospace, Menlo, monospace" }}
+                className="max-h-40 overflow-y-auto rounded-lg p-3 text-xs leading-relaxed text-[#374151]"
+                style={{ background: "#e5e7eb", fontFamily: "ui-monospace, Menlo, monospace" }}
               >
                 {r.transcript.map((line, i) => (
                   <div key={i}>{line}</div>
@@ -1138,35 +1133,32 @@ export function LegacyOverlay({
     >
       <div
         className="flex max-h-[85vh] w-full max-w-3xl flex-col gap-4 overflow-hidden rounded-2xl p-6"
-        style={{ background: "#1b1728", boxShadow: "var(--shadow-card)" }}
+        style={{ background: "#ffffff", boxShadow: "0 1px 3px rgba(16,24,40,0.12)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg text-white">Legado v1 (somente leitura)</h2>
-            <p className="text-xs text-[color:var(--color-text-muted)]">
+            <h2 className="text-lg text-[#111827]">Legado v1 (somente leitura)</h2>
+            <p className="text-xs text-[#6b7280]">
               {summary.flowId} · v{summary.version} · {summary.nodeCount} nós · entry:{" "}
               {summary.entry}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[color:var(--color-text-muted)] hover:text-white"
-          >
+          <button onClick={onClose} className="text-[#6b7280] hover:text-[#111827]">
             <X className="size-5" />
           </button>
         </div>
-        <p className="text-xs text-[color:var(--color-text-muted)]">
+        <p className="text-xs text-[#6b7280]">
           O formato de trabalho é o v2 (estágios). O v1 é mostrado só para consulta — não é editável
           aqui.
         </p>
         <div
           className="flex-1 overflow-y-auto rounded-xl"
-          style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}
+          style={{ boxShadow: "inset 0 0 0 1px rgba(16,24,40,0.08)" }}
         >
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0" style={{ background: "#0e0918" }}>
-              <tr className="text-[color:var(--color-text-muted)]">
+            <thead className="sticky top-0" style={{ background: "#f6f7f9" }}>
+              <tr className="text-[#6b7280]">
                 <th className="px-3 py-2">id</th>
                 <th className="px-3 py-2">type</th>
                 <th className="px-3 py-2">label</th>
@@ -1174,10 +1166,10 @@ export function LegacyOverlay({
             </thead>
             <tbody>
               {summary.nodes.map((n) => (
-                <tr key={n.id} style={{ boxShadow: "inset 0 -1px 0 0 rgba(255,255,255,0.04)" }}>
-                  <td className="px-3 py-1.5 text-white">{n.id}</td>
-                  <td className="px-3 py-1.5 text-[color:var(--color-text-muted)]">{n.type}</td>
-                  <td className="px-3 py-1.5 text-[color:var(--color-text-muted)]">{n.label}</td>
+                <tr key={n.id} style={{ boxShadow: "inset 0 -1px 0 0 rgba(16,24,40,0.05)" }}>
+                  <td className="px-3 py-1.5 text-[#111827]">{n.id}</td>
+                  <td className="px-3 py-1.5 text-[#6b7280]">{n.type}</td>
+                  <td className="px-3 py-1.5 text-[#6b7280]">{n.label}</td>
                 </tr>
               ))}
             </tbody>
@@ -1203,7 +1195,7 @@ function Field({
     <div className="flex flex-col gap-1.5">
       {(label || action) && (
         <div className="flex items-center justify-between">
-          {label && <Label className="text-xs text-[color:var(--color-text-muted)]">{label}</Label>}
+          {label && <Label className="text-xs text-[#6b7280]">{label}</Label>}
           {action}
         </div>
       )}
@@ -1262,7 +1254,7 @@ function StringListField({
               )}
               <button
                 onClick={() => remove(i)}
-                className="self-start pt-2 text-[color:var(--color-text-muted)] hover:text-white"
+                className="self-start pt-2 text-[#6b7280] hover:text-[#111827]"
                 title="Remover"
               >
                 <Trash2 className="size-3.5" />
@@ -1321,14 +1313,14 @@ function ChipsField({
                 key={v}
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
                 style={{
-                  background: "#1f192a",
-                  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)",
+                  background: "#e5e7eb",
+                  boxShadow: "inset 0 0 0 1px rgba(16,24,40,0.1)",
                 }}
               >
                 {v}
                 <button
                   onClick={() => onChange(values.filter((x) => x !== v))}
-                  className="text-[color:var(--color-text-muted)] hover:text-white"
+                  className="text-[#6b7280] hover:text-[#111827]"
                 >
                   <X className="size-3" />
                 </button>

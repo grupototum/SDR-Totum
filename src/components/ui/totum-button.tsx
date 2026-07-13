@@ -12,8 +12,12 @@ const totumButtonVariants = cva(
           "bg-[#da2128] text-white shadow-[var(--shadow-btn-primary)] hover:shadow-[var(--shadow-halo-red)]",
         secondary:
           "text-white bg-[image:var(--gradient-secondary)] shadow-[var(--shadow-btn-primary)] hover:brightness-110",
-        ghost: "bg-transparent text-white hover:bg-[hsla(0,0%,100%,0.07)]",
-        outline: "bg-transparent text-white card-shadow hover:bg-[hsla(0,0%,100%,0.05)]",
+        // Cores via CSS var com fallback no valor original (tema dark). Páginas
+        // claras definem --tbtn-fg/--tbtn-hover-bg no wrapper .totum-light.
+        ghost:
+          "bg-transparent text-[color:var(--tbtn-fg,#fff)] hover:bg-[color:var(--tbtn-hover-bg,hsla(0,0%,100%,0.07))]",
+        outline:
+          "bg-transparent text-[color:var(--tbtn-fg,#fff)] card-shadow hover:bg-[color:var(--tbtn-hover-bg,hsla(0,0%,100%,0.05))]",
       },
       size: {
         sm: "h-8 px-4 text-xs",

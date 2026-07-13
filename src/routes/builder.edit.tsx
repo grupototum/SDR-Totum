@@ -100,11 +100,11 @@ function BuilderEditPage() {
   if (!storeFlow || loading) {
     return (
       <div
-        className="flex h-screen flex-col items-center justify-center gap-3 text-sm text-[color:var(--color-text-muted)]"
-        style={{ background: "#0e0918" }}
+        className="flex h-screen flex-col items-center justify-center gap-3 text-sm text-[#6b7280]"
+        style={{ background: "#f6f7f9" }}
       >
         Carregando flow…
-        <Link to="/builder" className="flex items-center gap-1 hover:text-white">
+        <Link to="/builder" className="flex items-center gap-1 hover:text-[#111827]">
           <ArrowLeft className="size-3.5" /> Voltar aos fluxos
         </Link>
       </div>
@@ -117,8 +117,8 @@ function BuilderEditPage() {
 
   return (
     <div
-      className="flex w-full flex-col overflow-hidden"
-      style={{ background: "#0e0918", height: "100vh" }}
+      className="totum-light flex w-full flex-col overflow-hidden"
+      style={{ background: "#f6f7f9", height: "100vh" }}
     >
       <V2Toolbar
         mode={mode}
